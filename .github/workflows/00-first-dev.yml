@@ -1,0 +1,79 @@
+name: "Stage 0: First-Dev - Basic Compilation"
+
+on:
+  push:
+    branches:
+      - first-dev
+  pull_request:
+    branches:
+      - first-dev
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  compile:
+    name: Basic Compilation Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo index
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-git-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo build
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Compile project
+        run: cargo build --verbose
+
+      - name: Report success
+        if: success()
+        run: echo "✅ Stage 0 (first-dev) - Basic compilation successful"
+
+  auto-promote:
+    name: Auto-promote to dev
+    needs: compile
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/first-dev' && github.event_name == 'push'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+
+      - name: Create promotion PR to dev
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git fetch origin dev || git push origin first-dev:dev
+          gh pr create \
+            --base dev \
+            --head first-dev \
+            --title "Auto-promote: first-dev → dev" \
+            --body "Automatic promotion from Stage 0 (first-dev) to Stage 1 (dev). Basic compilation checks passed." \
+            || echo "PR may already exist"
+          gh pr merge first-dev --auto --merge --delete-branch=false || true

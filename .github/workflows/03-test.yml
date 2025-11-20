@@ -1,0 +1,93 @@
+name: "Stage 3: Test - Unit Tests"
+
+on:
+  push:
+    branches:
+      - test
+  pull_request:
+    branches:
+      - test
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  unit-tests:
+    name: Unit Tests with Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-tarpaulin
+        run: cargo install cargo-tarpaulin
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Run unit tests
+        run: cargo test --lib --verbose
+
+      - name: Run tests with coverage
+        run: cargo tarpaulin --lib --out Xml --output-dir coverage
+
+      - name: Check coverage threshold (70%)
+        run: |
+          COVERAGE=$(grep -oP 'line-rate="\K[0-9.]+' coverage/cobertura.xml | head -1)
+          COVERAGE_PCT=$(echo "$COVERAGE * 100" | bc)
+          echo "Coverage: ${COVERAGE_PCT}%"
+          if (( $(echo "$COVERAGE_PCT < 70" | bc -l) )); then
+            echo "❌ Coverage ${COVERAGE_PCT}% is below 70% threshold"
+            exit 1
+          fi
+          echo "✅ Coverage ${COVERAGE_PCT}% meets minimum requirement"
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage/cobertura.xml
+          fail_ci_if_error: false
+
+      - name: Report success
+        if: success()
+        run: echo "✅ Stage 3 (test) - All unit tests passed with adequate coverage"
+
+  auto-promote:
+    name: Auto-promote to integration
+    needs: unit-tests
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/test' && github.event_name == 'push'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+
+      - name: Create promotion PR to integration
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git fetch origin integration || git push origin test:integration
+          gh pr create \
+            --base integration \
+            --head test \
+            --title "Auto-promote: test → integration" \
+            --body "Automatic promotion from Stage 3 (test) to Stage 4 (integration). All unit tests passed with 70%+ coverage." \
+            || echo "PR may already exist"
+          gh pr merge test --auto --merge --delete-branch=false || true

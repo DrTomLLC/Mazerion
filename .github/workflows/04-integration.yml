@@ -1,0 +1,81 @@
+name: "Stage 4: Integration - Integration Tests"
+
+on:
+  push:
+    branches:
+      - integration
+  pull_request:
+    branches:
+      - integration
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  integration-tests:
+    name: Integration & E2E Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Run integration tests
+        run: cargo test --test '*' --verbose
+
+      - name: Run all tests together
+        run: cargo test --verbose
+
+      - name: Verify examples compile
+        run: |
+          if [ -d "examples" ]; then
+            cargo build --examples
+          else
+            echo "No examples directory, skipping"
+          fi
+
+      - name: Report success
+        if: success()
+        run: echo "✅ Stage 4 (integration) - All integration tests passed"
+
+  auto-promote:
+    name: Auto-promote to bench
+    needs: integration-tests
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/integration' && github.event_name == 'push'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+
+      - name: Create promotion PR to bench
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git fetch origin bench || git push origin integration:bench
+          gh pr create \
+            --base bench \
+            --head integration \
+            --title "Auto-promote: integration → bench" \
+            --body "Automatic promotion from Stage 4 (integration) to Stage 5 (bench). All integration tests passed." \
+            || echo "PR may already exist"
+          gh pr merge integration --auto --merge --delete-branch=false || true

@@ -1,0 +1,14 @@
+[package]
+name = "mazerion-calculators"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+mazerion-core = { path = "../core" }
+rust_decimal = { workspace = true }
+rust_decimal_macros = "1.39.0"
+linkme = "0.3.35"

@@ -1,0 +1,7 @@
+app_name = "Mazerion"
+version = "0.1.0"
+
+[precision]
+sg_decimals = 4
+ph_decimals = 3
+brix_decimals = 2

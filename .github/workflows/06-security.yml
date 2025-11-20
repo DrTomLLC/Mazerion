@@ -1,0 +1,117 @@
+name: "Stage 6: Security - Vulnerability Scan"
+
+on:
+  push:
+    branches:
+      - security
+  pull_request:
+    branches:
+      - security
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+
+      - name: Install cargo-deny
+        run: cargo install cargo-deny
+
+      - name: Run security audit
+        run: cargo audit
+
+      - name: Check dependencies for vulnerabilities
+        run: |
+          if [ ! -f "deny.toml" ]; then
+            cat > deny.toml << 'EOF'
+          [advisories]
+          vulnerability = "deny"
+          unmaintained = "warn"
+          unsound = "warn"
+          yanked = "deny"
+
+          [licenses]
+          unlicensed = "deny"
+          allow = [
+              "MIT",
+              "Apache-2.0",
+              "BSD-3-Clause",
+              "ISC",
+              "0BSD",
+          ]
+          copyleft = "warn"
+
+          [bans]
+          multiple-versions = "warn"
+          wildcards = "allow"
+
+          [sources]
+          unknown-registry = "deny"
+          unknown-git = "deny"
+          EOF
+          fi
+          cargo deny check
+
+      - name: Check for unsafe code
+        run: |
+          echo "Scanning for unsafe blocks..."
+          UNSAFE_COUNT=$(grep -r "unsafe" src/ --include="*.rs" | grep -v "// unsafe" | wc -l || echo "0")
+          echo "Found $UNSAFE_COUNT unsafe blocks"
+          if [ "$UNSAFE_COUNT" -gt 0 ]; then
+            echo "⚠️ Warning: Project contains $UNSAFE_COUNT unsafe blocks - manual review recommended"
+          fi
+
+      - name: Report success
+        if: success()
+        run: echo "✅ Stage 6 (security) - Security audit passed, no known vulnerabilities"
+
+  auto-promote:
+    name: Auto-promote to staging
+    needs: security-audit
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/security' && github.event_name == 'push'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+
+      - name: Create promotion PR to staging
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git fetch origin staging || git push origin security:staging
+          gh pr create \
+            --base staging \
+            --head security \
+            --title "Auto-promote: security → staging" \
+            --body "Automatic promotion from Stage 6 (security) to Stage 7 (staging). Security audit passed - no known vulnerabilities." \
+            || echo "PR may already exist"
+          gh pr merge security --auto --merge --delete-branch=false || true
