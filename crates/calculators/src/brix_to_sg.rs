@@ -4,7 +4,8 @@ use mazerion_core::{
     register_calculator, CalcInput, CalcResult, Calculator, Measurement, Result, Unit,
     Validator,
 };
-use rust_decimal_macros::dec;
+use rust_decimal::Decimal;
+use std::str::FromStr;
 
 /// Convert Brix to SG using polynomial approximation.
 #[derive(Default)]
@@ -33,7 +34,7 @@ impl Calculator for BrixToSgCalculator {
 
         Validator::brix(brix)?;
 
-        let sg = dec!(1.0) + (brix * dec!(0.004));
+        let sg = Decimal::ONE + (brix * Decimal::new(4, 3)); // 0.004
 
         let mut result = CalcResult::new(Measurement::sg(sg)?);
 

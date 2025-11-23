@@ -1,32 +1,38 @@
-//! Mazerion CLI launcher.
-
-use mazerion_core::traits::list_calculators;
+use mazerion_core::get_all_calculators;
 use std::env;
 
-fn main() -> anyhow::Result<()> {
-    let args: Vec<String> = env::args().collect();
+fn main() {
+    mazerion_calculators::init();
 
-    match args.get(1).map(|s| s.as_str()) {
+    let args: Vec<String> = env::args().collect();
+    let mode = args.get(1).map(String::as_str);
+
+    match mode {
         Some("gui") => {
-            mazerion_gui::run().map_err(|e| anyhow::anyhow!("GUI error: {}", e))?;
+            if let Err(e) = mazerion_gui::run() {
+                eprintln!("GUI error: {}", e);
+                std::process::exit(1);
+            }
         }
         Some("tui") => {
-            mazerion_tui::run()?;
+            if let Err(e) = mazerion_tui::run() {
+                eprintln!("TUI error: {}", e);
+                std::process::exit(1);
+            }
         }
         Some("list") => {
-            println!("Available calculators:");
-            for calc_id in list_calculators() {
-                println!("  - {}", calc_id);
+            println!("Available Calculators:");
+            for calc in get_all_calculators() {
+                println!("  {} - {}", calc.id(), calc.name());
+                println!("    {}", calc.description());
             }
         }
         _ => {
-            println!("Mazerion - Precision Mead & Beverage Calculator");
+            println!("Mazerion - Precision Beverage Calculator");
             println!("\nUsage:");
-            println!("  mazerion gui      Launch GUI");
-            println!("  mazerion tui      Launch TUI");
-            println!("  mazerion list     List calculators");
+            println!("  mazerion gui   - Launch GUI (recommended)");
+            println!("  mazerion tui   - Launch TUI");
+            println!("  mazerion list  - List all calculators");
         }
     }
-
-    Ok(())
 }

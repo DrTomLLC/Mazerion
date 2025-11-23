@@ -1,19 +1,14 @@
-//! Database layer with optional SQLite support.
+#[cfg(feature = "sqlite")]
+pub mod sqlite;
 
-#[cfg(feature = "db")]
-mod sqlite;
+#[cfg(feature = "sqlite")]
+pub use sqlite::SqliteLogbook;
 
-#[cfg(feature = "db")]
-pub use sqlite::{Logbook, LogEntry};
+// Re-export core types
+pub use mazerion_core::{Error, Result};
 
-#[cfg(not(feature = "db"))]
-pub struct Logbook;
-
-#[cfg(not(feature = "db"))]
-impl Logbook {
-    pub fn new(_path: &str) -> mazerion_core::Result<Self> {
-        Err(mazerion_core::Error::Database(
-            "Database feature not enabled".into(),
-        ))
-    }
+/// Trait for batch tracking and recipe storage
+pub trait Logbook {
+    fn save_calculation(&mut self, calc_id: &str, inputs: &str, outputs: &str) -> Result<()>;
+    fn list_calculations(&self) -> Result<Vec<String>>;
 }

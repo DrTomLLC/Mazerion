@@ -9,6 +9,13 @@ pub mod traits;
 pub mod units;
 pub mod validation;
 
+#[cfg(test)]
+mod calc_input_tests;
+#[cfg(test)]
+mod calc_result_tests;
+#[cfg(test)]
+mod units_tests;
+
 pub use error::{Error, Result};
 pub use traits::Calculator;
 pub use units::*;

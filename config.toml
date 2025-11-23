@@ -1,7 +1,27 @@
+# Mazerion Configuration
+[general]
 app_name = "Mazerion"
-version = "0.1.0"
+version = "0.2.0"
+theme = "dark"
 
-[precision]
-sg_decimals = 4
-ph_decimals = 3
-brix_decimals = 2
+[calculations]
+decimal_places = 4
+temperature_unit = "Celsius"
+volume_unit = "Liters"
+
+[validation]
+sg_min = 0.600
+sg_max = 2.000
+brix_min = 0.0
+brix_max = 70.0
+temp_min = -5.0
+temp_max = 100.0
+ph_min = 1.5
+ph_max = 8.5
+abv_min = 0.0
+abv_max = 30.0
+
+[brewing]
+fermentation_temp = 20.0
+batch_size = 20.0
+target_carbonation = 2.5

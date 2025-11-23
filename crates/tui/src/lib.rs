@@ -1,107 +1,91 @@
-//! TUI using ratatui and crossterm.
-
-use crossterm::event::{self, Event, KeyCode};
-use crossterm::terminal::{
-    disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
+use crossterm::{
+    event::{self, Event, KeyCode},
+    execute,
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use crossterm::ExecutableCommand;
-use mazerion_core::{Error, Result};
-use ratatui::prelude::*;
-use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph};
+use ratatui::{
+    backend::CrosstermBackend,
+    layout::{Constraint, Direction, Layout},
+    style::{Color, Style},
+    text::{Line, Span},
+    widgets::{Block, Borders, List, ListItem, Paragraph},
+    Terminal,
+};
 use std::io;
-use mazerion_core::traits::list_calculators;
+use ratatui::backend::Backend;
+// Force calculators to register
+use mazerion_core as _;
 
-pub struct TuiApp {
-    calculators: Vec<String>,
-    selected: usize,
+pub fn run() -> io::Result<()> {
+    enable_raw_mode()?;
+    let mut stdout = io::stdout();
+    execute!(stdout, EnterAlternateScreen)?;
+    let backend = CrosstermBackend::new(stdout);
+    let mut terminal = Terminal::new(backend)?;
+
+    let result = run_app(&mut terminal);
+
+    disable_raw_mode()?;
+    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
+    terminal.show_cursor()?;
+
+    result
 }
 
-impl TuiApp {
-    pub fn new() -> Self {
-        Self {
-            calculators: list_calculators().iter().map(|s| s.to_string()).collect(),
-            selected: 0,
-        }
-    }
+fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>) -> io::Result<()> where std::io::Error: From<<B as Backend>::Error> {
+    let calculators = mazerion_core::get_all_calculators();
+    let mut selected: usize = 0;
 
-    fn handle_key(&mut self, code: KeyCode) -> bool {
-        match code {
-            KeyCode::Char('q') => return false,
-            KeyCode::Down => {
-                if self.selected < self.calculators.len().saturating_sub(1) {
-                    self.selected = self.selected.saturating_add(1);
+    loop {
+        terminal.draw(|f| {
+            let chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Length(3), Constraint::Min(0)])
+                .split(f.area());
+
+            let title = Paragraph::new("🍯 Mazerion TUI - Press 'q' to quit")
+                .block(Block::default().borders(Borders::ALL))
+                .style(Style::default().fg(Color::Cyan));
+            f.render_widget(title, chunks[0]);
+
+            let items: Vec<ListItem> = calculators
+                .iter()
+                .enumerate()
+                .map(|(i, calc)| {
+                    let style = if i == selected {
+                        Style::default().bg(Color::Blue).fg(Color::White)
+                    } else {
+                        Style::default()
+                    };
+                    ListItem::new(vec![Line::from(vec![
+                        Span::raw(calc.name()),
+                        Span::raw(" - "),
+                        Span::styled(calc.description(), Style::default().fg(Color::Gray)),
+                    ])])
+                        .style(style)
+                })
+                .collect();
+
+            let list = List::new(items)
+                .block(Block::default().title("Calculators").borders(Borders::ALL));
+            f.render_widget(list, chunks[1]);
+        })?;
+
+        if let Event::Key(key) = event::read()? {
+            match key.code {
+                KeyCode::Char('q') => return Ok(()),
+                KeyCode::Down => {
+                    if selected < calculators.len() - 1 {
+                        selected += 1;
+                    }
                 }
-            }
-            KeyCode::Up => {
-                self.selected = self.selected.saturating_sub(1);
-            }
-            _ => {}
-        }
-        true
-    }
-
-    fn render(&self, frame: &mut Frame) {
-        let chunks = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([Constraint::Length(3), Constraint::Min(0)])
-            .split(frame.area());
-
-        let title = Paragraph::new("🍯 Mazerion Calculator (q to quit)")
-            .block(Block::default().borders(Borders::ALL).title("Mazerion"));
-        frame.render_widget(title, chunks[0]);
-
-        let items: Vec<ListItem> = self
-            .calculators
-            .iter()
-            .enumerate()
-            .map(|(i, calc)| {
-                let style = if i == self.selected {
-                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
-                } else {
-                    Style::default()
-                };
-                ListItem::new(calc.as_str()).style(style)
-            })
-            .collect();
-
-        let list = List::new(items)
-            .block(Block::default().borders(Borders::ALL).title("Calculators"))
-            .highlight_style(Style::default().add_modifier(Modifier::BOLD));
-
-        frame.render_widget(list, chunks[1]);
-    }
-}
-
-pub fn run() -> Result<()> {
-    enable_raw_mode().map_err(|e| Error::Io(format!("Enable raw mode failed: {}", e)))?;
-    io::stdout()
-        .execute(EnterAlternateScreen)
-        .map_err(|e| Error::Io(format!("Enter alternate screen failed: {}", e)))?;
-
-    let mut terminal = Terminal::new(CrosstermBackend::new(io::stdout()))
-        .map_err(|e| Error::Io(format!("Terminal init failed: {}", e)))?;
-
-    let mut app = TuiApp::new();
-    let mut running = true;
-
-    while running {
-        terminal
-            .draw(|f| app.render(f))
-            .map_err(|e| Error::Io(format!("Draw failed: {}", e)))?;
-
-        if event::poll(std::time::Duration::from_millis(100))
-            .map_err(|e| Error::Io(format!("Event poll failed: {}", e)))?
-        {
-            if let Event::Key(key) = event::read().map_err(|e| Error::Io(e.to_string()))? {
-                running = app.handle_key(key.code);
+                KeyCode::Up => {
+                    if selected > 0 {
+                        selected -= 1;
+                    }
+                }
+                _ => {}
             }
         }
     }
-
-    disable_raw_mode().map_err(|e| Error::Io(format!("Disable raw mode failed: {}", e)))?;
-    io::stdout()
-        .execute(LeaveAlternateScreen)
-        .map_err(|e| Error::Io(format!("Leave alternate screen failed: {}", e)))?;
-
-    Ok(())
 }

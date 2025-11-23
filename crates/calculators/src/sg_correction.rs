@@ -3,7 +3,8 @@
 use mazerion_core::{
     register_calculator, CalcInput, CalcResult, Calculator, Measurement, Result, Unit,
 };
-use rust_decimal_macros::dec;
+use rust_decimal::Decimal;
+use std::str::FromStr;
 
 /// Correct SG reading for temperature (calibrated at 20°C).
 #[derive(Default)]
@@ -33,8 +34,8 @@ impl Calculator for SgCorrectionCalculator {
         let sg = sg_meas.value;
         let temp = temp_meas.value;
 
-        let cal_temp = dec!(20.0);
-        let correction_factor = dec!(0.00013);
+        let cal_temp = Decimal::from(20);
+        let correction_factor = Decimal::new(13, 5); // 0.00013
         let temp_diff = temp - cal_temp;
         let correction = correction_factor * temp_diff;
 
@@ -42,7 +43,7 @@ impl Calculator for SgCorrectionCalculator {
 
         let mut result = CalcResult::new(Measurement::sg(corrected_sg)?);
 
-        if (temp - cal_temp).abs() > dec!(10) {
+        if (temp - cal_temp).abs() > Decimal::from(10) {
             result = result.with_warning("Large temperature deviation from calibration (20°C)");
         }
 

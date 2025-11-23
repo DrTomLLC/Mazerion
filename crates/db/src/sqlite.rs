@@ -1,83 +1,76 @@
-//! SQLite logbook for calculation history.
+use crate::{Logbook, Result};
+use mazerion_core::Error;
+use rusqlite::{Connection, params};
 
-use mazerion_core::{Error, Result};
-use rusqlite::{params, Connection};
-use serde::{Deserialize, Serialize};
-
-/// Log entry for calculations.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LogEntry {
-    pub id: Option<i64>,
-    pub timestamp: String,
-    pub calculator_id: String,
-    pub input: String,
-    pub output: String,
-}
-
-/// SQLite-backed logbook.
-pub struct Logbook {
+pub struct SqliteLogbook {
     conn: Connection,
 }
 
-impl Logbook {
-    /// Create or open logbook at path.
+impl SqliteLogbook {
     pub fn new(path: &str) -> Result<Self> {
-        let conn =
-            Connection::open(path).map_err(|e| Error::Database(format!("Open failed: {}", e)))?;
+        let conn = Connection::open(path)
+            .map_err(|e| Error::DatabaseError(format!("Failed to open database: {}", e)))?;
 
         conn.execute(
-            "CREATE TABLE IF NOT EXISTS log (
+            "CREATE TABLE IF NOT EXISTS calculations (
                 id INTEGER PRIMARY KEY,
-                timestamp TEXT NOT NULL,
-                calculator_id TEXT NOT NULL,
-                input TEXT NOT NULL,
-                output TEXT NOT NULL
+                calc_id TEXT NOT NULL,
+                inputs TEXT NOT NULL,
+                outputs TEXT NOT NULL,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
             )",
             [],
-        )
-        .map_err(|e| Error::Database(format!("Schema creation failed: {}", e)))?;
+        ).map_err(|e| Error::DatabaseError(format!("Failed to create table: {}", e)))?;
 
         Ok(Self { conn })
     }
+}
 
-    /// Add entry to log.
-    pub fn add(&mut self, entry: &LogEntry) -> Result<i64> {
+impl Logbook for SqliteLogbook {
+    fn save_calculation(&mut self, calc_id: &str, inputs: &str, outputs: &str) -> Result<()> {
         self.conn
             .execute(
-                "INSERT INTO log (timestamp, calculator_id, input, output) VALUES (?1, ?2, ?3, ?4)",
-                params![
-                    &entry.timestamp,
-                    &entry.calculator_id,
-                    &entry.input,
-                    &entry.output
-                ],
+                "INSERT INTO calculations (calc_id, inputs, outputs) VALUES (?1, ?2, ?3)",
+                params![calc_id, inputs, outputs],
             )
-            .map_err(|e| Error::Database(format!("Insert failed: {}", e)))?;
-
-        Ok(self.conn.last_insert_rowid())
+            .map_err(|e| Error::DatabaseError(format!("Failed to save: {}", e)))?;
+        Ok(())
     }
 
-    /// Get recent entries (limit 100).
-    pub fn recent(&self, limit: usize) -> Result<Vec<LogEntry>> {
+    fn list_calculations(&self) -> Result<Vec<String>> {
         let mut stmt = self
             .conn
-            .prepare("SELECT id, timestamp, calculator_id, input, output FROM log ORDER BY id DESC LIMIT ?1")
-            .map_err(|e| Error::Database(format!("Query prepare failed: {}", e)))?;
+            .prepare("SELECT calc_id, timestamp FROM calculations ORDER BY timestamp DESC LIMIT 100")
+            .map_err(|e| Error::DatabaseError(format!("Failed to prepare: {}", e)))?;
 
-        let entries = stmt
-            .query_map([limit], |row| {
-                Ok(LogEntry {
-                    id: Some(row.get(0)?),
-                    timestamp: row.get(1)?,
-                    calculator_id: row.get(2)?,
-                    input: row.get(3)?,
-                    output: row.get(4)?,
-                })
+        let rows = stmt
+            .query_map([], |row| {
+                let calc_id: String = row.get(0)?;
+                let timestamp: String = row.get(1)?;
+                Ok(format!("{} at {}", calc_id, timestamp))
             })
-            .map_err(|e| Error::Database(format!("Query failed: {}", e)))?
-            .collect::<std::result::Result<Vec<_>, _>>()
-            .map_err(|e| Error::Database(format!("Row parse failed: {}", e)))?;
+            .map_err(|e| Error::DatabaseError(format!("Failed to query: {}", e)))?;
 
-        Ok(entries)
+        let mut results = Vec::new();
+        for row in rows {
+            results.push(row.map_err(|e| {
+                Error::DatabaseError(format!("Failed to read row: {}", e))
+            })?);
+        }
+
+        Ok(results)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_sqlite_logbook() {
+        let mut logbook = SqliteLogbook::new(":memory:").unwrap();
+        logbook.save_calculation("abv", "og=1.100,fg=1.000", "abv=13.125").unwrap();
+        let calcs = logbook.list_calculations().unwrap();
+        assert_eq!(calcs.len(), 1);
     }
 }

@@ -2,16 +2,18 @@
 name = "mazerion-gui"
 version.workspace = true
 edition.workspace = true
-rust-version.workspace = true
-
-[lints]
-workspace = true
+license.workspace = true
+authors.workspace = true
 
 [dependencies]
 mazerion-core = { path = "../core" }
 mazerion-calculators = { path = "../calculators" }
-mazerion-config = { path = "../config" }
-eframe = "0.33.2"
-egui = "0.33.2"
-rust_decimal = { workspace = true }
-rust_decimal_macros = "1.39.0"
+eframe.workspace = true
+egui.workspace = true
+rust_decimal.workspace = true
+serde = { version = "1.0.228", features = ["derive"] }
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"

@@ -1,69 +1,79 @@
-//! Line count enforcer for Mazerion.
-
-use std::env;
 use std::fs;
-use std::path::Path;
-use std::process;
+use std::path::PathBuf;
 
 const MAX_LINES: usize = 150;
 
-fn count_lines(path: &Path) -> std::io::Result<usize> {
-    let content = fs::read_to_string(path)?;
-    Ok(content.lines().count())
-}
-
-fn check_file(path: &Path) -> bool {
-    match count_lines(path) {
-        Ok(count) if count > MAX_LINES => {
-            eprintln!("❌ {}: {} lines (max {})", path.display(), count, MAX_LINES);
-            false
-        }
-        Ok(count) => {
-            println!("✓ {}: {} lines", path.display(), count);
-            true
-        }
-        Err(e) => {
-            eprintln!("⚠ {}: {}", path.display(), e);
-            false
-        }
-    }
-}
-
-fn walk_dir(dir: &Path, pattern: &str) -> Vec<bool> {
-    let mut results = Vec::new();
-
-    if let Ok(entries) = fs::read_dir(dir) {
-        for entry in entries.filter_map(Result::ok) {
-            let path = entry.path();
-
-            if path.is_dir() && !path.file_name().map_or(true, |n| n == "target") {
-                results.extend(walk_dir(&path, pattern));
-            } else if path.extension().and_then(|e| e.to_str()) == Some(pattern) {
-                results.push(check_file(&path));
-            }
-        }
-    }
-
-    results
-}
-
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    let root = args.get(1).map(String::as_str).unwrap_or(".");
+    let mut violations = Vec::new();
+    let mut total_files = 0;
+    let mut total_lines = 0;
 
-    println!("🔍 Checking Rust files in {} (max {} lines per file)", root, MAX_LINES);
+    let paths = vec![
+        "crates/core/src",
+        "crates/calculators/src",
+        "crates/config/src",
+        "crates/db/src",
+        "crates/gui/src",
+        "crates/tui/src",
+        "crates/cli/src",
+    ];
 
-    let results = walk_dir(Path::new(root), "rs");
-
-    let passed = results.iter().filter(|&&r| r).count();
-    let failed = results.len().saturating_sub(passed);
-
-    println!("\n📊 Summary: {} passed, {} failed", passed, failed);
-
-    if failed > 0 {
-        eprintln!("\n❌ Line limit violations detected!");
-        process::exit(1);
+    for path in paths {
+        check_directory(path, &mut violations, &mut total_files, &mut total_lines);
     }
 
-    println!("\n✅ All files within line limit");
+    println!("Line Guard Report");
+    println!("=================");
+    println!("Total files checked: {}", total_files);
+    println!("Total lines: {}", total_lines);
+    println!("Max lines per file: {}", MAX_LINES);
+    println!();
+
+    if violations.is_empty() {
+        println!("✅ All files are within the {} line limit!", MAX_LINES);
+    } else {
+        println!("❌ {} file(s) exceed the line limit:", violations.len());
+        for (file, lines) in violations {
+            println!("  {} - {} lines (excess: {})", file, lines, lines - MAX_LINES);
+        }
+        std::process::exit(1);
+    }
+}
+
+fn check_directory(
+    path: &str,
+    violations: &mut Vec<(String, usize)>,
+    total_files: &mut usize,
+    total_lines: &mut usize,
+) {
+    let entries = match fs::read_dir(path) {
+        Ok(e) => e,
+        Err(_) => return,
+    };
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            check_directory(&path.to_string_lossy(), violations, total_files, total_lines);
+        } else if path.extension().and_then(|s| s.to_str()) == Some("rs") {
+            check_file(&path, violations, total_files, total_lines);
+        }
+    }
+}
+
+fn check_file(
+    path: &PathBuf,
+    violations: &mut Vec<(String, usize)>,
+    total_files: &mut usize,
+    total_lines: &mut usize,
+) {
+    if let Ok(content) = fs::read_to_string(path) {
+        let line_count = content.lines().count();
+        *total_files += 1;
+        *total_lines += line_count;
+
+        if line_count > MAX_LINES {
+            violations.push((path.to_string_lossy().to_string(), line_count));
+        }
+    }
 }

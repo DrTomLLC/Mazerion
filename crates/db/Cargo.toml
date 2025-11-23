@@ -2,16 +2,18 @@
 name = "mazerion-db"
 version.workspace = true
 edition.workspace = true
-rust-version.workspace = true
-
-[lints]
-workspace = true
-
-[features]
-default = []
-db = ["dep:rusqlite"]
+license.workspace = true
+authors.workspace = true
 
 [dependencies]
 mazerion-core = { path = "../core" }
-serde = { workspace = true }
-rusqlite = { version = "0.37.0", features = ["bundled"], optional = true }
+rusqlite = { version = "0.32", features = ["bundled"], optional = true }
+
+[features]
+default = []
+sqlite = ["dep:rusqlite"]
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"

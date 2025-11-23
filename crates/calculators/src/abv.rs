@@ -4,7 +4,7 @@ use mazerion_core::{
     register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
 };
 use rust_decimal::Decimal;
-use rust_decimal_macros::dec;
+use std::str::FromStr;
 
 /// Calculate alcohol by volume from gravity readings.
 #[derive(Default)]
@@ -48,11 +48,11 @@ impl Calculator for AbvCalculator {
             return Err(Error::Validation("OG must be >= FG".into()));
         }
 
-        let abv = (og_val - fg_val) * dec!(131.25);
+        let abv = (og_val - fg_val) * Decimal::new(13125, 2); // 131.25
 
         let mut result = CalcResult::new(Measurement::new(abv, Unit::Abv));
 
-        if abv > dec!(20) {
+        if abv > Decimal::from(20) {
             result = result.with_warning("ABV > 20% is unusually high");
         }
 

@@ -1,196 +1,68 @@
-# 🍯 Mazerion
+# 🍯 Mazerion - Precision Mead & Beverage Calculator
 
-**Precision Mead & Beverage Calculator** — A modular, panic-free Rust workspace with GUI, TUI, and CLI interfaces.
+A production-ready Rust application for precise brewing calculations, specializing in mead, beer, wine, cider, and hybrid beverages.
 
 ## Features
 
-- ✅ **Zero Panics**: No `unwrap`, `expect`, `panic!`, `todo!` anywhere
-- 🎯 **Decimal Precision**: Using `rust_decimal` for accurate calculations
-- 🔌 **Modular Calculators**: Drop-in calculator plugins via compile-time registry
-- 🔥 **Hot Reload**: Config and ingredients files reload on change
-- 🎨 **Pure Rust UIs**: GUI (egui), TUI (ratatui), CLI
-- 📊 **Optional SQLite**: Feature-gated database for calculation history
-- 📏 **Line Limits**: Max 150 lines per `.rs` file, enforced by tooling
-- 🔒 **Strict Linting**: Denies unsafe code, panics, and common pitfalls
+### 11 Professional Calculators
 
-## Quick Start
+**Basic Calculations**
+- ABV Calculator - Calculate alcohol by volume from gravity readings
+- Brix ↔ SG Converter - Convert between Brix and specific gravity
+- SG Temperature Correction - Adjust readings for temperature
+
+**Advanced Operations**
+- Dilution Calculator - Adjust ABV with water additions
+- Blending Calculator - Mix two beverages with precision
+- Refractometer Correction - Alcohol-adjusted refractometer readings
+
+**Fermentation Management**
+- Yeast Nutrition - TOSNA protocol with Fermaid O calculations
+- Carbonation Calculator - Precise priming sugar calculations
+
+**Finishing Processes**
+- Acid Addition - pH adjustment with 4 acid types
+- Sulfite Calculator - K-meta and SO2 dosing
+- Backsweetening - Post-fermentation sugar additions
+
+## Installation
 
 ```bash
-# Build everything
 cargo build --release
+```
 
-# Run GUI
+## Usage
+
+### GUI Mode (Recommended)
+```bash
 cargo run --bin mazerion -- gui
+```
 
-# Run TUI
+### TUI Mode
+```bash
 cargo run --bin mazerion -- tui
+```
 
-# List calculators
+### List Calculators
+```bash
 cargo run --bin mazerion -- list
-
-# Check line counts
-cargo run --bin line-guard
 ```
 
-## Workspace Structure
+## Architecture Highlights
 
-```
-mazerion/
-├── crates/
-│   ├── core/         # Core types, traits, errors
-│   ├── calculators/  # Calculator implementations
-│   ├── config/       # Hot-reload configuration
-│   ├── db/           # Optional SQLite (feature: db)
-│   ├── gui/          # egui/eframe GUI
-│   ├── tui/          # ratatui TUI
-│   └── cli/          # CLI launcher
-└── tools/
-    └── line-guard/   # Line count enforcer
-```
+- **Zero Panics**: Comprehensive error handling, no unwrap/expect/panic
+- **Decimal Precision**: rust_decimal for accurate brewing calculations
+- **Modular Design**: Drop-in calculator system with compile-time registry
+- **Hot-Reload**: Configuration files auto-reload during runtime
+- **Pure Rust UIs**: egui GUI + ratatui TUI
+- **Optional SQLite**: Feature-gated database integration
+- **Strict Quality**: All files ≤150 lines, comprehensive validation
 
-## Adding a Calculator
+## Documentation
 
-Create a new file in `crates/calculators/src/`:
-
-```rust
-use mazerion_core::{register_calculator, Calculator, CalcInput, CalcResult};
-
-#[derive(Default)]
-pub struct MyCalculator;
-
-impl MyCalculator {
-    pub const ID: &'static str = "my_calc";
-}
-
-impl Calculator for MyCalculator {
-    fn id(&self) -> &'static str { Self::ID }
-    fn name(&self) -> &'static str { "My Calculator" }
-    fn description(&self) -> &'static str { "Does something cool" }
-    
-    fn calculate(&self, input: CalcInput) -> mazerion_core::Result<CalcResult> {
-        // Your logic here
-        todo!() // This would fail clippy - implement it!
-    }
-}
-
-register_calculator!(MyCalculator);
-```
-
-Then add to `crates/calculators/src/lib.rs`:
-
-```rust
-pub mod my_calc;
-pub use my_calc::MyCalculator;
-```
-
-**No other code needs to change!** The calculator auto-registers at compile time.
-
-## Validation Ranges
-
-- **SG**: 0.6000–2.0000 (4 decimals)
-- **pH**: 1.50–8.50 (3 decimals)
-- **Brix/Plato**: 0–70 (warn >45, 2 decimals)
-- **Temperature**: −5°C to 100°C
-
-## Configuration
-
-### config.toml
-
-Hot-reloaded configuration:
-
-```toml
-app_name = "Mazerion"
-version = "0.1.0"
-
-[precision]
-sg_decimals = 4
-ph_decimals = 3
-brix_decimals = 2
-```
-
-### ingredients.toml
-
-Hot-reloaded ingredient database:
-
-```toml
-[[items]]
-name = "Honey"
-category = "sweetener"
-sugar_content = 82.0
-```
-
-## Database Feature
-
-Enable SQLite logbook:
-
-```bash
-cargo build --features db
-```
-
-Without the `db` feature, builds have no database dependencies.
-
-## CI & Testing
-
-```bash
-# Linting
-cargo clippy -- -D warnings
-
-# Tests
-cargo test --all-features
-
-# Line limits
-cargo run --bin line-guard
-
-# Deny checks
-cargo deny check
-```
-
-## Android Build
-
-```bash
-# Install cargo-ndk
-cargo install cargo-ndk
-
-# Build for Android
-cargo ndk build --target aarch64-linux-android
-```
+- See `ARCHITECTURE.md` for design details
+- See `CONTRIBUTING.md` for extension guide
 
 ## License
 
 MIT OR Apache-2.0
-
-## Architecture
-
-### Calculator Registry
-
-Uses `linkme` for compile-time registration. No runtime initialization needed.
-
-### Error Handling
-
-All errors use `thiserror` with typed variants. No string errors or panics.
-
-### Hot Reload
-
-Polls file metadata (mtime + size) without heavy dependencies. Efficient and simple.
-
-### Precision
-
-`rust_decimal::Decimal` for all measurements. Display precision per unit type.
-
-## Development
-
-Requires Rust 1.83+ (Edition 2024).
-
-```bash
-# Development build
-cargo build
-
-# Release build (optimized)
-cargo build --release
-
-# Run tests
-cargo test
-
-# Check everything
-cargo check --all-features --all-targets
-```

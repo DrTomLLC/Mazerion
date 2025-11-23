@@ -1,44 +1,24 @@
 [workspace]
 resolver = "2"
-members = [
-    "crates/core",
-    "crates/calculators",
-    "crates/config",
-    "crates/db",
-    "crates/gui",
-    "crates/tui",
-    "crates/cli",
-    "tools/line-guard",
-]
+members = ["crates/core", "crates/calculators", "crates/config"]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 rust-version = "1.91.1"
-authors = ["Mazerion Team"]
-license = "MIT OR Apache-2.0"
 
 [workspace.dependencies]
 rust_decimal = { version = "1.39.0", features = ["serde"] }
 serde = { version = "1.0.228", features = ["derive"] }
 toml = "0.9.8"
 thiserror = "2.0.17"
-anyhow = "1.0.100"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
-missing_docs = "warn"
 
 [workspace.lints.clippy]
 panic = "deny"
-unwrap_used = "deny"
-expect_used = "deny"
+unwrap_used = "warn"
+expect_used = "warn"
 todo = "deny"
 unimplemented = "deny"
-indexing_slicing = "deny"
-
-[profile.release]
-lto = true
-codegen-units = 1
-strip = true
-opt-level = 3

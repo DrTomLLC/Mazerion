@@ -2,15 +2,16 @@
 name = "mazerion-tui"
 version.workspace = true
 edition.workspace = true
-rust-version.workspace = true
-
-[lints]
-workspace = true
+license.workspace = true
+authors.workspace = true
 
 [dependencies]
 mazerion-core = { path = "../core" }
 mazerion-calculators = { path = "../calculators" }
-mazerion-config = { path = "../config" }
-ratatui = "0.30.0-beta.0"
-crossterm = "0.29.0"
-rust_decimal = { workspace = true }
+ratatui.workspace = true
+crossterm.workspace = true
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
