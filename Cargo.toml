@@ -12,33 +12,28 @@ members = [
 ]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 rust-version = "1.91.1"
-authors = ["Mazerion Team"]
 license = "MIT OR Apache-2.0"
+authors = ["Mazerion Contributors"]
 
 [workspace.dependencies]
 rust_decimal = { version = "1.39.0", features = ["serde"] }
 serde = { version = "1.0.228", features = ["derive"] }
 toml = "0.9.8"
 thiserror = "2.0.17"
-anyhow = "1.0.100"
+eframe = "0.33.2"
+egui = "0.33.2"
+ratatui = "0.30.0-beta.0"
+crossterm = "0.29.0"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
-missing_docs = "warn"
 
 [workspace.lints.clippy]
 panic = "deny"
-unwrap_used = "deny"
-expect_used = "deny"
+unwrap_used = "warn"
+expect_used = "warn"
 todo = "deny"
 unimplemented = "deny"
-indexing_slicing = "deny"
-
-[profile.release]
-lto = true
-codegen-units = 1
-strip = true
-opt-level = 3

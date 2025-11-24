@@ -13,6 +13,12 @@ pub trait Calculator: Send + Sync {
     /// Description.
     fn description(&self) -> &'static str;
 
+    /// Category for organization.
+    fn category(&self) -> &'static str;
+
+    /// Detailed help text.
+    fn help_text(&self) -> &'static str;
+
     /// Perform calculation.
     fn calculate(&self, input: CalcInput) -> Result<CalcResult>;
 
@@ -47,6 +53,14 @@ pub fn get_calculator(id: &str) -> Option<Box<dyn Calculator>> {
         .iter()
         .find(|e| e.id == id)
         .map(|e| (e.factory)())
+}
+
+/// Get all calculators.
+pub fn get_all_calculators() -> Vec<Box<dyn Calculator>> {
+    CALCULATORS
+        .iter()
+        .map(|e| (e.factory)())
+        .collect()
 }
 
 /// List all calculator IDs.

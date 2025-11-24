@@ -1,32 +1,58 @@
-//! Mazerion CLI launcher.
-
-use mazerion_core::traits::list_calculators;
+use mazerion_core::traits::get_all_calculators;
 use std::env;
 
-fn main() -> anyhow::Result<()> {
+fn main() {
     let args: Vec<String> = env::args().collect();
+    let mode = args.get(1).map(String::as_str);
 
-    match args.get(1).map(|s| s.as_str()) {
+    match mode {
         Some("gui") => {
-            mazerion_gui::run().map_err(|e| anyhow::anyhow!("GUI error: {}", e))?;
-        }
-        Some("tui") => {
-            mazerion_tui::run()?;
-        }
-        Some("list") => {
-            println!("Available calculators:");
-            for calc_id in list_calculators() {
-                println!("  - {}", calc_id);
+            if let Err(e) = mazerion_gui::run() {
+                eprintln!("GUI error: {}", e);
+                std::process::exit(1);
             }
         }
+        Some("tui") => {
+            if let Err(e) = mazerion_tui::run() {
+                eprintln!("TUI error: {}", e);
+                std::process::exit(1);
+            }
+        }
+        Some("list") => {
+            println!("🍯 Mazerion - Available Calculators:\n");
+            let calculators = get_all_calculators();
+
+            // Group by category
+            let mut by_category: std::collections::HashMap<String, Vec<_>> = std::collections::HashMap::new();
+            for calc in calculators {
+                by_category.entry(calc.category().to_string())
+                    .or_default()
+                    .push(calc);
+            }
+
+            // Sort categories
+            let mut categories: Vec<_> = by_category.keys().collect();
+            categories.sort();
+
+            for category in categories {
+                println!("📂 {}:", category.to_uppercase());
+                let calcs = &by_category[category];
+                for calc in calcs {
+                    println!("  • {} ({})", calc.name(), calc.id());
+                    println!("    {}", calc.description());
+                }
+                println!();
+            }
+
+            println!("Total: {} calculators", get_all_calculators().len());
+        }
         _ => {
-            println!("Mazerion - Precision Mead & Beverage Calculator");
+            println!("🍯 Mazerion - Precision Beverage Calculator v0.2.0");
             println!("\nUsage:");
-            println!("  mazerion gui      Launch GUI");
-            println!("  mazerion tui      Launch TUI");
-            println!("  mazerion list     List calculators");
+            println!("  mazerion gui   - Launch GUI (recommended)");
+            println!("  mazerion tui   - Launch terminal UI");
+            println!("  mazerion list  - List all calculators");
+            println!("\nFor help and documentation, visit the README.md");
         }
     }
-
-    Ok(())
 }

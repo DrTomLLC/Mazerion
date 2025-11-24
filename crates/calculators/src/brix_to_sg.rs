@@ -4,7 +4,7 @@ use mazerion_core::{
     register_calculator, CalcInput, CalcResult, Calculator, Measurement, Result, Unit,
     Validator,
 };
-use rust_decimal_macros::dec;
+use rust_decimal::Decimal;
 
 /// Convert Brix to SG using polynomial approximation.
 #[derive(Default)]
@@ -27,13 +27,21 @@ impl Calculator for BrixToSgCalculator {
         "Convert degrees Brix to specific gravity"
     }
 
+    fn category(&self) -> &'static str {
+        "Basic Calculations"
+    }
+
+    fn help_text(&self) -> &'static str {
+        "Converts Brix to SG using: SG ≈ 1.0 + (Brix × 0.004)"
+    }
+
     fn calculate(&self, input: CalcInput) -> Result<CalcResult> {
         let brix_meas = input.get_measurement(Unit::Brix)?;
         let brix = brix_meas.value;
 
         Validator::brix(brix)?;
 
-        let sg = dec!(1.0) + (brix * dec!(0.004));
+        let sg = Decimal::ONE + (brix * Decimal::new(4, 3));
 
         let mut result = CalcResult::new(Measurement::sg(sg)?);
 
