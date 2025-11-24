@@ -15,7 +15,12 @@ mod tests {
         let result = calc.calculate(input);
         assert!(result.is_ok());
 
-        let res = result.unwrap();
+        let res = if let Ok(value) = result {
+            value
+        } else {
+            // This should never happen as we've already verified result is Ok
+            unreachable!("Result should be Ok as verified by assert");
+        };
         assert!(res.output.value > dec!(0));
         assert!(res.output.value < dec!(20));
     }
@@ -50,7 +55,12 @@ mod tests {
         let result = calc.calculate(input);
         assert!(result.is_ok());
 
-        let res = result.unwrap();
+        let res = if let Ok(value) = result {
+            value
+        } else {
+            // This should never happen as we've already verified result is Ok
+            unreachable!("Result should be Ok as verified by assert");
+        };
         assert!(!res.warnings.is_empty());
     }
 }

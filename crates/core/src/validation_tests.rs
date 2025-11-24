@@ -47,12 +47,17 @@ mod tests {
 
     #[test]
     fn test_calc_input() {
-        let input = CalcInput::new()
-            .add_measurement(Measurement::sg(dec!(1.050)).unwrap())
-            .add_param("test", "value");
+        let sg = Measurement::sg(dec!(1.050));
+        assert!(sg.is_ok());
 
-        assert!(input.get_measurement(Unit::SpecificGravity).is_ok());
-        assert!(input.get_param("test").is_some());
-        assert_eq!(input.get_param("test"), Some("value"));
+        if let Ok(measurement) = sg {
+            let input = CalcInput::new()
+                .add_measurement(measurement)
+                .add_param("test", "value");
+
+            assert!(input.get_measurement(Unit::SpecificGravity).is_ok());
+            assert!(input.get_param("test").is_some());
+            assert_eq!(input.get_param("test"), Some("value"));
+        }
     }
 }
