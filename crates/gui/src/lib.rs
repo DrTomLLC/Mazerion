@@ -1,4 +1,4 @@
-//! GUI for Mazerion using egui.
+//! GUI for Mazerion using egui - Complete implementation with all 11 calculators.
 
 mod state;
 mod tabs;
@@ -130,6 +130,54 @@ impl eframe::App for MazerionApp {
 }
 
 impl MazerionApp {
+    // UNIT CONVERSION HELPERS
+    fn format_volume(&self, liters: f64) -> String {
+        match self.state.settings.measurement_system {
+            MeasurementSystem::Standard => format!("{:.2} gal", liters * 0.264172),
+            MeasurementSystem::Metric => format!("{:.2} L", liters),
+        }
+    }
+
+    fn format_temp(&self, celsius: f64) -> String {
+        match self.state.settings.measurement_system {
+            MeasurementSystem::Standard => format!("{:.1}°F", (celsius * 9.0 / 5.0) + 32.0),
+            MeasurementSystem::Metric => format!("{:.1}°C", celsius),
+        }
+    }
+
+    fn format_weight(&self, grams: f64) -> String {
+        match self.state.settings.measurement_system {
+            MeasurementSystem::Standard => {
+                if grams >= 453.592 {
+                    format!("{:.2} lb", grams / 453.592)
+                } else {
+                    format!("{:.2} oz", grams * 0.035274)
+                }
+            }
+            MeasurementSystem::Metric => {
+                if grams >= 1000.0 {
+                    format!("{:.2} kg", grams / 1000.0)
+                } else {
+                    format!("{:.1} g", grams)
+                }
+            }
+        }
+    }
+
+    fn volume_label(&self) -> &str {
+        match self.state.settings.measurement_system {
+            MeasurementSystem::Standard => "Volume (gal):",
+            MeasurementSystem::Metric => "Volume (L):",
+        }
+    }
+
+    fn temp_label(&self) -> &str {
+        match self.state.settings.measurement_system {
+            MeasurementSystem::Standard => "Temperature (°F):",
+            MeasurementSystem::Metric => "Temperature (°C):",
+        }
+    }
+
     fn apply_theme(&self, ctx: &egui::Context) {
         match self.state.settings.theme {
             Theme::Light => ctx.set_visuals(egui::Visuals::light()),
@@ -141,12 +189,14 @@ impl MazerionApp {
     fn render_header(&self, ui: &mut egui::Ui) {
         ui.vertical_centered(|ui| {
             ui.heading(egui::RichText::new("🍯 Mazerion").size(32.0).strong());
-            ui.label(egui::RichText::new(format!("Professional Beverage Calculator Suite - {} calculators", self.calculators.len())).size(14.0));
+            ui.label(egui::RichText::new(format!("Professional Beverage Calculator Suite - {} calculators loaded", self.calculators.len())).size(14.0));
         });
     }
 
     fn render_tabs(&mut self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
+            ui.spacing_mut().item_spacing.x = 5.0;
+
             if self.tab_button(ui, "📊 Basic", self.state.current_tab == state::TabView::Basic).clicked() {
                 self.state.current_tab = state::TabView::Basic;
                 self.result.clear();
@@ -183,58 +233,66 @@ impl MazerionApp {
         ui.heading("📊 Basic Calculators");
         ui.add_space(10.0);
 
+        // ABV Calculator
         ui.group(|ui| {
             ui.heading("🍺 ABV Calculator");
-            egui::Grid::new("abv_grid").show(ui, |ui| {
-                ui.label("Original Gravity:");
+            ui.label("Calculate alcohol by volume from gravity readings");
+            egui::Grid::new("abv_grid").num_columns(2).spacing([10.0, 8.0]).show(ui, |ui| {
+                ui.label("Original Gravity (OG):");
                 ui.text_edit_singleline(&mut self.og);
                 ui.end_row();
-                ui.label("Final Gravity:");
+                ui.label("Final Gravity (FG):");
                 ui.text_edit_singleline(&mut self.fg);
                 ui.end_row();
             });
-            if ui.button("Calculate ABV").clicked() {
+            if ui.button("📊 Calculate ABV").clicked() {
                 self.calc_abv();
             }
         });
 
         ui.add_space(10.0);
 
+        // Brix to SG Converter
         ui.group(|ui| {
             ui.heading("📐 Brix to SG Converter");
-            egui::Grid::new("brix_grid").show(ui, |ui| {
+            ui.label("Convert degrees Brix to Specific Gravity");
+            egui::Grid::new("brix_grid").num_columns(2).spacing([10.0, 8.0]).show(ui, |ui| {
                 ui.label("Brix (°Bx):");
                 ui.text_edit_singleline(&mut self.brix_input);
                 ui.end_row();
             });
-            if ui.button("Convert to SG").clicked() {
+            if ui.button("🔄 Convert to SG").clicked() {
                 self.calc_brix_to_sg();
             }
         });
 
         ui.add_space(10.0);
 
+        // SG Temperature Correction
         ui.group(|ui| {
             ui.heading("🌡️ SG Temperature Correction");
-            egui::Grid::new("sg_corr_grid").show(ui, |ui| {
+            ui.label("Adjust gravity readings for temperature (calibrated at 20°C/68°F)");
+            egui::Grid::new("sg_corr_grid").num_columns(2).spacing([10.0, 8.0]).show(ui, |ui| {
                 ui.label("Measured SG:");
                 ui.text_edit_singleline(&mut self.sg_input);
                 ui.end_row();
-                ui.label("Temperature (°C):");
+                ui.label(self.temp_label());
                 ui.text_edit_singleline(&mut self.temp_input);
                 ui.end_row();
             });
-            if ui.button("Correct for Temperature").clicked() {
+            if ui.button("✅ Correct for Temperature").clicked() {
                 self.calc_sg_correction();
             }
         });
 
         ui.add_space(10.0);
 
+        // Dilution Calculator
         ui.group(|ui| {
             ui.heading("💧 Dilution Calculator");
-            egui::Grid::new("dilution_grid").show(ui, |ui| {
-                ui.label("Current Volume (L):");
+            ui.label("Calculate water needed to reduce ABV");
+            egui::Grid::new("dilution_grid").num_columns(2).spacing([10.0, 8.0]).show(ui, |ui| {
+                ui.label(self.volume_label());
                 ui.text_edit_singleline(&mut self.dilution_vol);
                 ui.end_row();
                 ui.label("Current ABV (%):");
@@ -244,7 +302,7 @@ impl MazerionApp {
                 ui.text_edit_singleline(&mut self.dilution_target_abv);
                 ui.end_row();
             });
-            if ui.button("Calculate Water Needed").clicked() {
+            if ui.button("💧 Calculate Water Needed").clicked() {
                 self.calc_dilution();
             }
         });
@@ -257,33 +315,36 @@ impl MazerionApp {
         ui.heading("🔬 Advanced Calculators");
         ui.add_space(10.0);
 
+        // Blending Calculator
         ui.group(|ui| {
             ui.heading("🔀 Blending Calculator");
-            egui::Grid::new("blend_grid").show(ui, |ui| {
-                ui.label("Batch 1 Volume (L):");
+            ui.label("Calculate final ABV when mixing two batches");
+            egui::Grid::new("blend_grid").num_columns(2).spacing([10.0, 8.0]).show(ui, |ui| {
+                ui.label(format!("Batch 1 {}", self.volume_label()));
                 ui.text_edit_singleline(&mut self.blend_vol1);
                 ui.end_row();
                 ui.label("Batch 1 ABV (%):");
                 ui.text_edit_singleline(&mut self.blend_abv1);
                 ui.end_row();
-                ui.label("Batch 2 Volume (L):");
+                ui.label(format!("Batch 2 {}", self.volume_label()));
                 ui.text_edit_singleline(&mut self.blend_vol2);
                 ui.end_row();
                 ui.label("Batch 2 ABV (%):");
                 ui.text_edit_singleline(&mut self.blend_abv2);
                 ui.end_row();
             });
-            if ui.button("Calculate Blend").clicked() {
+            if ui.button("🔀 Calculate Blend").clicked() {
                 self.calc_blending();
             }
         });
 
         ui.add_space(10.0);
 
+        // Refractometer Correction
         ui.group(|ui| {
             ui.heading("🔍 Refractometer Correction");
-            ui.label("Correct refractometer readings for alcohol (Terrill cubic)");
-            egui::Grid::new("refract_grid").show(ui, |ui| {
+            ui.label("Correct refractometer readings for alcohol (Terrill cubic equation)");
+            egui::Grid::new("refract_grid").num_columns(2).spacing([10.0, 8.0]).show(ui, |ui| {
                 ui.label("Original Brix (°Bx):");
                 ui.text_edit_singleline(&mut self.refract_og);
                 ui.end_row();
@@ -291,7 +352,7 @@ impl MazerionApp {
                 ui.text_edit_singleline(&mut self.refract_fg);
                 ui.end_row();
             });
-            if ui.button("Calculate True SG").clicked() {
+            if ui.button("🔍 Calculate True SG").clicked() {
                 self.calc_refractometer();
             }
         });
@@ -304,40 +365,43 @@ impl MazerionApp {
         ui.heading("🍺 Brewing Calculators");
         ui.add_space(10.0);
 
+        // TOSNA Nutrition Calculator
         ui.group(|ui| {
             ui.heading("🧪 TOSNA Nutrition Calculator");
             ui.label("Calculate Fermaid-O schedule using TOSNA 2.0 protocol");
-            egui::Grid::new("tosna_grid").show(ui, |ui| {
-                ui.label("Volume (L):");
+            egui::Grid::new("tosna_grid").num_columns(2).spacing([10.0, 8.0]).show(ui, |ui| {
+                ui.label(self.volume_label());
                 ui.text_edit_singleline(&mut self.tosna_volume);
                 ui.end_row();
                 ui.label("Target ABV (%):");
                 ui.text_edit_singleline(&mut self.tosna_target_abv);
                 ui.end_row();
-                ui.label("Yeast Nitrogen Req:");
+                ui.label("Yeast Nitrogen Need:");
                 egui::ComboBox::from_id_source("yn_req")
                     .selected_text(&self.tosna_yn_req)
                     .show_ui(ui, |ui| {
-                        ui.selectable_value(&mut self.tosna_yn_req, "low".to_string(), "Low");
-                        ui.selectable_value(&mut self.tosna_yn_req, "medium".to_string(), "Medium");
-                        ui.selectable_value(&mut self.tosna_yn_req, "high".to_string(), "High");
+                        ui.selectable_value(&mut self.tosna_yn_req, "low".to_string(), "Low (DV10, QA23)");
+                        ui.selectable_value(&mut self.tosna_yn_req, "medium".to_string(), "Medium (most yeasts)");
+                        ui.selectable_value(&mut self.tosna_yn_req, "high".to_string(), "High (EC-1118, K1-V1116)");
                     });
                 ui.end_row();
             });
-            if ui.button("Calculate TOSNA Schedule").clicked() {
+            if ui.button("🧪 Calculate TOSNA Schedule").clicked() {
                 self.calc_nutrition();
             }
         });
 
         ui.add_space(10.0);
 
+        // Carbonation Calculator
         ui.group(|ui| {
             ui.heading("🫧 Carbonation Calculator");
-            egui::Grid::new("carb_grid").show(ui, |ui| {
-                ui.label("Volume (L):");
+            ui.label("Calculate priming sugar or keg PSI for carbonation");
+            egui::Grid::new("carb_grid").num_columns(2).spacing([10.0, 8.0]).show(ui, |ui| {
+                ui.label(self.volume_label());
                 ui.text_edit_singleline(&mut self.carb_volume);
                 ui.end_row();
-                ui.label("Temperature (°C):");
+                ui.label(self.temp_label());
                 ui.text_edit_singleline(&mut self.carb_temp);
                 ui.end_row();
                 ui.label("Target CO₂ (volumes):");
@@ -356,15 +420,15 @@ impl MazerionApp {
                     egui::ComboBox::from_id_source("sugar_type")
                         .selected_text(&self.carb_sugar_type)
                         .show_ui(ui, |ui| {
-                            ui.selectable_value(&mut self.carb_sugar_type, "table_sugar".to_string(), "Table Sugar");
-                            ui.selectable_value(&mut self.carb_sugar_type, "corn_sugar".to_string(), "Corn Sugar");
+                            ui.selectable_value(&mut self.carb_sugar_type, "table_sugar".to_string(), "Table Sugar (Sucrose)");
+                            ui.selectable_value(&mut self.carb_sugar_type, "corn_sugar".to_string(), "Corn Sugar (Dextrose)");
                             ui.selectable_value(&mut self.carb_sugar_type, "honey".to_string(), "Honey");
-                            ui.selectable_value(&mut self.carb_sugar_type, "dme".to_string(), "DME");
+                            ui.selectable_value(&mut self.carb_sugar_type, "dme".to_string(), "Dry Malt Extract");
                         });
                     ui.end_row();
                 }
             });
-            if ui.button("Calculate Carbonation").clicked() {
+            if ui.button("🫧 Calculate Carbonation").clicked() {
                 self.calc_carbonation();
             }
         });
@@ -377,11 +441,13 @@ impl MazerionApp {
         ui.heading("✨ Finishing Calculators");
         ui.add_space(10.0);
 
+        // Backsweetening Calculator
         ui.group(|ui| {
             ui.heading("🍯 Backsweetening Calculator");
-            ui.label("⚠️ MUST stabilize with K-meta and K-sorbate FIRST!");
-            egui::Grid::new("sweet_grid").show(ui, |ui| {
-                ui.label("Volume (L):");
+            ui.colored_label(egui::Color32::from_rgb(255, 100, 0), "⚠️ CRITICAL: Stabilize with K-meta and K-sorbate FIRST!");
+            ui.label("Calculate sweetener additions to reach target gravity");
+            egui::Grid::new("sweet_grid").num_columns(2).spacing([10.0, 8.0]).show(ui, |ui| {
+                ui.label(self.volume_label());
                 ui.text_edit_singleline(&mut self.sweet_volume);
                 ui.end_row();
                 ui.label("Current SG:");
@@ -390,29 +456,30 @@ impl MazerionApp {
                 ui.label("Target SG:");
                 ui.text_edit_singleline(&mut self.sweet_target_sg);
                 ui.end_row();
-                ui.label("Sweetener:");
+                ui.label("Sweetener Type:");
                 egui::ComboBox::from_id_source("sweetener")
                     .selected_text(&self.sweet_type)
                     .show_ui(ui, |ui| {
                         ui.selectable_value(&mut self.sweet_type, "honey".to_string(), "Honey");
                         ui.selectable_value(&mut self.sweet_type, "table_sugar".to_string(), "Table Sugar");
-                        ui.selectable_value(&mut self.sweet_type, "agave".to_string(), "Agave");
+                        ui.selectable_value(&mut self.sweet_type, "agave".to_string(), "Agave Nectar");
                         ui.selectable_value(&mut self.sweet_type, "maple_syrup".to_string(), "Maple Syrup");
                     });
                 ui.end_row();
             });
-            if ui.button("Calculate Sweetener Amount").clicked() {
+            if ui.button("🍯 Calculate Sweetener Amount").clicked() {
                 self.calc_backsweetening();
             }
         });
 
         ui.add_space(10.0);
 
+        // Sulfite Calculator
         ui.group(|ui| {
             ui.heading("🛡️ Sulfite Calculator");
             ui.label("Calculate K-meta additions with pH-dependent effectiveness");
-            egui::Grid::new("sulfite_grid").show(ui, |ui| {
-                ui.label("Volume (L):");
+            egui::Grid::new("sulfite_grid").num_columns(2).spacing([10.0, 8.0]).show(ui, |ui| {
+                ui.label(self.volume_label());
                 ui.text_edit_singleline(&mut self.sulfite_volume);
                 ui.end_row();
                 ui.label("pH:");
@@ -422,17 +489,19 @@ impl MazerionApp {
                 ui.text_edit_singleline(&mut self.sulfite_target_so2);
                 ui.end_row();
             });
-            if ui.button("Calculate Sulfite Addition").clicked() {
+            if ui.button("🛡️ Calculate Sulfite Addition").clicked() {
                 self.calc_sulfite();
             }
         });
 
         ui.add_space(10.0);
 
+        // Acid Addition Calculator
         ui.group(|ui| {
             ui.heading("🍋 Acid Addition Calculator");
-            egui::Grid::new("acid_grid").show(ui, |ui| {
-                ui.label("Volume (L):");
+            ui.label("Calculate acid additions to adjust pH");
+            egui::Grid::new("acid_grid").num_columns(2).spacing([10.0, 8.0]).show(ui, |ui| {
+                ui.label(self.volume_label());
                 ui.text_edit_singleline(&mut self.acid_volume);
                 ui.end_row();
                 ui.label("Current pH:");
@@ -445,14 +514,14 @@ impl MazerionApp {
                 egui::ComboBox::from_id_source("acid_type")
                     .selected_text(&self.acid_type)
                     .show_ui(ui, |ui| {
-                        ui.selectable_value(&mut self.acid_type, "tartaric".to_string(), "Tartaric");
-                        ui.selectable_value(&mut self.acid_type, "citric".to_string(), "Citric");
-                        ui.selectable_value(&mut self.acid_type, "malic".to_string(), "Malic");
-                        ui.selectable_value(&mut self.acid_type, "lactic".to_string(), "Lactic");
+                        ui.selectable_value(&mut self.acid_type, "tartaric".to_string(), "Tartaric (strongest, wine)");
+                        ui.selectable_value(&mut self.acid_type, "citric".to_string(), "Citric (bright, fruity)");
+                        ui.selectable_value(&mut self.acid_type, "malic".to_string(), "Malic (soft, apple-like)");
+                        ui.selectable_value(&mut self.acid_type, "lactic".to_string(), "Lactic (smooth, creamy)");
                     });
                 ui.end_row();
             });
-            if ui.button("Calculate Acid Addition").clicked() {
+            if ui.button("🍋 Calculate Acid Addition").clicked() {
                 self.calc_acid_addition();
             }
         });
@@ -460,6 +529,7 @@ impl MazerionApp {
         self.render_result(ui);
     }
 
+    // SETTINGS TAB
     fn render_settings(&mut self, ui: &mut egui::Ui) {
         ui.heading("⚙️ Settings");
         ui.add_space(15.0);
@@ -472,24 +542,31 @@ impl MazerionApp {
                 egui::ComboBox::from_id_source("theme_selector")
                     .selected_text(format!("{:?}", self.state.settings.theme))
                     .show_ui(ui, |ui| {
-                        ui.selectable_value(&mut self.state.settings.theme, Theme::Light, "Light");
-                        ui.selectable_value(&mut self.state.settings.theme, Theme::Dark, "Dark");
-                        ui.selectable_value(&mut self.state.settings.theme, Theme::System, "System");
+                        ui.selectable_value(&mut self.state.settings.theme, Theme::Light, "☀️ Light");
+                        ui.selectable_value(&mut self.state.settings.theme, Theme::Dark, "🌙 Dark");
+                        ui.selectable_value(&mut self.state.settings.theme, Theme::System, "💻 System");
                     });
                 ui.end_row();
 
                 ui.label(egui::RichText::new("Measurement System:").size(16.0).strong());
                 egui::ComboBox::from_id_source("measurement_selector")
                     .selected_text(match self.state.settings.measurement_system {
-                        MeasurementSystem::Standard => "Standard (Imperial/US)",
-                        MeasurementSystem::Metric => "Metric",
+                        MeasurementSystem::Standard => "🇺🇸 Standard (Imperial/US)",
+                        MeasurementSystem::Metric => "🌍 Metric",
                     })
                     .show_ui(ui, |ui| {
-                        ui.selectable_value(&mut self.state.settings.measurement_system, MeasurementSystem::Standard, "Standard (Imperial/US)");
-                        ui.selectable_value(&mut self.state.settings.measurement_system, MeasurementSystem::Metric, "Metric");
+                        ui.selectable_value(&mut self.state.settings.measurement_system, MeasurementSystem::Standard, "🇺🇸 Standard (Imperial/US) - Default");
+                        ui.selectable_value(&mut self.state.settings.measurement_system, MeasurementSystem::Metric, "🌍 Metric");
                     });
                 ui.end_row();
             });
+
+        ui.add_space(20.0);
+        ui.separator();
+        ui.add_space(10.0);
+
+        ui.label(egui::RichText::new("💡 Theme changes apply immediately!").size(13.0).color(egui::Color32::DARK_GRAY));
+        ui.label(egui::RichText::new("📏 Measurement system changes labels and results.").size(13.0).color(egui::Color32::DARK_GRAY));
     }
 
     fn render_result(&self, ui: &mut egui::Ui) {
@@ -497,7 +574,15 @@ impl MazerionApp {
             ui.add_space(15.0);
             ui.separator();
             ui.add_space(10.0);
-            ui.label(egui::RichText::new(&self.result).size(14.0).strong());
+
+            egui::Frame::none()
+                .fill(egui::Color32::from_rgba_premultiplied(200, 255, 200, 30))
+                .stroke(egui::Stroke::new(2.0, egui::Color32::from_rgb(50, 150, 50)))
+                .corner_radius(8.0)
+                .inner_margin(15.0)
+                .show(ui, |ui| {
+                    ui.label(egui::RichText::new(&self.result).size(14.0));
+                });
         }
     }
 
@@ -512,7 +597,7 @@ impl MazerionApp {
                     Ok(res) => {
                         self.result = format!("✅ ABV: {:.2}%", res.output.value);
                         for w in &res.warnings { self.result.push_str(&format!("\n⚠️ {}", w)); }
-                        for (k, v) in &res.metadata { self.result.push_str(&format!("\n  • {}: {}", k, v)); }
+                        for (k, v) in &res.metadata { self.result.push_str(&format!("\nℹ️ {}: {}", k, v)); }
                     }
                     Err(e) => self.result = format!("❌ Error: {}", e),
                 }
@@ -561,7 +646,7 @@ impl MazerionApp {
                                     Ok(res) => {
                                         self.result = format!("✅ Corrected SG: {:.4}", res.output.value);
                                         for w in &res.warnings { self.result.push_str(&format!("\n⚠️ {}", w)); }
-                                        for (k, v) in &res.metadata { self.result.push_str(&format!("\n  • {}: {}", k, v)); }
+                                        for (k, v) in &res.metadata { self.result.push_str(&format!("\nℹ️ {}: {}", k, v)); }
                                     }
                                     Err(e) => self.result = format!("❌ Error: {}", e),
                                 }
@@ -585,9 +670,10 @@ impl MazerionApp {
                     .add_param("target_abv", &self.dilution_target_abv);
                 match calc.calculate(input) {
                     Ok(res) => {
-                        self.result = format!("✅ Water to Add: {:.2} L", res.output.value);
+                        let liters = res.output.value.to_string().parse::<f64>().unwrap_or(0.0);
+                        self.result = format!("✅ Water to Add: {}", self.format_volume(liters));
                         for w in &res.warnings { self.result.push_str(&format!("\n⚠️ {}", w)); }
-                        for (k, v) in &res.metadata { self.result.push_str(&format!("\n  • {}: {}", k, v)); }
+                        for (k, v) in &res.metadata { self.result.push_str(&format!("\nℹ️ {}: {}", k, v)); }
                     }
                     Err(e) => self.result = format!("❌ Error: {}", e),
                 }
@@ -608,7 +694,7 @@ impl MazerionApp {
                     Ok(res) => {
                         self.result = format!("✅ Blended ABV: {:.2}%", res.output.value);
                         for w in &res.warnings { self.result.push_str(&format!("\n⚠️ {}", w)); }
-                        for (k, v) in &res.metadata { self.result.push_str(&format!("\n  • {}: {}", k, v)); }
+                        for (k, v) in &res.metadata { self.result.push_str(&format!("\nℹ️ {}: {}", k, v)); }
                     }
                     Err(e) => self.result = format!("❌ Error: {}", e),
                 }
@@ -631,7 +717,7 @@ impl MazerionApp {
                                     Ok(res) => {
                                         self.result = format!("✅ Corrected FG: {:.4}", res.output.value);
                                         for w in &res.warnings { self.result.push_str(&format!("\n⚠️ {}", w)); }
-                                        for (k, v) in &res.metadata { self.result.push_str(&format!("\n  • {}: {}", k, v)); }
+                                        for (k, v) in &res.metadata { self.result.push_str(&format!("\nℹ️ {}: {}", k, v)); }
                                     }
                                     Err(e) => self.result = format!("❌ Error: {}", e),
                                 }
@@ -655,9 +741,10 @@ impl MazerionApp {
                     .add_param("yn_requirement", &self.tosna_yn_req);
                 match calc.calculate(input) {
                     Ok(res) => {
-                        self.result = format!("✅ Total Fermaid-O: {:.2} g", res.output.value);
+                        let grams = res.output.value.to_string().parse::<f64>().unwrap_or(0.0);
+                        self.result = format!("✅ Total Fermaid-O: {}", self.format_weight(grams));
                         for w in &res.warnings { self.result.push_str(&format!("\n⚠️ {}", w)); }
-                        for (k, v) in &res.metadata { self.result.push_str(&format!("\n  • {}: {}", k, v)); }
+                        for (k, v) in &res.metadata { self.result.push_str(&format!("\nℹ️ {}: {}", k, v)); }
                     }
                     Err(e) => self.result = format!("❌ Error: {}", e),
                 }
@@ -678,12 +765,13 @@ impl MazerionApp {
                 match calc.calculate(input) {
                     Ok(res) => {
                         if self.carb_method == "priming" {
-                            self.result = format!("✅ Priming Sugar: {:.1} g", res.output.value);
+                            let grams = res.output.value.to_string().parse::<f64>().unwrap_or(0.0);
+                            self.result = format!("✅ Priming Sugar: {}", self.format_weight(grams));
                         } else {
                             self.result = format!("✅ Target PSI: {:.1}", res.output.value);
                         }
                         for w in &res.warnings { self.result.push_str(&format!("\n⚠️ {}", w)); }
-                        for (k, v) in &res.metadata { self.result.push_str(&format!("\n  • {}: {}", k, v)); }
+                        for (k, v) in &res.metadata { self.result.push_str(&format!("\nℹ️ {}: {}", k, v)); }
                     }
                     Err(e) => self.result = format!("❌ Error: {}", e),
                 }
@@ -706,19 +794,17 @@ impl MazerionApp {
                                     .add_param("sweetener", &self.sweet_type);
                                 match calc.calculate(input) {
                                     Ok(res) => {
-                                        self.result = format!("✅ {} Needed: {:.0} g ({:.2} kg)",
-                                                              match self.sweet_type.as_str() {
-                                                                  "honey" => "Honey",
-                                                                  "table_sugar" => "Table Sugar",
-                                                                  "agave" => "Agave",
-                                                                  "maple_syrup" => "Maple Syrup",
-                                                                  _ => "Sweetener"
-                                                              },
-                                                              res.output.value,
-                                                              res.output.value / Decimal::from(1000)
-                                        );
+                                        let grams = res.output.value.to_string().parse::<f64>().unwrap_or(0.0);
+                                        let sweetener_name = match self.sweet_type.as_str() {
+                                            "honey" => "Honey",
+                                            "table_sugar" => "Table Sugar",
+                                            "agave" => "Agave",
+                                            "maple_syrup" => "Maple Syrup",
+                                            _ => "Sweetener"
+                                        };
+                                        self.result = format!("✅ {} Needed: {}", sweetener_name, self.format_weight(grams));
                                         for w in &res.warnings { self.result.push_str(&format!("\n⚠️ {}", w)); }
-                                        for (k, v) in &res.metadata { self.result.push_str(&format!("\n  • {}: {}", k, v)); }
+                                        for (k, v) in &res.metadata { self.result.push_str(&format!("\nℹ️ {}: {}", k, v)); }
                                     }
                                     Err(e) => self.result = format!("❌ Error: {}", e),
                                 }
@@ -746,9 +832,10 @@ impl MazerionApp {
                                     .add_param("target_free_so2", &self.sulfite_target_so2);
                                 match calc.calculate(input) {
                                     Ok(res) => {
-                                        self.result = format!("✅ K-meta Needed: {:.2} g", res.output.value);
+                                        let grams = res.output.value.to_string().parse::<f64>().unwrap_or(0.0);
+                                        self.result = format!("✅ K-meta Needed: {}", self.format_weight(grams));
                                         for w in &res.warnings { self.result.push_str(&format!("\n⚠️ {}", w)); }
-                                        for (k, v) in &res.metadata { self.result.push_str(&format!("\n  • {}: {}", k, v)); }
+                                        for (k, v) in &res.metadata { self.result.push_str(&format!("\nℹ️ {}: {}", k, v)); }
                                     }
                                     Err(e) => self.result = format!("❌ Error: {}", e),
                                 }
@@ -777,18 +864,17 @@ impl MazerionApp {
                                     .add_param("acid_type", &self.acid_type);
                                 match calc.calculate(input) {
                                     Ok(res) => {
-                                        self.result = format!("✅ {} Acid Needed: {:.2} g",
-                                                              match self.acid_type.as_str() {
-                                                                  "tartaric" => "Tartaric",
-                                                                  "citric" => "Citric",
-                                                                  "malic" => "Malic",
-                                                                  "lactic" => "Lactic",
-                                                                  _ => "Acid"
-                                                              },
-                                                              res.output.value
-                                        );
+                                        let grams = res.output.value.to_string().parse::<f64>().unwrap_or(0.0);
+                                        let acid_name = match self.acid_type.as_str() {
+                                            "tartaric" => "Tartaric",
+                                            "citric" => "Citric",
+                                            "malic" => "Malic",
+                                            "lactic" => "Lactic",
+                                            _ => "Acid"
+                                        };
+                                        self.result = format!("✅ {} Acid Needed: {}", acid_name, self.format_weight(grams));
                                         for w in &res.warnings { self.result.push_str(&format!("\n⚠️ {}", w)); }
-                                        for (k, v) in &res.metadata { self.result.push_str(&format!("\n  • {}: {}", k, v)); }
+                                        for (k, v) in &res.metadata { self.result.push_str(&format!("\nℹ️ {}: {}", k, v)); }
                                     }
                                     Err(e) => self.result = format!("❌ Error: {}", e),
                                 }
