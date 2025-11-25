@@ -1,6 +1,6 @@
-// State management for Mazerion GUI
+//! State management for Mazerion GUI.
 
-use eframe::egui::Color32;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -9,56 +9,55 @@ pub enum TabView {
     Advanced,
     Brewing,
     Finishing,
+    Settings,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Theme {
+    Light,
+    Dark,
+    System,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum MeasurementSystem {
+    Standard, // Default: Imperial/US
+    Metric,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Settings {
+    pub theme: Theme,
+    pub measurement_system: MeasurementSystem,
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            theme: Theme::Light,
+            measurement_system: MeasurementSystem::Standard,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct AppState {
     pub current_tab: TabView,
-    pub selected_calculator: String,
-    pub inputs: HashMap<String, String>,
-    pub result: Option<String>,
-    pub warnings: Vec<String>,
-    pub metadata: Vec<(String, String)>,
-    pub show_help: bool,
+    pub settings: Settings,
+    pub result_cache: HashMap<String, String>,
 }
 
 impl Default for AppState {
     fn default() -> Self {
         Self {
             current_tab: TabView::Basic,
-            selected_calculator: "abv".to_string(),
-            inputs: HashMap::new(),
-            result: None,
-            warnings: Vec::new(),
-            metadata: Vec::new(),
-            show_help: false,
+            settings: Settings::default(),
+            result_cache: HashMap::new(),
         }
     }
 }
 
-impl AppState {
-    pub fn clear_results(&mut self) {
-        self.result = None;
-        self.warnings.clear();
-        self.metadata.clear();
-    }
-
-    pub fn set_calculator(&mut self, calc_id: &str) {
-        self.selected_calculator = calc_id.to_string();
-        self.clear_results();
-        self.inputs.clear();
-    }
-
-    pub fn get_input(&self, key: &str) -> String {
-        self.inputs.get(key).cloned().unwrap_or_default()
-    }
-
-    pub fn set_input(&mut self, key: &str, value: String) {
-        self.inputs.insert(key.to_string(), value);
-    }
-}
-
-// Color theme
+// Color theme constants
 pub mod colors {
     use eframe::egui::Color32;
 

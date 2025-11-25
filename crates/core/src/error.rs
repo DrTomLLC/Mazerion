@@ -27,7 +27,7 @@ pub enum Error {
     Config(String),
 
     #[error("Database error: {0}")]
-    Database(String),
+    DatabaseError(String),
 }
 
 /// Result type alias.

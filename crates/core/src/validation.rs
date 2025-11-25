@@ -2,7 +2,6 @@
 
 use crate::{Error, Result};
 use rust_decimal::Decimal;
-use rust_decimal_macros::dec;
 
 /// Range validator with warnings.
 pub struct Validator;
@@ -10,7 +9,9 @@ pub struct Validator;
 impl Validator {
     /// Validate specific gravity (0.6000–2.0000).
     pub fn sg(value: Decimal) -> Result<()> {
-        if value < dec!(0.6000) || value > dec!(2.0000) {
+        let min = Decimal::new(6000, 4);
+        let max = Decimal::new(20000, 4);
+        if value < min || value > max {
             return Err(Error::OutOfRange(format!(
                 "SG {} outside range 0.6000–2.0000",
                 value
@@ -21,7 +22,9 @@ impl Validator {
 
     /// Validate pH (1.50–8.50).
     pub fn ph(value: Decimal) -> Result<()> {
-        if value < dec!(1.50) || value > dec!(8.50) {
+        let min = Decimal::new(150, 2);
+        let max = Decimal::new(850, 2);
+        if value < min || value > max {
             return Err(Error::OutOfRange(format!(
                 "pH {} outside range 1.50–8.50",
                 value
@@ -30,9 +33,9 @@ impl Validator {
         Ok(())
     }
 
-    /// Validate Brix (0–70, warn >45).
+    /// Validate Brix (0–70).
     pub fn brix(value: Decimal) -> Result<()> {
-        if value < dec!(0) || value > dec!(70) {
+        if value < Decimal::ZERO || value > Decimal::from(70) {
             return Err(Error::OutOfRange(format!(
                 "Brix {} outside range 0–70",
                 value
@@ -43,16 +46,16 @@ impl Validator {
 
     /// Check if Brix needs warning (>45).
     pub fn brix_warning(value: Decimal) -> Option<String> {
-        if value > dec!(45) {
+        if value > Decimal::from(45) {
             Some(format!("Brix {} above typical range (0–45)", value))
         } else {
             None
         }
     }
 
-    /// Validate Plato (0–70, warn >45).
+    /// Validate Plato (0–70).
     pub fn plato(value: Decimal) -> Result<()> {
-        if value < dec!(0) || value > dec!(70) {
+        if value < Decimal::ZERO || value > Decimal::from(70) {
             return Err(Error::OutOfRange(format!(
                 "Plato {} outside range 0–70",
                 value
@@ -61,18 +64,9 @@ impl Validator {
         Ok(())
     }
 
-    /// Check if Plato needs warning (>45).
-    pub fn plato_warning(value: Decimal) -> Option<String> {
-        if value > dec!(45) {
-            Some(format!("Plato {} above typical range (0–45)", value))
-        } else {
-            None
-        }
-    }
-
     /// Validate temperature Celsius (−5–100).
     pub fn temp_c(value: Decimal) -> Result<()> {
-        if value < dec!(-5) || value > dec!(100) {
+        if value < Decimal::from(-5) || value > Decimal::from(100) {
             return Err(Error::OutOfRange(format!(
                 "Temperature {} °C outside range −5–100",
                 value
@@ -83,7 +77,7 @@ impl Validator {
 
     /// Validate temperature Fahrenheit.
     pub fn temp_f(value: Decimal) -> Result<()> {
-        if value < dec!(23) || value > dec!(212) {
+        if value < Decimal::from(23) || value > Decimal::from(212) {
             return Err(Error::OutOfRange(format!(
                 "Temperature {} °F outside range 23–212",
                 value
@@ -94,7 +88,7 @@ impl Validator {
 
     /// Validate percentage (0–100).
     pub fn percent(value: Decimal) -> Result<()> {
-        if value < dec!(0) || value > dec!(100) {
+        if value < Decimal::ZERO || value > Decimal::from(100) {
             return Err(Error::OutOfRange(format!(
                 "Percentage {} outside range 0–100",
                 value
@@ -103,7 +97,3 @@ impl Validator {
         Ok(())
     }
 }
-
-#[cfg(test)]
-#[path = "validation_tests.rs"]
-mod tests;

@@ -1,4 +1,4 @@
-// Convert degrees Brix to specific gravity.
+//! Convert degrees Brix to specific gravity.
 
 use mazerion_core::{
     register_calculator, CalcInput, CalcResult, Calculator, Measurement, Result, Unit,
@@ -25,14 +25,6 @@ impl Calculator for BrixToSgCalculator {
 
     fn description(&self) -> &'static str {
         "Convert degrees Brix to specific gravity"
-    }
-
-    fn category(&self) -> &'static str {
-        "Basic Calculations"
-    }
-
-    fn help_text(&self) -> &'static str {
-        "Converts Brix to SG using: SG ≈ 1.0 + (Brix × 0.004)"
     }
 
     fn calculate(&self, input: CalcInput) -> Result<CalcResult> {

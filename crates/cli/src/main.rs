@@ -1,5 +1,8 @@
-use mazerion_core::traits::get_all_calculators;
+use mazerion_core::get_all_calculators;
 use std::env;
+
+// Force calculators to link
+use mazerion_calculators as _;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -19,40 +22,19 @@ fn main() {
             }
         }
         Some("list") => {
-            println!("🍯 Mazerion - Available Calculators:\n");
-            let calculators = get_all_calculators();
-
-            // Group by category
-            let mut by_category: std::collections::HashMap<String, Vec<_>> = std::collections::HashMap::new();
-            for calc in calculators {
-                by_category.entry(calc.category().to_string())
-                    .or_default()
-                    .push(calc);
-            }
-
-            // Sort categories
-            let mut categories: Vec<_> = by_category.keys().collect();
-            categories.sort();
-
-            for category in categories {
-                println!("📂 {}:", category.to_uppercase());
-                let calcs = &by_category[category];
-                for calc in calcs {
-                    println!("  • {} ({})", calc.name(), calc.id());
-                    println!("    {}", calc.description());
-                }
+            println!("Available Calculators ({}):\n", get_all_calculators().len());
+            for calc in get_all_calculators() {
+                println!("  {} - {}", calc.id(), calc.name());
+                println!("    {}", calc.description());
                 println!();
             }
-
-            println!("Total: {} calculators", get_all_calculators().len());
         }
         _ => {
-            println!("🍯 Mazerion - Precision Beverage Calculator v0.2.0");
+            println!("Mazerion - Precision Beverage Calculator");
             println!("\nUsage:");
-            println!("  mazerion gui   - Launch GUI (recommended)");
-            println!("  mazerion tui   - Launch terminal UI");
+            println!("  mazerion gui   - Launch GUI");
+            println!("  mazerion tui   - Launch TUI");
             println!("  mazerion list  - List all calculators");
-            println!("\nFor help and documentation, visit the README.md");
         }
     }
 }

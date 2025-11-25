@@ -12,7 +12,7 @@ pub struct Logbook;
 #[cfg(not(feature = "db"))]
 impl Logbook {
     pub fn new(_path: &str) -> mazerion_core::Result<Self> {
-        Err(mazerion_core::Error::Database(
+        Err(mazerion_core::Error::DatabaseError(
             "Database feature not enabled".into(),
         ))
     }
