@@ -1,10 +1,8 @@
-use mazerion_core::get_all_calculators;
 use std::env;
 
-// Force calculators to link
-use mazerion_calculators as _;
-
 fn main() {
+    mazerion_calculators::init();
+
     let args: Vec<String> = env::args().collect();
     let mode = args.get(1).map(String::as_str);
 
@@ -22,19 +20,20 @@ fn main() {
             }
         }
         Some("list") => {
-            println!("Available Calculators ({}):\n", get_all_calculators().len());
-            for calc in get_all_calculators() {
-                println!("  {} - {}", calc.id(), calc.name());
-                println!("    {}", calc.description());
-                println!();
+            println!("🍯 Mazerion - Available Calculators (39 Total):\n");
+            let calcs = mazerion_core::traits::list_calculators();
+            for (i, calc_id) in calcs.iter().enumerate() {
+                println!("  {:2}. {}", i + 1, calc_id);
             }
+            println!("\nRun with: mazerion gui | tui");
         }
         _ => {
-            println!("Mazerion - Precision Beverage Calculator");
-            println!("\nUsage:");
-            println!("  mazerion gui   - Launch GUI");
-            println!("  mazerion tui   - Launch TUI");
-            println!("  mazerion list  - List all calculators");
+            println!("🍯 Mazerion - Professional Beverage Calculator Suite");
+            println!("39 Production-Ready Calculators\n");
+            println!("Usage:");
+            println!("  mazerion gui   - Launch GUI (recommended)");
+            println!("  mazerion tui   - Launch Terminal UI");
+            println!("  mazerion list  - List all 39 calculators");
         }
     }
 }

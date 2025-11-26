@@ -10,7 +10,6 @@ mazerion-core = { path = "../core" }
 mazerion-calculators = { path = "../calculators" }
 ratatui = { workspace = true }
 crossterm = { workspace = true }
-rust_decimal = { workspace = true }
 
 [lints.clippy]
 unwrap_used = "deny"

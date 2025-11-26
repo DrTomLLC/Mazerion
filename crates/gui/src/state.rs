@@ -1,7 +1,7 @@
-//! State management for Mazerion GUI.
+// Enhanced state management for Mazerion GUI
 
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TabView {
@@ -9,52 +9,54 @@ pub enum TabView {
     Advanced,
     Brewing,
     Finishing,
-    Settings,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum Theme {
-    Light,
-    Dark,
-    System,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum MeasurementSystem {
-    Standard, // Default: Imperial/US
-    Metric,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Settings {
-    pub theme: Theme,
-    pub measurement_system: MeasurementSystem,
-}
-
-impl Default for Settings {
-    fn default() -> Self {
-        Self {
-            theme: Theme::Light,
-            measurement_system: MeasurementSystem::Standard,
-        }
-    }
 }
 
 #[derive(Debug, Clone)]
 pub struct AppState {
     pub current_tab: TabView,
-    pub settings: Settings,
-    pub result_cache: HashMap<String, String>,
+    pub basic_calc: BasicCalculator,
+    pub advanced_calc: AdvancedCalculator,
+    pub brewing_calc: BrewingCalculator,
+    pub finishing_calc: FinishingCalculator,
 }
 
 impl Default for AppState {
     fn default() -> Self {
         Self {
             current_tab: TabView::Basic,
-            settings: Settings::default(),
-            result_cache: HashMap::new(),
+            basic_calc: BasicCalculator::Abv,
+            advanced_calc: AdvancedCalculator::Blending,
+            brewing_calc: BrewingCalculator::Nutrition,
+            finishing_calc: FinishingCalculator::Backsweetening,
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BasicCalculator {
+    Abv,
+    BrixSgConverter,
+    Dilution,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AdvancedCalculator {
+    Blending,
+    Refractometer,
+    SgCorrection,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BrewingCalculator {
+    Nutrition,
+    Carbonation,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FinishingCalculator {
+    Backsweetening,
+    Sulfite,
+    AcidAddition,
 }
 
 // Color theme constants

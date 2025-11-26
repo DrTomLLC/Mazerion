@@ -1,11 +1,8 @@
-//! TOSNA 2.0 nutrition calculator.
-
 use mazerion_core::{
     register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
 };
 use rust_decimal::Decimal;
 
-/// Calculate Fermaid-O schedule using TOSNA 2.0 protocol.
 #[derive(Default)]
 pub struct NutritionCalculator;
 
@@ -14,76 +11,35 @@ impl NutritionCalculator {
 }
 
 impl Calculator for NutritionCalculator {
-    fn id(&self) -> &'static str {
-        Self::ID
-    }
-
-    fn name(&self) -> &'static str {
-        "TOSNA Nutrition"
-    }
-
-    fn description(&self) -> &'static str {
-        "Calculate Fermaid-O schedule using TOSNA 2.0 protocol"
-    }
+    fn id(&self) -> &'static str { Self::ID }
+    fn name(&self) -> &'static str { "TOSNA Nutrition Calculator" }
+    fn description(&self) -> &'static str { "Calculate Fermaid-O schedule using TOSNA 2.0" }
 
     fn calculate(&self, input: CalcInput) -> Result<CalcResult> {
         let volume = input.get_param("volume")
             .ok_or_else(|| Error::MissingInput("volume required".into()))?
             .parse::<Decimal>()
-            .map_err(|_| Error::Parse("Invalid volume".into()))?;
-
+            .map_err(|e| Error::Parse(format!("Invalid volume: {}", e)))?;
         let target_abv = input.get_param("target_abv")
             .ok_or_else(|| Error::MissingInput("target_abv required".into()))?
             .parse::<Decimal>()
-            .map_err(|_| Error::Parse("Invalid target_abv".into()))?;
-
+            .map_err(|e| Error::Parse(format!("Invalid target_abv: {}", e)))?;
         let yn_req = input.get_param("yn_requirement").unwrap_or("medium");
 
-        if volume <= Decimal::ZERO {
-            return Err(Error::OutOfRange("Volume must be positive".into()));
-        }
-
-        let base_yan = target_abv * Decimal::from(18);
-
-        let yan_per_liter = match yn_req {
-            "low" => base_yan * Decimal::new(8, 1),
-            "high" => base_yan * Decimal::new(12, 1),
-            _ => base_yan,
+        let base_rate = match yn_req {
+            "low" => Decimal::new(8, 1),
+            "high" => Decimal::new(12, 1),
+            _ => Decimal::from(10),
         };
 
-        let total_yan_needed = yan_per_liter * volume;
-        let fermaid_o_grams = total_yan_needed / Decimal::from(10);
+        let abv_factor = target_abv / Decimal::from(13);
+        let total_grams = volume * base_rate * abv_factor;
 
-        let per_addition = fermaid_o_grams / Decimal::from(4);
-
-        let mut result = CalcResult::new(Measurement::grams(fermaid_o_grams)?);
-
-        if fermaid_o_grams > Decimal::from(100) {
-            result = result.with_warning("Large nutrient addition - consider more doses");
-        }
-
+        let mut result = CalcResult::new(Measurement::new(total_grams, Unit::Grams));
         result = result
-            .with_meta("volume", format!("{} L", volume))
-            .with_meta("target_abv", format!("{}%", target_abv))
-            .with_meta("yn_requirement", yn_req)
-            .with_meta("total_yan", format!("{:.1} mg/L", yan_per_liter))
-            .with_meta("schedule", "TOSNA 2.0")
-            .with_meta("addition_1", format!("{:.2} g at 24h", per_addition))
-            .with_meta("addition_2", format!("{:.2} g at 48h", per_addition))
-            .with_meta("addition_3", format!("{:.2} g at 72h", per_addition))
-            .with_meta("addition_4", format!("{:.2} g at 1/3 sugar break", per_addition));
-
+            .with_meta("schedule", "24h: 25%, 48h: 25%, 72h: 25%, 1/3 break: 25%")
+            .with_meta("per_addition", format!("{:.1}g", total_grams / Decimal::from(4)));
         Ok(result)
-    }
-
-    fn validate(&self, input: &CalcInput) -> Result<()> {
-        if input.get_param("volume").is_none() {
-            return Err(Error::MissingInput("volume required".into()));
-        }
-        if input.get_param("target_abv").is_none() {
-            return Err(Error::MissingInput("target_abv required".into()));
-        }
-        Ok(())
     }
 }
 

@@ -1,4 +1,4 @@
-//! ABV calculator from original and final gravity.
+// ABV calculator from original and final gravity.
 
 use mazerion_core::{
     register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
@@ -47,25 +47,18 @@ impl Calculator for AbvCalculator {
             return Err(Error::Validation("OG must be >= FG".into()));
         }
 
-        let abv = (og_val - fg_val) * Decimal::new(13125, 2);
+        let abv = (og_val - fg_val) * Decimal::new(13125, 2); // 131.25
 
         let mut result = CalcResult::new(Measurement::new(abv, Unit::Abv));
 
         if abv > Decimal::from(20) {
-            result = result.with_warning("ABV > 20% is unusually high - verify readings");
-        } else if abv > Decimal::from(15) {
-            result = result.with_warning("ABV > 15% - strong fermentation");
-        }
-
-        if abv < Decimal::from(3) {
-            result = result.with_warning("ABV < 3% - fermentation may be incomplete");
+            result = result.with_warning("ABV > 20% is unusually high");
         }
 
         result = result
             .with_meta("og", og)
             .with_meta("fg", fg)
-            .with_meta("formula", "ABV = (OG - FG) × 131.25")
-            .with_meta("attenuation", format!("{:.1}%", ((og_val - fg_val) / (og_val - Decimal::ONE)) * Decimal::from(100)));
+            .with_meta("formula", "Standard ABV = (OG - FG) × 131.25");
 
         Ok(result)
     }

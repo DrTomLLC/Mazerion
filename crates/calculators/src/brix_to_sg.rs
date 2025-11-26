@@ -1,4 +1,4 @@
-//! Convert degrees Brix to specific gravity.
+// Convert degrees Brix to specific gravity.
 
 use mazerion_core::{
     register_calculator, CalcInput, CalcResult, Calculator, Measurement, Result, Unit,
@@ -33,7 +33,7 @@ impl Calculator for BrixToSgCalculator {
 
         Validator::brix(brix)?;
 
-        let sg = Decimal::ONE + (brix * Decimal::new(4, 3));
+        let sg = Decimal::ONE + (brix * Decimal::new(4, 3)); // 0.004
 
         let mut result = CalcResult::new(Measurement::sg(sg)?);
 

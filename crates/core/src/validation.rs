@@ -7,44 +7,31 @@ use rust_decimal::Decimal;
 pub struct Validator;
 
 impl Validator {
-    /// Validate specific gravity (0.6000–2.0000).
     pub fn sg(value: Decimal) -> Result<()> {
         let min = Decimal::new(6000, 4);
         let max = Decimal::new(20000, 4);
         if value < min || value > max {
-            return Err(Error::OutOfRange(format!(
-                "SG {} outside range 0.6000–2.0000",
-                value
-            )));
+            return Err(Error::OutOfRange(format!("SG {} outside range 0.6000–2.0000", value)));
         }
         Ok(())
     }
 
-    /// Validate pH (1.50–8.50).
     pub fn ph(value: Decimal) -> Result<()> {
         let min = Decimal::new(150, 2);
         let max = Decimal::new(850, 2);
         if value < min || value > max {
-            return Err(Error::OutOfRange(format!(
-                "pH {} outside range 1.50–8.50",
-                value
-            )));
+            return Err(Error::OutOfRange(format!("pH {} outside range 1.50–8.50", value)));
         }
         Ok(())
     }
 
-    /// Validate Brix (0–70).
     pub fn brix(value: Decimal) -> Result<()> {
         if value < Decimal::ZERO || value > Decimal::from(70) {
-            return Err(Error::OutOfRange(format!(
-                "Brix {} outside range 0–70",
-                value
-            )));
+            return Err(Error::OutOfRange(format!("Brix {} outside range 0–70", value)));
         }
         Ok(())
     }
 
-    /// Check if Brix needs warning (>45).
     pub fn brix_warning(value: Decimal) -> Option<String> {
         if value > Decimal::from(45) {
             Some(format!("Brix {} above typical range (0–45)", value))
@@ -53,46 +40,38 @@ impl Validator {
         }
     }
 
-    /// Validate Plato (0–70).
     pub fn plato(value: Decimal) -> Result<()> {
         if value < Decimal::ZERO || value > Decimal::from(70) {
-            return Err(Error::OutOfRange(format!(
-                "Plato {} outside range 0–70",
-                value
-            )));
+            return Err(Error::OutOfRange(format!("Plato {} outside range 0–70", value)));
         }
         Ok(())
     }
 
-    /// Validate temperature Celsius (−5–100).
+    pub fn plato_warning(value: Decimal) -> Option<String> {
+        if value > Decimal::from(45) {
+            Some(format!("Plato {} above typical range (0–45)", value))
+        } else {
+            None
+        }
+    }
+
     pub fn temp_c(value: Decimal) -> Result<()> {
         if value < Decimal::from(-5) || value > Decimal::from(100) {
-            return Err(Error::OutOfRange(format!(
-                "Temperature {} °C outside range −5–100",
-                value
-            )));
+            return Err(Error::OutOfRange(format!("Temperature {} °C outside range −5–100", value)));
         }
         Ok(())
     }
 
-    /// Validate temperature Fahrenheit.
     pub fn temp_f(value: Decimal) -> Result<()> {
         if value < Decimal::from(23) || value > Decimal::from(212) {
-            return Err(Error::OutOfRange(format!(
-                "Temperature {} °F outside range 23–212",
-                value
-            )));
+            return Err(Error::OutOfRange(format!("Temperature {} °F outside range 23–212", value)));
         }
         Ok(())
     }
 
-    /// Validate percentage (0–100).
     pub fn percent(value: Decimal) -> Result<()> {
         if value < Decimal::ZERO || value > Decimal::from(100) {
-            return Err(Error::OutOfRange(format!(
-                "Percentage {} outside range 0–100",
-                value
-            )));
+            return Err(Error::OutOfRange(format!("Percentage {} outside range 0–100", value)));
         }
         Ok(())
     }

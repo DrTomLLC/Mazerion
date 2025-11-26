@@ -4,22 +4,13 @@ use crate::{CalcInput, CalcResult, Error, Result};
 
 /// Calculator trait for all computation modules.
 pub trait Calculator: Send + Sync {
-    /// Unique identifier.
     fn id(&self) -> &'static str;
-
-    /// Display name.
     fn name(&self) -> &'static str;
-
-    /// Description.
     fn description(&self) -> &'static str;
-
-    /// Perform calculation.
     fn calculate(&self, input: CalcInput) -> Result<CalcResult>;
-
-    /// Validate inputs before calculation.
     fn validate(&self, input: &CalcInput) -> Result<()> {
         if input.measurements.is_empty() && input.params.is_empty() {
-            return Err(Error::MissingInput("No measurements or parameters provided".into()));
+            return Err(Error::MissingInput("No inputs provided".into()));
         }
         Ok(())
     }
@@ -54,7 +45,19 @@ pub fn list_calculators() -> Vec<&'static str> {
     CALCULATORS.iter().map(|e| e.id).collect()
 }
 
-/// Get all calculators.
+/// Get all calculators as instances.
 pub fn get_all_calculators() -> Vec<Box<dyn Calculator>> {
     CALCULATORS.iter().map(|e| (e.factory)()).collect()
+}
+
+/// Macro to register a calculator.
+#[macro_export]
+macro_rules! register_calculator {
+    ($calc:ty) => {
+        #[::linkme::distributed_slice($crate::traits::CALCULATORS)]
+        static ENTRY: $crate::traits::CalculatorEntry = $crate::traits::CalculatorEntry::new(
+            <$calc>::ID,
+            || Box::new(<$calc>::default()),
+        );
+    };
 }

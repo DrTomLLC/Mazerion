@@ -10,11 +10,9 @@ pub mod units;
 pub mod validation;
 
 pub use error::{Error, Result};
-pub use traits::{Calculator, get_calculator, list_calculators, get_all_calculators, CALCULATORS};
+pub use traits::Calculator;
 pub use units::*;
 pub use validation::*;
-
-// Re-export the register_calculator macro
 
 /// Measurement with unit and precision.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -51,30 +49,6 @@ impl Measurement {
     pub fn celsius(value: Decimal) -> Result<Self> {
         Validator::temp_c(value)?;
         Ok(Self::new(value, Unit::Celsius))
-    }
-
-    pub fn fahrenheit(value: Decimal) -> Result<Self> {
-        Validator::temp_f(value)?;
-        Ok(Self::new(value, Unit::Fahrenheit))
-    }
-
-    pub fn liters(value: Decimal) -> Result<Self> {
-        if value < Decimal::ZERO {
-            return Err(Error::OutOfRange("Volume cannot be negative".into()));
-        }
-        Ok(Self::new(value, Unit::Liters))
-    }
-
-    pub fn grams(value: Decimal) -> Result<Self> {
-        if value < Decimal::ZERO {
-            return Err(Error::OutOfRange("Mass cannot be negative".into()));
-        }
-        Ok(Self::new(value, Unit::Grams))
-    }
-
-    pub fn percent(value: Decimal) -> Result<Self> {
-        Validator::percent(value)?;
-        Ok(Self::new(value, Unit::Percent))
     }
 }
 
@@ -156,16 +130,4 @@ impl Default for CalcInput {
     fn default() -> Self {
         Self::new()
     }
-}
-
-/// Macro to register a calculator.
-#[macro_export]
-macro_rules! register_calculator {
-    ($calc:ty) => {
-        #[::linkme::distributed_slice($crate::CALCULATORS)]
-        static ENTRY: $crate::traits::CalculatorEntry = $crate::traits::CalculatorEntry::new(
-            <$calc>::ID,
-            || Box::new(<$calc>::default()),
-        );
-    };
 }
