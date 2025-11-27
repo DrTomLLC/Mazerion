@@ -1,25 +1,24 @@
-//! Application state - COMPLETE with Settings
+//! State management - WITH Conversions tab
 
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TabView {
+    Basic,
+    Advanced,
+    Brewing,
+    Finishing,
+    Conversions,
+    Settings,
+}
+
+#[derive(Debug, Clone)]
 pub struct AppState {
-    // UI state
+    // Navigation
     pub current_tab: TabView,
 
-    // Settings
-    pub theme: String,
-    pub font_size: String,
-    pub volume_unit: String,
-    pub temp_unit: String,
-    pub show_warnings: bool,
-    pub show_metadata: bool,
-    pub auto_save: bool,
-    pub default_batch_size: String,
-    pub default_yn_req: String,
-    pub default_ferm_temp: String,
-
-    // Basic calculations
+    // Input fields - Basic
     pub og: String,
     pub fg: String,
     pub brix: String,
@@ -29,7 +28,7 @@ pub struct AppState {
     pub current_abv: String,
     pub target_abv: String,
 
-    // Advanced calculations
+    // Input fields - Advanced
     pub vol1: String,
     pub abv1: String,
     pub vol2: String,
@@ -37,7 +36,7 @@ pub struct AppState {
     pub orig_brix: String,
     pub curr_brix: String,
 
-    // Brewing calculations
+    // Input fields - Brewing
     pub volume: String,
     pub target_abv_brew: String,
     pub yn_requirement: String,
@@ -46,7 +45,7 @@ pub struct AppState {
     pub carb_method: String,
     pub sugar_type: String,
 
-    // Finishing calculations
+    // Input fields - Finishing
     pub sweet_vol: String,
     pub current_sg: String,
     pub target_sg: String,
@@ -59,19 +58,28 @@ pub struct AppState {
     pub target_ph_acid: String,
     pub acid_type: String,
 
+    // Input fields - Conversions
+    pub conv_value: String,
+    pub conv_from_unit: String,
+    pub conv_to_unit: String,
+    pub conv_result: Option<String>,
+
     // Results
     pub result: Option<String>,
     pub warnings: Vec<String>,
     pub metadata: Vec<(String, String)>,
-}
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum TabView {
-    Basic,
-    Advanced,
-    Brewing,
-    Finishing,
-    Settings,
+    // Settings
+    pub theme: String,
+    pub font_size: String,
+    pub volume_unit: String,
+    pub temp_unit: String,
+    pub show_warnings: bool,
+    pub show_metadata: bool,
+    pub auto_save: bool,
+    pub default_batch_size: String,
+    pub default_yn_req: String,
+    pub default_ferm_temp: String,
 }
 
 impl Default for AppState {
@@ -79,24 +87,12 @@ impl Default for AppState {
         Self {
             current_tab: TabView::Basic,
 
-            // Settings defaults
-            theme: "soft_blue".to_string(),
-            font_size: "medium".to_string(),
-            volume_unit: "liters".to_string(),
-            temp_unit: "celsius".to_string(),
-            show_warnings: true,
-            show_metadata: true,
-            auto_save: false,
-            default_batch_size: "19.0".to_string(),
-            default_yn_req: "medium".to_string(),
-            default_ferm_temp: "20.0".to_string(),
-
             // Basic defaults
             og: "1.090".to_string(),
             fg: "1.010".to_string(),
             brix: "15.0".to_string(),
             sg: "1.060".to_string(),
-            temp: "20.0".to_string(),
+            temp: "22.0".to_string(),
             current_vol: "19.0".to_string(),
             current_abv: "14.0".to_string(),
             target_abv: "10.0".to_string(),
@@ -131,18 +127,55 @@ impl Default for AppState {
             target_ph_acid: "3.4".to_string(),
             acid_type: "tartaric".to_string(),
 
+            // Conversions defaults
+            conv_value: "1.0".to_string(),
+            conv_from_unit: "liters".to_string(),
+            conv_to_unit: "gallons".to_string(),
+            conv_result: None,
+
             // Results
             result: None,
             warnings: Vec::new(),
             metadata: Vec::new(),
+
+            // Settings defaults
+            theme: "soft_blue".to_string(),
+            font_size: "medium".to_string(),
+            volume_unit: "liters".to_string(),
+            temp_unit: "celsius".to_string(),
+            show_warnings: true,
+            show_metadata: true,
+            auto_save: false,
+            default_batch_size: "19.0".to_string(),
+            default_yn_req: "medium".to_string(),
+            default_ferm_temp: "20.0".to_string(),
         }
     }
 }
 
-impl AppState {
-    pub fn clear_results(&mut self) {
-        self.result = None;
-        self.warnings.clear();
-        self.metadata.clear();
-    }
+// Color theme constants
+pub mod colors {
+    use eframe::egui::Color32;
+
+    // Soft Blue Theme (default)
+    pub const BG_MAIN: Color32 = Color32::from_rgb(225, 235, 245);
+    pub const BG_PANEL: Color32 = Color32::from_rgb(245, 250, 255);
+    pub const ACCENT: Color32 = Color32::from_rgb(70, 130, 180);
+    pub const TAB_ACTIVE: Color32 = Color32::from_rgb(70, 130, 180);
+    pub const TAB_INACTIVE: Color32 = Color32::from_rgb(200, 220, 240);
+    pub const SCROLLBAR: Color32 = Color32::from_rgb(100, 149, 237);
+    pub const TEXT_MAIN: Color32 = Color32::from_rgb(30, 30, 30);
+    pub const TEXT_SUCCESS: Color32 = Color32::from_rgb(34, 139, 34);
+    pub const TEXT_ERROR: Color32 = Color32::from_rgb(220, 20, 60);
+    pub const TEXT_WARNING: Color32 = Color32::from_rgb(255, 140, 0);
+
+    // Light Gray Theme
+    pub const LIGHT_BG_MAIN: Color32 = Color32::from_rgb(240, 240, 240);
+    pub const LIGHT_BG_PANEL: Color32 = Color32::from_rgb(250, 250, 250);
+    pub const LIGHT_ACCENT: Color32 = Color32::from_rgb(100, 100, 100);
+
+    // Cream Theme
+    pub const CREAM_BG_MAIN: Color32 = Color32::from_rgb(255, 248, 220);
+    pub const CREAM_BG_PANEL: Color32 = Color32::from_rgb(255, 253, 245);
+    pub const CREAM_ACCENT: Color32 = Color32::from_rgb(218, 165, 32);
 }
