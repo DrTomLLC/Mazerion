@@ -11,7 +11,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.2.0"
+version = "0.5.0"
 edition = "2024"
 rust-version = "1.91.1"
 license = "MIT OR Apache-2.0"
@@ -22,10 +22,10 @@ rust_decimal = { version = "1.39.0", features = ["serde"] }
 serde = { version = "1.0.228", features = ["derive"] }
 toml = "0.9.8"
 thiserror = "2.0.17"
-eframe = "0.29"
-egui = "0.29"
-ratatui = "0.29"
-crossterm = "0.28"
+eframe = "0.33.2"
+egui = "0.33.2"
+ratatui = "0.30.0-beta.0"
+crossterm = "0.29.0"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
