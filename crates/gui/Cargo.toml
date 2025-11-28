@@ -1,6 +1,6 @@
 [package]
 name = "mazerion-gui"
-version = "0.5.0"
+version = "0.7.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 authors = ["Doctor"]
@@ -8,8 +8,8 @@ authors = ["Doctor"]
 [dependencies]
 mazerion-core = { path = "../core" }
 mazerion-calculators = { path = "../calculators" }
-eframe = "0.29"
-egui = "0.29"
+eframe = "0.33.2"
+egui = "0.33.2"
 rust_decimal = "1.39.0"
 serde = { version = "1.0.228", features = ["derive"] }
 
