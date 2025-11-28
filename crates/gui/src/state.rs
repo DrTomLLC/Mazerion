@@ -1,7 +1,6 @@
 //! State management - WITH Conversions tab
 
-use rust_decimal::Decimal;
-use serde::{Deserialize, Serialize};
+// use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TabView {
@@ -166,7 +165,6 @@ pub mod colors {
     pub const SCROLLBAR: Color32 = Color32::from_rgb(100, 149, 237);
     pub const TEXT_MAIN: Color32 = Color32::from_rgb(30, 30, 30);
     pub const TEXT_SUCCESS: Color32 = Color32::from_rgb(34, 139, 34);
-    pub const TEXT_ERROR: Color32 = Color32::from_rgb(220, 20, 60);
     pub const TEXT_WARNING: Color32 = Color32::from_rgb(255, 140, 0);
 
     // Light Gray Theme

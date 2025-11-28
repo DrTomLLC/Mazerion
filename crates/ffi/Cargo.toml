@@ -1,23 +1,21 @@
 [package]
-name = "mazerion"
+name = "mazerion-ffi"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 authors.workspace = true
 
-[[bin]]
-name = "mazerion"
-path = "src/main.rs"
+[lints]
+workspace = true
 
 [dependencies]
 mazerion-core = { path = "../core" }
 mazerion-calculators = { path = "../calculators" }
-mazerion-gui = { path = "../gui" }
-mazerion-tui = { path = "../tui" }
 mazerion-api = { path = "../api" }
+serde = { workspace = true }
+serde_json = "1.0"
+thiserror = { workspace = true }
 
-
-[lints.clippy]
-unwrap_used = "deny"
-expect_used = "deny"
-panic = "deny"
+[dev-dependencies]
+rust_decimal = { workspace = true }

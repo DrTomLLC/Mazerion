@@ -12,7 +12,11 @@ const BORDER: Color32 = Color32::from_rgb(70, 130, 180);
 const BUTTON: Color32 = Color32::from_rgb(70, 130, 180);
 
 pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
-    ui.heading(RichText::new("📐 Unit Conversions & Reference").color(TEXT_ACCENT).size(20.0));
+    ui.heading(
+        RichText::new("📐 Unit Conversions & Reference")
+            .color(TEXT_ACCENT)
+            .size(20.0),
+    );
     ui.add_space(10.0);
 
     // Interactive Converter
@@ -27,12 +31,36 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
             egui::ComboBox::new("conv_from", "")
                 .selected_text(&state.conv_from_unit)
                 .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut state.conv_from_unit, "liters".to_string(), "Liters (L)");
-                    ui.selectable_value(&mut state.conv_from_unit, "gallons".to_string(), "Gallons (US)");
-                    ui.selectable_value(&mut state.conv_from_unit, "kilograms".to_string(), "Kilograms (kg)");
-                    ui.selectable_value(&mut state.conv_from_unit, "pounds".to_string(), "Pounds (lb)");
-                    ui.selectable_value(&mut state.conv_from_unit, "celsius".to_string(), "Celsius (°C)");
-                    ui.selectable_value(&mut state.conv_from_unit, "fahrenheit".to_string(), "Fahrenheit (°F)");
+                    ui.selectable_value(
+                        &mut state.conv_from_unit,
+                        "liters".to_string(),
+                        "Liters (L)",
+                    );
+                    ui.selectable_value(
+                        &mut state.conv_from_unit,
+                        "gallons".to_string(),
+                        "Gallons (US)",
+                    );
+                    ui.selectable_value(
+                        &mut state.conv_from_unit,
+                        "kilograms".to_string(),
+                        "Kilograms (kg)",
+                    );
+                    ui.selectable_value(
+                        &mut state.conv_from_unit,
+                        "pounds".to_string(),
+                        "Pounds (lb)",
+                    );
+                    ui.selectable_value(
+                        &mut state.conv_from_unit,
+                        "celsius".to_string(),
+                        "Celsius (°C)",
+                    );
+                    ui.selectable_value(
+                        &mut state.conv_from_unit,
+                        "fahrenheit".to_string(),
+                        "Fahrenheit (°F)",
+                    );
                 });
 
             ui.label(RichText::new("→").size(20.0));
@@ -41,12 +69,36 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
             egui::ComboBox::new("conv_to", "")
                 .selected_text(&state.conv_to_unit)
                 .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut state.conv_to_unit, "liters".to_string(), "Liters (L)");
-                    ui.selectable_value(&mut state.conv_to_unit, "gallons".to_string(), "Gallons (US)");
-                    ui.selectable_value(&mut state.conv_to_unit, "kilograms".to_string(), "Kilograms (kg)");
-                    ui.selectable_value(&mut state.conv_to_unit, "pounds".to_string(), "Pounds (lb)");
-                    ui.selectable_value(&mut state.conv_to_unit, "celsius".to_string(), "Celsius (°C)");
-                    ui.selectable_value(&mut state.conv_to_unit, "fahrenheit".to_string(), "Fahrenheit (°F)");
+                    ui.selectable_value(
+                        &mut state.conv_to_unit,
+                        "liters".to_string(),
+                        "Liters (L)",
+                    );
+                    ui.selectable_value(
+                        &mut state.conv_to_unit,
+                        "gallons".to_string(),
+                        "Gallons (US)",
+                    );
+                    ui.selectable_value(
+                        &mut state.conv_to_unit,
+                        "kilograms".to_string(),
+                        "Kilograms (kg)",
+                    );
+                    ui.selectable_value(
+                        &mut state.conv_to_unit,
+                        "pounds".to_string(),
+                        "Pounds (lb)",
+                    );
+                    ui.selectable_value(
+                        &mut state.conv_to_unit,
+                        "celsius".to_string(),
+                        "Celsius (°C)",
+                    );
+                    ui.selectable_value(
+                        &mut state.conv_to_unit,
+                        "fahrenheit".to_string(),
+                        "Fahrenheit (°F)",
+                    );
                 });
         });
 
@@ -56,7 +108,12 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
 
         if let Some(ref result) = state.conv_result {
             ui.add_space(5.0);
-            ui.label(RichText::new(result).color(Color32::from_rgb(34, 139, 34)).size(18.0).strong());
+            ui.label(
+                RichText::new(result)
+                    .color(Color32::from_rgb(34, 139, 34))
+                    .size(18.0)
+                    .strong(),
+            );
         }
     });
 
@@ -66,45 +123,51 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
     ui.columns(2, |columns| {
         // Volume conversions
         section(&mut columns[0], "💧 Volume Conversions", |ui| {
-            table(ui, &[
-                ("1 Liter (L)", "0.2642 Gallons (US)"),
-                ("1 Liter", "1.0567 Quarts (US)"),
-                ("1 Liter", "2.1134 Pints (US)"),
-                ("1 Liter", "4.2268 Cups (US)"),
-                ("1 Liter", "33.814 Fluid Ounces (US)"),
-                ("1 Liter", "1000 Milliliters (mL)"),
-                ("", ""),
-                ("1 Gallon (US)", "3.7854 Liters"),
-                ("1 Gallon", "4 Quarts"),
-                ("1 Gallon", "8 Pints"),
-                ("1 Gallon", "16 Cups"),
-                ("1 Gallon", "128 Fluid Ounces"),
-                ("", ""),
-                ("1 Quart (US)", "0.9464 Liters"),
-                ("1 Pint (US)", "0.4732 Liters"),
-                ("1 Cup (US)", "236.6 mL"),
-                ("1 Fl Oz (US)", "29.574 mL"),
-            ]);
+            table(
+                ui,
+                &[
+                    ("1 Liter (L)", "0.2642 Gallons (US)"),
+                    ("1 Liter", "1.0567 Quarts (US)"),
+                    ("1 Liter", "2.1134 Pints (US)"),
+                    ("1 Liter", "4.2268 Cups (US)"),
+                    ("1 Liter", "33.814 Fluid Ounces (US)"),
+                    ("1 Liter", "1000 Milliliters (mL)"),
+                    ("", ""),
+                    ("1 Gallon (US)", "3.7854 Liters"),
+                    ("1 Gallon", "4 Quarts"),
+                    ("1 Gallon", "8 Pints"),
+                    ("1 Gallon", "16 Cups"),
+                    ("1 Gallon", "128 Fluid Ounces"),
+                    ("", ""),
+                    ("1 Quart (US)", "0.9464 Liters"),
+                    ("1 Pint (US)", "0.4732 Liters"),
+                    ("1 Cup (US)", "236.6 mL"),
+                    ("1 Fl Oz (US)", "29.574 mL"),
+                ],
+            );
         });
 
         // Weight conversions
         section(&mut columns[1], "⚖️ Weight/Mass Conversions", |ui| {
-            table(ui, &[
-                ("1 Kilogram (kg)", "2.2046 Pounds (lb)"),
-                ("1 Kilogram", "35.274 Ounces (oz)"),
-                ("1 Kilogram", "1000 Grams (g)"),
-                ("", ""),
-                ("1 Pound (lb)", "0.4536 Kilograms"),
-                ("1 Pound", "16 Ounces (oz)"),
-                ("1 Pound", "453.6 Grams (g)"),
-                ("", ""),
-                ("1 Ounce (oz)", "28.35 Grams"),
-                ("1 Gram (g)", "0.0353 Ounces"),
-                ("", ""),
-                ("1 Metric Ton", "1000 Kilograms"),
-                ("1 US Ton", "2000 Pounds"),
-                ("1 US Ton", "907.2 Kilograms"),
-            ]);
+            table(
+                ui,
+                &[
+                    ("1 Kilogram (kg)", "2.2046 Pounds (lb)"),
+                    ("1 Kilogram", "35.274 Ounces (oz)"),
+                    ("1 Kilogram", "1000 Grams (g)"),
+                    ("", ""),
+                    ("1 Pound (lb)", "0.4536 Kilograms"),
+                    ("1 Pound", "16 Ounces (oz)"),
+                    ("1 Pound", "453.6 Grams (g)"),
+                    ("", ""),
+                    ("1 Ounce (oz)", "28.35 Grams"),
+                    ("1 Gram (g)", "0.0353 Ounces"),
+                    ("", ""),
+                    ("1 Metric Ton", "1000 Kilograms"),
+                    ("1 US Ton", "2000 Pounds"),
+                    ("1 US Ton", "907.2 Kilograms"),
+                ],
+            );
         });
     });
 
@@ -113,43 +176,53 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
     ui.columns(2, |columns| {
         // Temperature conversions
         section(&mut columns[0], "🌡️ Temperature Conversions", |ui| {
-            table(ui, &[
-                ("Formula", "Result"),
-                ("°C → °F", "°F = (°C × 9/5) + 32"),
-                ("°F → °C", "°C = (°F - 32) × 5/9"),
-                ("°C → K", "K = °C + 273.15"),
-                ("", ""),
-                ("Common Temps:", ""),
-                ("0°C", "32°F (Water freezes)"),
-                ("20°C", "68°F (Room temp)"),
-                ("100°C", "212°F (Water boils)"),
-                ("", ""),
-                ("Brewing Temps:", ""),
-                ("10-15°C", "50-59°F (Lager)"),
-                ("18-22°C", "64-72°F (Ale)"),
-                ("22-30°C", "72-86°F (Wine/Mead)"),
-            ]);
+            table(
+                ui,
+                &[
+                    ("Formula", "Result"),
+                    ("°C → °F", "°F = (°C × 9/5) + 32"),
+                    ("°F → °C", "°C = (°F - 32) × 5/9"),
+                    ("°C → K", "K = °C + 273.15"),
+                    ("", ""),
+                    ("Common Temps:", ""),
+                    ("0°C", "32°F (Water freezes)"),
+                    ("20°C", "68°F (Room temp)"),
+                    ("100°C", "212°F (Water boils)"),
+                    ("", ""),
+                    ("Brewing Temps:", ""),
+                    ("10-15°C", "50-59°F (Lager)"),
+                    ("18-22°C", "64-72°F (Ale)"),
+                    ("22-30°C", "72-86°F (Wine/Mead)"),
+                ],
+            );
         });
 
         // Gravity/Sugar conversions
-        section(&mut columns[1], "📊 Gravity & Sugar Conversions", |ui| {
-            table(ui, &[
-                ("Specific Gravity", "Brix / Plato"),
-                ("1.000 SG", "0.0° Bx"),
-                ("1.020 SG", "~5.1° Bx"),
-                ("1.040 SG", "~10.0° Bx"),
-                ("1.060 SG", "~14.7° Bx"),
-                ("1.080 SG", "~19.3° Bx"),
-                ("1.100 SG", "~23.7° Bx"),
-                ("1.120 SG", "~28.0° Bx"),
-                ("", ""),
-                ("Formula (approx):", ""),
-                ("Brix → SG", "SG ≈ 1 + (Bx × 0.004)"),
-                ("SG → Brix", "Bx ≈ (SG - 1) × 250"),
-                ("", ""),
-                ("Note:", "Brix ≈ Plato"),
-            ]);
-        });
+        section(
+            &mut columns[1],
+            "📊 Gravity & Sugar Conversions",
+            |ui| {
+                table(
+                    ui,
+                    &[
+                        ("Specific Gravity", "Brix / Plato"),
+                        ("1.000 SG", "0.0° Bx"),
+                        ("1.020 SG", "~5.1° Bx"),
+                        ("1.040 SG", "~10.0° Bx"),
+                        ("1.060 SG", "~14.7° Bx"),
+                        ("1.080 SG", "~19.3° Bx"),
+                        ("1.100 SG", "~23.7° Bx"),
+                        ("1.120 SG", "~28.0° Bx"),
+                        ("", ""),
+                        ("Formula (approx):", ""),
+                        ("Brix → SG", "SG ≈ 1 + (Bx × 0.004)"),
+                        ("SG → Brix", "Bx ≈ (SG - 1) × 250"),
+                        ("", ""),
+                        ("Note:", "Brix ≈ Plato"),
+                    ],
+                );
+            },
+        );
     });
 
     ui.add_space(10.0);
@@ -185,7 +258,12 @@ fn section(ui: &mut egui::Ui, title: &str, content: impl FnOnce(&mut egui::Ui)) 
         .rounding(Rounding::same(8.0))
         .inner_margin(12.0)
         .show(ui, |ui| {
-            ui.label(RichText::new(title).color(TEXT_ACCENT).size(16.0).strong());
+            ui.label(
+                RichText::new(title)
+                    .color(TEXT_ACCENT)
+                    .size(16.0)
+                    .strong(),
+            );
             ui.add_space(6.0);
             content(ui);
         });
@@ -207,14 +285,21 @@ fn table(ui: &mut egui::Ui, rows: &[(&str, &str)]) {
 
 fn button(ui: &mut egui::Ui, text: &str) -> bool {
     ui.add(
-        egui::Button::new(RichText::new(text).color(Color32::WHITE).size(16.0).strong())
+        egui::Button::new(
+            RichText::new(text)
+                .color(Color32::WHITE)
+                .size(16.0)
+                .strong(),
+        )
             .fill(BUTTON)
             .rounding(Rounding::same(6.0))
-            .min_size(Vec2::new(150.0, 36.0))
-    ).clicked()
+            .min_size(Vec2::new(150.0, 36.0)),
+    )
+        .clicked()
 }
 
 fn perform_conversion(state: &mut AppState) {
+    // Parse user input safely; report a friendly error instead of panicking.
     let value = match Decimal::from_str(&state.conv_value) {
         Ok(v) => v,
         Err(_) => {
@@ -223,19 +308,49 @@ fn perform_conversion(state: &mut AppState) {
         }
     };
 
+    // All constants are constructed via Decimal::new to avoid unwrap/expect.
     let result = match (state.conv_from_unit.as_str(), state.conv_to_unit.as_str()) {
-        ("liters", "gallons") => value * Decimal::from_str("0.264172").unwrap(),
-        ("gallons", "liters") => value * Decimal::from_str("3.78541").unwrap(),
+        // Volume
+        ("liters", "gallons") => {
+            // 0.264172
+            let factor = Decimal::new(264_172, 6);
+            value * factor
+        }
+        ("gallons", "liters") => {
+            // 3.78541
+            let factor = Decimal::new(378_541, 5);
+            value * factor
+        }
         ("liters", "liters") => value,
         ("gallons", "gallons") => value,
-        ("kilograms", "pounds") => value * Decimal::from_str("2.20462").unwrap(),
-        ("pounds", "kilograms") => value * Decimal::from_str("0.453592").unwrap(),
+
+        // Mass/Weight
+        ("kilograms", "pounds") => {
+            // 2.20462
+            let factor = Decimal::new(220_462, 5);
+            value * factor
+        }
+        ("pounds", "kilograms") => {
+            // 0.453592
+            let factor = Decimal::new(453_592, 6);
+            value * factor
+        }
         ("kilograms", "kilograms") => value,
         ("pounds", "pounds") => value,
-        ("celsius", "fahrenheit") => (value * Decimal::from_str("1.8").unwrap()) + Decimal::from(32),
-        ("fahrenheit", "celsius") => (value - Decimal::from(32)) * Decimal::from_str("0.555556").unwrap(),
+
+        // Temperature (exact rational formulas, no magic strings)
+        ("celsius", "fahrenheit") => {
+            // F = C * 9/5 + 32
+            (value * Decimal::new(9, 0) / Decimal::new(5, 0)) + Decimal::from(32)
+        }
+        ("fahrenheit", "celsius") => {
+            // C = (F - 32) * 5/9
+            (value - Decimal::from(32)) * Decimal::new(5, 0) / Decimal::new(9, 0)
+        }
         ("celsius", "celsius") => value,
         ("fahrenheit", "fahrenheit") => value,
+
+        // Unsupported combination
         _ => {
             state.conv_result = Some("❌ Cannot convert between these units".to_string());
             return;

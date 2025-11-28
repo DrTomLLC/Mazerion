@@ -1,0 +1,18 @@
+[package]
+name = "mazerion-api"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+mazerion-core = { path = "../core" }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+mazerion-calculators = { path = "../calculators" }
+rust_decimal = { workspace = true }

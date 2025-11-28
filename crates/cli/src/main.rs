@@ -1,10 +1,15 @@
 use std::env;
+use mazerion_api::ApiEngine;
 
 fn main() {
+    // Make sure calculators are registered.
     mazerion_calculators::init();
 
     let args: Vec<String> = env::args().collect();
     let mode = args.get(1).map(String::as_str);
+
+    // Create the stable API engine once.
+    let api = ApiEngine::new();
 
     match mode {
         Some("gui") => {
@@ -21,10 +26,12 @@ fn main() {
         }
         Some("list") => {
             println!("🍯 Mazerion - Available Calculators (39 Total):\n");
-            let calcs = mazerion_core::traits::list_calculators();
+
+            let calcs = api.list_calculator_ids();
             for (i, calc_id) in calcs.iter().enumerate() {
                 println!("  {:2}. {}", i + 1, calc_id);
             }
+
             println!("\nRun with: mazerion gui | tui");
         }
         _ => {

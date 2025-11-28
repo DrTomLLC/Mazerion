@@ -31,7 +31,7 @@ pub fn run() -> io::Result<()> {
     result
 }
 
-fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>) -> io::Result<()> {
+fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>) -> io::Result<()> where std::io::Error: std::convert::From<<B as ratatui::backend::Backend>::Error> {
     let calculators = mazerion_core::traits::list_calculators();
     let mut selected: usize = 0;
 

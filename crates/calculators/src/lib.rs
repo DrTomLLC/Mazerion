@@ -11,6 +11,7 @@ pub mod carbonation;
 pub mod sulfite;
 pub mod acid_addition;
 pub mod backsweetening;
+mod stabilization;
 
 pub use abv::AbvCalculator;
 pub use brix_to_sg::BrixToSgCalculator;

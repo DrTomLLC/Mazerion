@@ -5,7 +5,7 @@ mod tabs;
 mod unit_helpers;
 
 use eframe::egui::{self, Color32, RichText, Rounding, Stroke, Vec2};
-use state::{AppState, TabView, colors};
+use state::{colors, AppState, TabView};
 
 pub struct MazerionApp {
     state: AppState,
@@ -73,11 +73,12 @@ impl MazerionApp {
                 colors::CREAM_ACCENT,
                 colors::CREAM_ACCENT,
             ),
-            _ => ( // "soft_blue" or default
-                   colors::BG_MAIN,
-                   colors::BG_PANEL,
-                   colors::ACCENT,
-                   colors::TAB_ACTIVE,
+            _ => (
+                // "soft_blue" or default
+                colors::BG_MAIN,
+                colors::BG_PANEL,
+                colors::ACCENT,
+                colors::TAB_ACTIVE,
             ),
         };
 
@@ -91,18 +92,29 @@ impl MazerionApp {
 
         // HIGHLY VISIBLE SCROLLBAR
         style.visuals.widgets.inactive.fg_stroke = Stroke::new(12.0, colors::SCROLLBAR);
-        style.visuals.widgets.hovered.fg_stroke = Stroke::new(14.0, Color32::from_rgb(65, 105, 225));
-        style.visuals.widgets.active.fg_stroke = Stroke::new(14.0, Color32::from_rgb(30, 75, 180));
+        style.visuals.widgets.hovered.fg_stroke =
+            Stroke::new(14.0, Color32::from_rgb(65, 105, 225));
+        style.visuals.widgets.active.fg_stroke =
+            Stroke::new(14.0, Color32::from_rgb(30, 75, 180));
 
-        // Apply font size
+        // Apply font size safely (no unwrap)
         let text_size = match self.state.font_size.as_str() {
             "small" => 12.0,
             "large" => 16.0,
             _ => 14.0, // medium
         };
-        style.text_styles.get_mut(&egui::TextStyle::Body).unwrap().size = text_size;
-        style.text_styles.get_mut(&egui::TextStyle::Button).unwrap().size = text_size;
-        style.text_styles.get_mut(&egui::TextStyle::Small).unwrap().size = text_size - 2.0;
+
+        if let Some(body) = style.text_styles.get_mut(&egui::TextStyle::Body) {
+            body.size = text_size;
+        }
+
+        if let Some(button) = style.text_styles.get_mut(&egui::TextStyle::Button) {
+            button.size = text_size;
+        }
+
+        if let Some(small) = style.text_styles.get_mut(&egui::TextStyle::Small) {
+            small.size = text_size - 2.0;
+        }
 
         ctx.set_style(style);
     }
@@ -127,32 +139,70 @@ impl MazerionApp {
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 5.0;
 
-            if self.tab_button(ui, "📊 Basic", self.state.current_tab == TabView::Basic).clicked() {
+            if self
+                .tab_button(ui, "📊 Basic", self.state.current_tab == TabView::Basic)
+                .clicked()
+            {
                 self.state.current_tab = TabView::Basic;
                 self.clear_results();
             }
 
-            if self.tab_button(ui, "🔬 Advanced", self.state.current_tab == TabView::Advanced).clicked() {
+            if self
+                .tab_button(
+                    ui,
+                    "🔬 Advanced",
+                    self.state.current_tab == TabView::Advanced,
+                )
+                .clicked()
+            {
                 self.state.current_tab = TabView::Advanced;
                 self.clear_results();
             }
 
-            if self.tab_button(ui, "🍺 Brewing", self.state.current_tab == TabView::Brewing).clicked() {
+            if self
+                .tab_button(
+                    ui,
+                    "🍺 Brewing",
+                    self.state.current_tab == TabView::Brewing,
+                )
+                .clicked()
+            {
                 self.state.current_tab = TabView::Brewing;
                 self.clear_results();
             }
 
-            if self.tab_button(ui, "✨ Finishing", self.state.current_tab == TabView::Finishing).clicked() {
+            if self
+                .tab_button(
+                    ui,
+                    "✨ Finishing",
+                    self.state.current_tab == TabView::Finishing,
+                )
+                .clicked()
+            {
                 self.state.current_tab = TabView::Finishing;
                 self.clear_results();
             }
 
-            if self.tab_button(ui, "📐 Conversions", self.state.current_tab == TabView::Conversions).clicked() {
+            if self
+                .tab_button(
+                    ui,
+                    "📐 Conversions",
+                    self.state.current_tab == TabView::Conversions,
+                )
+                .clicked()
+            {
                 self.state.current_tab = TabView::Conversions;
                 self.clear_results();
             }
 
-            if self.tab_button(ui, "⚙️ Settings", self.state.current_tab == TabView::Settings).clicked() {
+            if self
+                .tab_button(
+                    ui,
+                    "⚙️ Settings",
+                    self.state.current_tab == TabView::Settings,
+                )
+                .clicked()
+            {
                 self.state.current_tab = TabView::Settings;
                 self.clear_results();
             }

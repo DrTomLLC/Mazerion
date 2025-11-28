@@ -4,7 +4,6 @@ use mazerion_core::{
     register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
 };
 use rust_decimal::Decimal;
-use std::str::FromStr;
 
 /// Calculate Fermaid-O additions using TOSNA 2.0 protocol.
 #[derive(Default)]

@@ -7,7 +7,10 @@ members = [
     "crates/gui",
     "crates/tui",
     "crates/cli",
-    "tools/line-guard"
+    "tools/line-guard",
+    "crates/api",
+    "crates/voice",
+    "crates/ffi",
 ]
 
 [workspace.package]
