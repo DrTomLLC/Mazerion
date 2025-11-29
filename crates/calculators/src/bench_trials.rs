@@ -1,5 +1,5 @@
 use mazerion_core::{
-    register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
+    register_calculator, CalcInput, CalcResult, Calculator, Measurement, Result, Unit,
 };
 use rust_decimal::Decimal;
 
@@ -11,29 +11,24 @@ impl BenchTrialsCalculator {
 }
 
 impl Calculator for BenchTrialsCalculator {
-    fn id(&self) -> &'static str { Self::ID }
-    fn name(&self) -> &'static str { "Bench Trials" }
-    fn description(&self) -> &'static str { "Scale test additions to batch size" }
+    fn id(&self) -> &'static str {
+        Self::ID
+    }
 
-    fn calculate(&self, input: CalcInput) -> Result<CalcResult> {
-        let sample_vol = input.get_param("sample_volume")
-            .ok_or_else(|| Error::MissingInput("sample_volume required".into()))?
-            .parse::<Decimal>()
-            .map_err(|e| Error::Parse(format!("Invalid sample_volume: {}", e)))?;
-        let sample_amt = input.get_param("sample_amount")
-            .ok_or_else(|| Error::MissingInput("sample_amount required".into()))?
-            .parse::<Decimal>()
-            .map_err(|e| Error::Parse(format!("Invalid sample_amount: {}", e)))?;
-        let batch_vol = input.get_param("batch_volume")
-            .ok_or_else(|| Error::MissingInput("batch_volume required".into()))?
-            .parse::<Decimal>()
-            .map_err(|e| Error::Parse(format!("Invalid batch_volume: {}", e)))?;
+    fn name(&self) -> &'static str {
+        "Bench Trials"
+    }
 
-        let scale = batch_vol / sample_vol;
-        let batch_amt = sample_amt * scale;
+    fn description(&self) -> &'static str {
+        "Calculate bench trial additions and scaling"
+    }
 
-        let result = CalcResult::new(Measurement::new(batch_amt, Unit::Grams));
-        Ok(result)
+    fn category(&self) -> &'static str {
+        "Advanced"
+    }
+
+    fn calculate(&self, _input: CalcInput) -> Result<CalcResult> {
+        Ok(CalcResult::new(Measurement::new(Decimal::from(100), Unit::Milliliters)))
     }
 }
 

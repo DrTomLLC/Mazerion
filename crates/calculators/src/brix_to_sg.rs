@@ -23,6 +23,10 @@ impl Calculator for BrixToSgCalculator {
         "Brix to SG"
     }
 
+    fn category(&self) -> &'static str {
+        "Basic"
+    }
+
     fn description(&self) -> &'static str {
         "Convert degrees Brix to specific gravity"
     }

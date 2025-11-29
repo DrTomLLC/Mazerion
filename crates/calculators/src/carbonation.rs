@@ -1,11 +1,8 @@
-//! Carbonation calculator - priming sugar and keg PSI.
-
 use mazerion_core::{
     register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
 };
 use rust_decimal::Decimal;
 
-/// Calculate carbonation requirements.
 #[derive(Default)]
 pub struct CarbonationCalculator;
 
@@ -22,78 +19,87 @@ impl Calculator for CarbonationCalculator {
         "Carbonation Calculator"
     }
 
+    fn category(&self) -> &'static str {
+        "Brewing"
+    }
+
     fn description(&self) -> &'static str {
         "Calculate priming sugar or keg PSI for target carbonation"
     }
 
     fn calculate(&self, input: CalcInput) -> Result<CalcResult> {
-        let volume = input
-            .get_param("volume")
+        let volume = input.get_param("volume")
             .ok_or_else(|| Error::MissingInput("volume required".into()))?;
-        let temp = input
-            .get_param("temperature")
+        let temperature = input.get_param("temperature")
             .ok_or_else(|| Error::MissingInput("temperature required".into()))?;
-        let target_co2 = input
-            .get_param("target_co2")
+        let target_co2 = input.get_param("target_co2")
             .ok_or_else(|| Error::MissingInput("target_co2 required".into()))?;
+
+        let vol: Decimal = volume.parse()
+            .map_err(|_| Error::Parse("Invalid volume".into()))?;
+        let temp: Decimal = temperature.parse()
+            .map_err(|_| Error::Parse("Invalid temperature".into()))?;
+        let target: Decimal = target_co2.parse()
+            .map_err(|_| Error::Parse("Invalid target_co2".into()))?;
+
+        // Calculate residual CO2 at temperature (simplified formula)
+        let residual_co2 = Decimal::new(3, 1) - (temp * Decimal::new(1, 2));
+
+        // CO2 needed = target - residual
+        let co2_needed = target - residual_co2;
+
+        if co2_needed < Decimal::ZERO {
+            return Err(Error::Validation("Target CO2 already present at this temperature".into()));
+        }
+
+        // Check method - priming sugar or force carbonation
         let method = input.get_param("method").unwrap_or("priming");
 
-        let vol: Decimal = volume
-            .parse()
-            .map_err(|_| Error::Parse(format!("Invalid volume: {}", volume)))?;
-        let t: Decimal = temp
-            .parse()
-            .map_err(|_| Error::Parse(format!("Invalid temperature: {}", temp)))?;
-        let co2: Decimal = target_co2
-            .parse()
-            .map_err(|_| Error::Parse(format!("Invalid CO2: {}", target_co2)))?;
+        let result = if method == "keg" {
+            // Calculate PSI for force carbonation
+            // PSI = (target_co2 - residual) * temp_factor
+            let psi = co2_needed * (Decimal::from(15) - (temp * Decimal::new(2, 1)));
 
-        // CO2 already dissolved at temperature (Henry's Law approximation)
-        let dissolved_co2 = Decimal::new(3044, 3) - (t * Decimal::new(19, 3)); // 3.044 - 0.019T
-
-        // Additional CO2 needed
-        let needed_co2 = co2 - dissolved_co2;
-
-        if needed_co2 <= Decimal::ZERO {
-            return Err(Error::Validation(
-                "Already naturally carbonated at this temperature".into(),
-            ));
-        }
-
-        if method == "priming" {
+            CalcResult::new(Measurement::new(psi, Unit::Grams))
+                .with_meta("method", "Force Carbonation (Keg)")
+                .with_meta("psi", format!("{:.1}", psi))
+                .with_meta("target_co2", target_co2)
+        } else {
+            // Calculate priming sugar (table sugar default)
+            // Grams = volume_L * co2_needed * 4 (simplified)
             let sugar_type = input.get_param("sugar_type").unwrap_or("table_sugar");
 
-            // Sugar factors (g/L per volume CO2)
             let factor = match sugar_type {
-                "corn_sugar" => Decimal::new(4, 0),   // 4.0 g/L
-                "table_sugar" => Decimal::new(38, 1), // 3.8 g/L
-                "honey" => Decimal::new(45, 1),       // 4.5 g/L
-                "dme" => Decimal::new(46, 1),         // 4.6 g/L
-                _ => Decimal::new(4, 0),
+                "table_sugar" => Decimal::from(4),
+                "corn_sugar" => Decimal::new(44, 1),  // 4.4
+                "honey" => Decimal::new(35, 1),       // 3.5
+                "dme" => Decimal::new(46, 1),         // 4.6
+                _ => Decimal::from(4),
             };
 
-            let sugar_needed = vol * needed_co2 * factor;
+            let priming_sugar = vol * co2_needed * factor;
 
-            let mut result = CalcResult::new(Measurement::new(sugar_needed, Unit::Grams));
-            result = result
+            CalcResult::new(Measurement::new(priming_sugar, Unit::Grams))
                 .with_meta("method", "Bottle Priming")
                 .with_meta("sugar_type", sugar_type)
-                .with_meta("volume", format!("{} L", vol))
-                .with_meta("target_co2", format!("{} vol", co2));
+                .with_meta("target_co2", target_co2)
+                .with_meta("residual_co2", format!("{:.2}", residual_co2))
+        };
 
-            Ok(result)
-        } else {
-            // Keg PSI calculation
-            let psi = (needed_co2 - Decimal::new(5, 1)) * Decimal::new(2, 0) + Decimal::new(5, 0);
+        Ok(result)
+    }
 
-            let mut result = CalcResult::new(Measurement::new(psi, Unit::Percent)); // Using Percent as PSI placeholder
-            result = result
-                .with_meta("method", "Force Carbonation (Keg)")
-                .with_meta("temperature", format!("{} °C", t))
-                .with_meta("target_co2", format!("{} vol", co2));
-
-            Ok(result)
+    fn validate(&self, input: &CalcInput) -> Result<()> {
+        if input.get_param("volume").is_none() {
+            return Err(Error::MissingInput("volume required".into()));
         }
+        if input.get_param("temperature").is_none() {
+            return Err(Error::MissingInput("temperature required".into()));
+        }
+        if input.get_param("target_co2").is_none() {
+            return Err(Error::MissingInput("target_co2 required".into()));
+        }
+        Ok(())
     }
 }
 

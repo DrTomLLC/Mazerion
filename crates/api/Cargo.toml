@@ -1,18 +1,20 @@
 [package]
 name = "mazerion-api"
-version.workspace = true
-edition.workspace = true
-rust-version.workspace = true
-license.workspace = true
-authors.workspace = true
-
-[lints]
-workspace = true
+version = "0.7.0"
+edition = "2021"
+authors = ["Doctor Tom"]
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 mazerion-core = { path = "../core" }
-thiserror = { workspace = true }
+mazerion-calculators = { path = "../calculators" }
+thiserror = "2.0.17"
+serde = { version = "1.0.228", features = ["derive"] }
 
 [dev-dependencies]
-mazerion-calculators = { path = "../calculators" }
-rust_decimal = { workspace = true }
+rust_decimal = "1.39"
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"

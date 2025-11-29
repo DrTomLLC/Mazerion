@@ -255,7 +255,7 @@ fn section(ui: &mut egui::Ui, title: &str, content: impl FnOnce(&mut egui::Ui)) 
     egui::Frame::none()
         .fill(BG_PANEL)
         .stroke(Stroke::new(1.5, BORDER))
-        .rounding(Rounding::same(8.0))
+        .rounding(Rounding::same(8.0 as u8))
         .inner_margin(12.0)
         .show(ui, |ui| {
             ui.label(
@@ -292,7 +292,7 @@ fn button(ui: &mut egui::Ui, text: &str) -> bool {
                 .strong(),
         )
             .fill(BUTTON)
-            .rounding(Rounding::same(6.0))
+            .rounding(Rounding::same(6.0 as u8))
             .min_size(Vec2::new(150.0, 36.0)),
     )
         .clicked()

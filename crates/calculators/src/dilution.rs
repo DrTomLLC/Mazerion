@@ -1,11 +1,8 @@
-//! Dilution calculator - adjust ABV by water addition.
-
 use mazerion_core::{
     register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
 };
 use rust_decimal::Decimal;
 
-/// Calculate water needed to dilute to target ABV.
 #[derive(Default)]
 pub struct DilutionCalculator;
 
@@ -22,53 +19,33 @@ impl Calculator for DilutionCalculator {
         "Dilution Calculator"
     }
 
+    fn category(&self) -> &'static str {
+        "Advanced"
+    }
+
     fn description(&self) -> &'static str {
-        "Calculate water needed to reduce ABV"
+        "Calculate water needed to dilute to target ABV"
     }
 
     fn calculate(&self, input: CalcInput) -> Result<CalcResult> {
-        let current_vol = input
-            .get_param("current_volume")
-            .ok_or_else(|| Error::MissingInput("current_volume required".into()))?;
-        let current_abv = input
-            .get_param("current_abv")
-            .ok_or_else(|| Error::MissingInput("current_abv required".into()))?;
-        let target_abv = input
-            .get_param("target_abv")
-            .ok_or_else(|| Error::MissingInput("target_abv required".into()))?;
+        let volume = input.get_param("current_volume").ok_or_else(|| Error::MissingInput("current_volume required".into()))?;
+        let current_abv = input.get_param("current_abv").ok_or_else(|| Error::MissingInput("current_abv required".into()))?;
+        let target_abv = input.get_param("target_abv").ok_or_else(|| Error::MissingInput("target_abv required".into()))?;
 
-        let vol: Decimal = current_vol
-            .parse()
-            .map_err(|_| Error::Parse(format!("Invalid volume: {}", current_vol)))?;
-        let cur_abv: Decimal = current_abv
-            .parse()
-            .map_err(|_| Error::Parse(format!("Invalid current ABV: {}", current_abv)))?;
-        let tgt_abv: Decimal = target_abv
-            .parse()
-            .map_err(|_| Error::Parse(format!("Invalid target ABV: {}", target_abv)))?;
+        let vol: Decimal = volume.parse().map_err(|_| Error::Parse("Invalid volume".into()))?;
+        let curr_abv: Decimal = current_abv.parse().map_err(|_| Error::Parse("Invalid current ABV".into()))?;
+        let targ_abv: Decimal = target_abv.parse().map_err(|_| Error::Parse("Invalid target ABV".into()))?;
 
-        if cur_abv <= tgt_abv {
-            return Err(Error::Validation(
-                "Current ABV must be greater than target ABV".into(),
-            ));
+        if targ_abv >= curr_abv {
+            return Err(Error::Validation("Target ABV must be less than current ABV".into()));
         }
 
-        if tgt_abv <= Decimal::ZERO {
-            return Err(Error::Validation("Target ABV must be positive".into()));
-        }
+        let water_needed = vol * ((curr_abv - targ_abv) / targ_abv);
 
-        // Water needed = current_vol × (current_abv / target_abv - 1)
-        let water_needed = vol * (cur_abv / tgt_abv - Decimal::ONE);
-
-        let mut result = CalcResult::new(Measurement::new(water_needed, Unit::Liters));
-
-        result = result
-            .with_meta("current_volume", format!("{} L", vol))
-            .with_meta("current_abv", format!("{}%", cur_abv))
-            .with_meta("target_abv", format!("{}%", tgt_abv))
-            .with_meta("final_volume", format!("{} L", vol + water_needed));
-
-        Ok(result)
+        Ok(CalcResult::new(Measurement::new(water_needed, Unit::Liters))
+            .with_meta("current_volume", volume)
+            .with_meta("current_abv", current_abv)
+            .with_meta("target_abv", target_abv))
     }
 }
 

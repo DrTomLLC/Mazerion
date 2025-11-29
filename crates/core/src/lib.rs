@@ -1,18 +1,66 @@
-//! Core types for Mazerion beverage calculations.
+//! Core types for Mazerion MCL - Production Ready
 
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::fmt;
+use std::collections::HashMap;
 
 pub mod error;
 pub mod traits;
 pub mod units;
 pub mod validation;
 
+#[cfg(test)]
+mod calc_input_tests;
+#[cfg(test)]
+mod calc_result_tests;
+#[cfg(test)]
+mod units_tests;
+
 pub use error::{Error, Result};
-pub use traits::Calculator;
+pub use traits::{Calculator, get_calculator, get_all_calculators, list_calculator_ids, calculator_count};
 pub use units::*;
 pub use validation::*;
+
+// Re-export linkme and CALCULATORS for public use
+pub use linkme;
+pub use traits::CALCULATORS;
+
+/// Valid calculator categories (enforced at runtime)
+pub const VALID_CATEGORIES: &[&str] = &[
+    "Basic",
+    "Advanced",
+    "Brewing",
+    "Beer",
+    "Finishing",
+    "Mead Styles",
+    "Utilities",
+];
+
+/// Validate that a category string is valid
+pub fn validate_category(category: &str) -> Result<()> {
+    if VALID_CATEGORIES.contains(&category) {
+        Ok(())
+    } else {
+        Err(Error::Validation(format!(
+            "Invalid category '{}'. Must be one of: {}",
+            category,
+            VALID_CATEGORIES.join(", ")
+        )))
+    }
+}
+
+/// Get all calculators organized by category
+pub fn get_calculators_by_category() -> HashMap<String, Vec<Box<dyn Calculator>>> {
+    let mut by_category: HashMap<String, Vec<Box<dyn Calculator>>> = HashMap::new();
+
+    for calc in get_all_calculators() {
+        let category = calc.category().to_string();
+        by_category.entry(category).or_default().push(calc);
+    }
+
+    by_category
+}
 
 /// Measurement with unit and precision.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

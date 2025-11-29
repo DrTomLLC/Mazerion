@@ -22,6 +22,10 @@ impl Calculator for SgCorrectionCalculator {
         "SG Temperature Correction"
     }
 
+    fn category(&self) -> &'static str {
+        "Basic"
+    }
+
     fn description(&self) -> &'static str {
         "Correct specific gravity reading for temperature (calibrated at 20°C)"
     }
@@ -34,7 +38,7 @@ impl Calculator for SgCorrectionCalculator {
         let temp = temp_meas.value;
 
         let cal_temp = Decimal::from(20);
-        let correction_factor = Decimal::new(13, 5); // 0.00013
+        let correction_factor = Decimal::new(13, 5);
         let temp_diff = temp - cal_temp;
         let correction = correction_factor * temp_diff;
 

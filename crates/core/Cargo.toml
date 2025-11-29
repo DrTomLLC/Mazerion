@@ -14,3 +14,8 @@ rust_decimal = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
 linkme = "0.3.35"
+inventory = "0.3.21"
+
+[lib]
+# This is required for inventory’s linker magic
+crate-type = ["rlib", "cdylib"]

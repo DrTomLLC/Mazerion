@@ -22,6 +22,10 @@ impl Calculator for AbvCalculator {
         "ABV Calculator"
     }
 
+    fn category(&self) -> &'static str {
+        "Basic"
+    }
+
     fn description(&self) -> &'static str {
         "Calculate alcohol by volume from original and final specific gravity"
     }

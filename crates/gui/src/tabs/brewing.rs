@@ -1,163 +1,166 @@
-//! Brewing tab - COMPLETE IMPLEMENTATION
+//! Brewing calculators tab
 
-use crate::state::AppState;
-use eframe::egui::{self, Color32, RichText, Rounding, Stroke, Vec2};
-use mazerion_core::{CalcInput, traits::get_calculator};
+use crate::{MazerionApp, state::{BrewingCalculator, colors}};
+use eframe::egui::{self, RichText, CornerRadius};
+use mazerion_core::CalcInput;
 
-const BG_PANEL: Color32 = Color32::from_rgb(255, 255, 255);
-const TEXT_MAIN: Color32 = Color32::from_rgb(30, 30, 30);
-const TEXT_LABEL: Color32 = Color32::from_rgb(60, 60, 60);
-const BORDER: Color32 = Color32::from_rgb(218, 165, 32);
-const BUTTON: Color32 = Color32::from_rgb(34, 139, 34);
-const BUTTON_TEXT: Color32 = Color32::WHITE;
-
-pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
-    // TOSNA Nutrition Calculator
-    section(ui, "🧪 TOSNA Nutrition Calculator", |ui| {
-        field(ui, "Volume (L):", &mut state.volume);
-        field(ui, "Target ABV (%):", &mut state.target_abv_brew);
-
-        ui.horizontal(|ui| {
-            ui.label(RichText::new("Yeast N Requirements:").color(TEXT_LABEL).strong());
-            egui::ComboBox::from_id_source("yn_req")
-                .selected_text(&state.yn_requirement)
-                .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut state.yn_requirement, "low".to_string(), "Low (DV10, QA23)");
-                    ui.selectable_value(&mut state.yn_requirement, "medium".to_string(), "Medium (most yeasts)");
-                    ui.selectable_value(&mut state.yn_requirement, "high".to_string(), "High (EC-1118, K1-V1116)");
-                });
-        });
-
-        if button(ui, "Calculate Fermaid-O Schedule") {
-            calc_nutrition(state);
-        }
+pub fn render(app: &mut MazerionApp, ui: &mut egui::Ui) {
+    ui.horizontal(|ui| {
+        ui.label(RichText::new("Select Calculator:").strong());
+        egui::ComboBox::from_id_salt("brewing_calc")
+            .selected_text(get_calc_name(app.state.brewing_calc))
+            .show_ui(ui, |ui| {
+                ui.selectable_value(&mut app.state.brewing_calc, BrewingCalculator::Nutrition, "TOSNA Nutrition Calculator");
+                ui.selectable_value(&mut app.state.brewing_calc, BrewingCalculator::Carbonation, "Carbonation Calculator");
+            });
     });
 
     ui.add_space(10.0);
 
-    // Carbonation Calculator
-    section(ui, "🫧 Carbonation Calculator", |ui| {
-        field(ui, "Volume (L):", &mut state.volume);
-        field(ui, "Temperature (°C):", &mut state.carb_temp);
-        field(ui, "Target CO₂ (volumes):", &mut state.target_co2);
-
-        ui.horizontal(|ui| {
-            ui.label(RichText::new("Method:").color(TEXT_LABEL).strong());
-            egui::ComboBox::from_id_source("carb_method")
-                .selected_text(if state.carb_method == "priming" { "Bottle Priming" } else { "Force Carbonation" })
-                .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut state.carb_method, "priming".to_string(), "Bottle Priming");
-                    ui.selectable_value(&mut state.carb_method, "keg".to_string(), "Force Carbonation (Keg)");
-                });
-        });
-
-        if state.carb_method == "priming" {
-            ui.horizontal(|ui| {
-                ui.label(RichText::new("Sugar Type:").color(TEXT_LABEL).strong());
-                egui::ComboBox::from_id_source("sugar_type")
-                    .selected_text(&state.sugar_type)
-                    .show_ui(ui, |ui| {
-                        ui.selectable_value(&mut state.sugar_type, "table_sugar".to_string(), "Table Sugar");
-                        ui.selectable_value(&mut state.sugar_type, "corn_sugar".to_string(), "Corn Sugar");
-                        ui.selectable_value(&mut state.sugar_type, "honey".to_string(), "Honey");
-                        ui.selectable_value(&mut state.sugar_type, "dme".to_string(), "DME");
-                    });
-            });
-        }
-
-        if button(ui, "Calculate Carbonation") {
-            calc_carbonation(state);
-        }
-    });
-}
-
-fn section(ui: &mut egui::Ui, title: &str, content: impl FnOnce(&mut egui::Ui)) {
-    egui::Frame::none()
-        .fill(BG_PANEL)
-        .stroke(Stroke::new(1.5, BORDER))
-        .rounding(Rounding::same(8.0))
+    egui::Frame::new()
+        .fill(colors::LIGHT_CREAM)
+        .stroke(egui::Stroke::new(1.5, colors::HONEY_GOLD))
+        .corner_radius(CornerRadius::same(8))
         .inner_margin(15.0)
         .show(ui, |ui| {
-            ui.heading(RichText::new(title).color(TEXT_MAIN).size(18.0));
-            ui.add_space(8.0);
-            content(ui);
+            match app.state.brewing_calc {
+                BrewingCalculator::Nutrition => render_nutrition(app, ui),
+                BrewingCalculator::Carbonation => render_carbonation(app, ui),
+            }
         });
 }
 
-fn field(ui: &mut egui::Ui, label: &str, value: &mut String) {
+fn get_calc_name(calc: BrewingCalculator) -> &'static str {
+    match calc {
+        BrewingCalculator::Nutrition => "TOSNA Nutrition Calculator",
+        BrewingCalculator::Carbonation => "Carbonation Calculator",
+    }
+}
+
+fn render_nutrition(app: &mut MazerionApp, ui: &mut egui::Ui) {
+    ui.heading(RichText::new("🧪 TOSNA Nutrition Calculator").color(colors::SADDLE_BROWN));
+    ui.label("Calculate Fermaid-O schedule using TOSNA 2.0 protocol");
+    ui.add_space(10.0);
+
+    crate::input_field(ui, "Volume (L):", &mut app.volume, "Total must volume");
+    crate::input_field(ui, "Target ABV (%):", &mut app.target_abv_brew, "Expected final ABV");
+
     ui.horizontal(|ui| {
-        ui.label(RichText::new(label).color(TEXT_LABEL).strong());
-        ui.text_edit_singleline(value);
+        ui.label(RichText::new("Yeast Nitrogen Needs:").strong());
+        egui::ComboBox::from_id_salt("yn_req")
+            .selected_text(&app.yn_requirement)
+            .show_ui(ui, |ui| {
+                ui.selectable_value(&mut app.yn_requirement, "low".to_string(), "Low (DV10, QA23)");
+                ui.selectable_value(&mut app.yn_requirement, "medium".to_string(), "Medium (most yeasts)");
+                ui.selectable_value(&mut app.yn_requirement, "high".to_string(), "High (EC-1118, K1-V1116)");
+            });
     });
+
+    ui.add_space(10.0);
+
+    if crate::calculate_button(ui, "Calculate TOSNA Schedule") {
+        calc_nutrition(app);
+    }
 }
 
-fn button(ui: &mut egui::Ui, text: &str) -> bool {
-    ui.add(
-        egui::Button::new(RichText::new(text).color(BUTTON_TEXT).size(16.0).strong())
-            .fill(BUTTON)
-            .rounding(Rounding::same(6.0))
-            .min_size(Vec2::new(220.0, 36.0))
-    ).clicked()
+fn render_carbonation(app: &mut MazerionApp, ui: &mut egui::Ui) {
+    ui.heading(RichText::new("🫧 Carbonation Calculator").color(colors::SADDLE_BROWN));
+    ui.label("Calculate priming sugar or keg PSI for target carbonation");
+    ui.add_space(10.0);
+
+    crate::input_field(ui, "Volume (L):", &mut app.volume, "Total volume to carbonate");
+    crate::input_field(ui, "Temperature (°C):", &mut app.carb_temp, "Current temperature");
+    crate::input_field(ui, "Target CO₂ (volumes):", &mut app.target_co2, "Desired carbonation level (1.5-4.5)");
+
+    ui.horizontal(|ui| {
+        ui.label(RichText::new("Method:").strong());
+        egui::ComboBox::from_id_salt("carb_method")
+            .selected_text(&app.carb_method)
+            .show_ui(ui, |ui| {
+                ui.selectable_value(&mut app.carb_method, "priming".to_string(), "Bottle Priming");
+                ui.selectable_value(&mut app.carb_method, "keg".to_string(), "Force Carbonation (Keg)");
+            });
+    });
+
+    if app.carb_method == "priming" {
+        ui.horizontal(|ui| {
+            ui.label(RichText::new("Sugar Type:").strong());
+            egui::ComboBox::from_id_salt("sugar_type")
+                .selected_text(&app.sugar_type)
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut app.sugar_type, "table_sugar".to_string(), "Table Sugar (Sucrose)");
+                    ui.selectable_value(&mut app.sugar_type, "corn_sugar".to_string(), "Corn Sugar (Dextrose)");
+                    ui.selectable_value(&mut app.sugar_type, "honey".to_string(), "Honey");
+                    ui.selectable_value(&mut app.sugar_type, "dme".to_string(), "Dry Malt Extract");
+                });
+        });
+    }
+
+    ui.add_space(10.0);
+
+    if crate::calculate_button(ui, "Calculate Carbonation") {
+        calc_carbonation(app);
+    }
 }
 
-fn calc_nutrition(state: &mut AppState) {
-    let calc = match get_calculator("nutrition") {
+fn calc_nutrition(app: &mut MazerionApp) {
+    let calc = match mazerion_core::traits::get_calculator("nutrition") {
         Some(c) => c,
         None => {
-            state.result = Some("❌ Calculator not found".to_string());
+            app.result = Some("Error: Nutrition calculator not found".to_string());
             return;
         }
     };
 
     let input = CalcInput::new()
-        .add_param("volume", &state.volume)
-        .add_param("target_abv", &state.target_abv_brew)
-        .add_param("yn_requirement", &state.yn_requirement);
+        .add_param("volume", &app.volume)
+        .add_param("target_abv", &app.target_abv_brew)
+        .add_param("yn_requirement", &app.yn_requirement);
 
     match calc.calculate(input) {
         Ok(res) => {
-            state.result = Some(format!("✓ Total Fermaid-O: {:.2}g", res.output.value));
-            state.warnings = res.warnings.clone();
-            state.metadata = res.metadata.clone();
+            app.result = Some(format!("Total Fermaid-O: {:.2} g", res.output.value));
+            app.warnings = res.warnings;
+            app.metadata = res.metadata;
         }
         Err(e) => {
-            state.result = Some(format!("❌ {}", e));
-            state.warnings.clear();
-            state.metadata.clear();
+            app.result = Some(format!("Error: {}", e));
+            app.warnings.clear();
+            app.metadata.clear();
         }
     }
 }
 
-fn calc_carbonation(state: &mut AppState) {
-    let calc = match get_calculator("carbonation") {
+fn calc_carbonation(app: &mut MazerionApp) {
+    let calc = match mazerion_core::traits::get_calculator("carbonation") {
         Some(c) => c,
         None => {
-            state.result = Some("❌ Calculator not found".to_string());
+            app.result = Some("Error: Carbonation calculator not found".to_string());
             return;
         }
     };
 
     let input = CalcInput::new()
-        .add_param("volume", &state.volume)
-        .add_param("temperature", &state.carb_temp)
-        .add_param("target_co2", &state.target_co2)
-        .add_param("method", &state.carb_method)
-        .add_param("sugar_type", &state.sugar_type);
+        .add_param("volume", &app.volume)
+        .add_param("temperature", &app.carb_temp)
+        .add_param("target_co2", &app.target_co2)
+        .add_param("method", &app.carb_method)
+        .add_param("sugar_type", &app.sugar_type);
 
     match calc.calculate(input) {
         Ok(res) => {
-            if state.carb_method == "priming" {
-                state.result = Some(format!("✓ Priming Sugar: {:.1}g", res.output.value));
+            if app.carb_method == "priming" {
+                app.result = Some(format!("Priming Sugar: {:.1} g", res.output.value));
             } else {
-                state.result = Some(format!("✓ Keg PSI: {:.1}", res.output.value));
+                app.result = Some(format!("Target PSI: {:.1}", res.output.value));
             }
-            state.warnings = res.warnings.clone();
-            state.metadata = res.metadata.clone();
+            app.warnings = res.warnings;
+            app.metadata = res.metadata;
         }
         Err(e) => {
-            state.result = Some(format!("❌ {}", e));
-            state.warnings.clear();
-            state.metadata.clear();
+            app.result = Some(format!("Error: {}", e));
+            app.warnings.clear();
+            app.metadata.clear();
         }
     }
 }

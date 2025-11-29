@@ -1,8 +1,8 @@
 # Switch to first-dev
 git checkout first-dev
 
-# Stage all changes
-git add .
+# Stage all changesz
+  git add .
 
 # Verify changes are staged
 git status

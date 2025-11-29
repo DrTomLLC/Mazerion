@@ -1,137 +1,142 @@
-//! Modern, beautiful GUI with Settings that WORK and Conversions tab
+//! Production GUI with calculator-specific interfaces and automatic linking
 
 mod state;
 mod tabs;
-mod unit_helpers;
 
-use eframe::egui::{self, Color32, RichText, Rounding, Stroke, Vec2};
-use state::{colors, AppState, TabView};
+use eframe::egui::{self, Color32, RichText, CornerRadius, Stroke, Vec2};
+use state::AppState;
 
 pub struct MazerionApp {
-    state: AppState,
+    pub state: AppState,
+
+    // Input fields
+    pub og: String,
+    pub fg: String,
+    pub brix: String,
+    pub sg: String,
+    pub temp: String,
+    pub current_vol: String,
+    pub current_abv: String,
+    pub target_abv: String,
+    pub vol1: String,
+    pub abv1: String,
+    pub vol2: String,
+    pub abv2: String,
+    pub orig_brix: String,
+    pub curr_brix: String,
+    pub volume: String,
+    pub target_abv_brew: String,
+    pub yn_requirement: String,
+    pub carb_temp: String,
+    pub target_co2: String,
+    pub carb_method: String,
+    pub sugar_type: String,
+    pub sweet_vol: String,
+    pub current_sg: String,
+    pub target_sg: String,
+    pub sweetener: String,
+    pub sulfite_vol: String,
+    pub ph: String,
+    pub target_so2: String,
+    pub acid_vol: String,
+    pub current_ph: String,
+    pub target_ph_acid: String,
+    pub acid_type: String,
+
+    pub result: Option<String>,
+    pub warnings: Vec<String>,
+    pub metadata: Vec<(String, String)>,
 }
 
 impl Default for MazerionApp {
     fn default() -> Self {
+        mazerion_calculators::init();
+
         Self {
             state: AppState::default(),
+            og: "1.090".to_string(),
+            fg: "1.010".to_string(),
+            brix: "15.0".to_string(),
+            sg: "1.060".to_string(),
+            temp: "22.0".to_string(),
+            current_vol: "19.0".to_string(),
+            current_abv: "14.0".to_string(),
+            target_abv: "10.0".to_string(),
+            vol1: "10.0".to_string(),
+            abv1: "14.0".to_string(),
+            vol2: "5.0".to_string(),
+            abv2: "8.0".to_string(),
+            orig_brix: "24.0".to_string(),
+            curr_brix: "8.0".to_string(),
+            volume: "19.0".to_string(),
+            target_abv_brew: "14.0".to_string(),
+            yn_requirement: "medium".to_string(),
+            carb_temp: "20.0".to_string(),
+            target_co2: "2.5".to_string(),
+            carb_method: "priming".to_string(),
+            sugar_type: "table_sugar".to_string(),
+            sweet_vol: "19.0".to_string(),
+            current_sg: "0.995".to_string(),
+            target_sg: "1.010".to_string(),
+            sweetener: "honey".to_string(),
+            sulfite_vol: "19.0".to_string(),
+            ph: "3.4".to_string(),
+            target_so2: "30.0".to_string(),
+            acid_vol: "19.0".to_string(),
+            current_ph: "3.8".to_string(),
+            target_ph_acid: "3.4".to_string(),
+            acid_type: "tartaric".to_string(),
+            result: None,
+            warnings: Vec::new(),
+            metadata: Vec::new(),
         }
     }
 }
 
 impl eframe::App for MazerionApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // Apply theme and font size settings
-        self.apply_settings(ctx);
+        self.apply_custom_style(ctx);
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            // Header
             self.render_header(ui);
             ui.add_space(10.0);
-
-            // Tab selection
             self.render_tabs(ui);
             ui.add_space(10.0);
 
-            // Tab content with scroll
-            egui::ScrollArea::vertical()
-                .auto_shrink([false; 2])
-                .show(ui, |ui| {
-                    match self.state.current_tab {
-                        TabView::Basic => tabs::render_basic(ui, &mut self.state),
-                        TabView::Advanced => tabs::render_advanced(ui, &mut self.state),
-                        TabView::Brewing => tabs::render_brewing(ui, &mut self.state),
-                        TabView::Finishing => tabs::render_finishing(ui, &mut self.state),
-                        TabView::Conversions => tabs::render_conversions(ui, &mut self.state),
-                        TabView::Settings => tabs::render_settings(ui, &mut self.state),
-                    }
+            match self.state.current_tab {
+                state::TabView::Basic => tabs::basic::render(self, ui),
+                state::TabView::Advanced => tabs::advanced::render(self, ui),
+                state::TabView::Brewing => tabs::brewing::render(self, ui),
+                state::TabView::Finishing => tabs::finishing::render(self, ui),
+            }
 
-                    ui.add_space(10.0);
-
-                    // Results section
-                    self.render_results(ui);
-                });
+            ui.add_space(10.0);
+            self.render_results(ui);
         });
     }
 }
 
 impl MazerionApp {
-    fn apply_settings(&self, ctx: &egui::Context) {
+    fn apply_custom_style(&self, ctx: &egui::Context) {
         let mut style = (*ctx.style()).clone();
-
-        // Apply theme
-        let (bg_main, bg_panel, accent, tab_active) = match self.state.theme.as_str() {
-            "light" => (
-                colors::LIGHT_BG_MAIN,
-                colors::LIGHT_BG_PANEL,
-                colors::LIGHT_ACCENT,
-                colors::LIGHT_ACCENT,
-            ),
-            "cream" => (
-                colors::CREAM_BG_MAIN,
-                colors::CREAM_BG_PANEL,
-                colors::CREAM_ACCENT,
-                colors::CREAM_ACCENT,
-            ),
-            _ => (
-                // "soft_blue" or default
-                colors::BG_MAIN,
-                colors::BG_PANEL,
-                colors::ACCENT,
-                colors::TAB_ACTIVE,
-            ),
-        };
-
-        style.visuals.window_fill = bg_main;
-        style.visuals.panel_fill = bg_main;
-        style.visuals.extreme_bg_color = bg_panel;
-        style.visuals.widgets.noninteractive.bg_fill = bg_panel;
-        style.visuals.widgets.inactive.bg_fill = bg_panel;
-        style.visuals.widgets.hovered.bg_fill = accent;
-        style.visuals.widgets.active.bg_fill = tab_active;
-
-        // HIGHLY VISIBLE SCROLLBAR
-        style.visuals.widgets.inactive.fg_stroke = Stroke::new(12.0, colors::SCROLLBAR);
-        style.visuals.widgets.hovered.fg_stroke =
-            Stroke::new(14.0, Color32::from_rgb(65, 105, 225));
-        style.visuals.widgets.active.fg_stroke =
-            Stroke::new(14.0, Color32::from_rgb(30, 75, 180));
-
-        // Apply font size safely (no unwrap)
-        let text_size = match self.state.font_size.as_str() {
-            "small" => 12.0,
-            "large" => 16.0,
-            _ => 14.0, // medium
-        };
-
-        if let Some(body) = style.text_styles.get_mut(&egui::TextStyle::Body) {
-            body.size = text_size;
-        }
-
-        if let Some(button) = style.text_styles.get_mut(&egui::TextStyle::Button) {
-            button.size = text_size;
-        }
-
-        if let Some(small) = style.text_styles.get_mut(&egui::TextStyle::Small) {
-            small.size = text_size - 2.0;
-        }
-
+        style.visuals.window_fill = state::colors::CORNSILK;
+        style.visuals.panel_fill = state::colors::LIGHT_CREAM;
+        style.visuals.widgets.noninteractive.bg_fill = state::colors::LIGHT_CREAM;
+        style.visuals.widgets.inactive.bg_fill = state::colors::LIGHT_CREAM;
+        style.visuals.widgets.hovered.bg_fill = state::colors::GOLDENROD;
+        style.visuals.widgets.active.bg_fill = state::colors::HONEY_GOLD;
         ctx.set_style(style);
     }
 
     fn render_header(&self, ui: &mut egui::Ui) {
         ui.vertical_centered(|ui| {
-            ui.heading(
-                RichText::new("🍯 Mazerion")
-                    .size(32.0)
-                    .color(colors::ACCENT)
-                    .strong(),
-            );
-            ui.label(
-                RichText::new("Professional Beverage Calculator Suite")
-                    .size(16.0)
-                    .color(colors::TEXT_MAIN),
-            );
+            ui.heading(RichText::new("🍯 Mazerion")
+                .size(32.0)
+                .color(state::colors::SADDLE_BROWN)
+                .strong());
+            ui.label(RichText::new("Professional Beverage Calculator Suite")
+                .size(16.0)
+                .color(state::colors::GOLDENROD));
         });
     }
 
@@ -139,141 +144,81 @@ impl MazerionApp {
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 5.0;
 
-            if self
-                .tab_button(ui, "📊 Basic", self.state.current_tab == TabView::Basic)
-                .clicked()
-            {
-                self.state.current_tab = TabView::Basic;
+            if self.tab_button(ui, "📊 Basic", self.state.current_tab == state::TabView::Basic).clicked() {
+                self.state.current_tab = state::TabView::Basic;
                 self.clear_results();
             }
 
-            if self
-                .tab_button(
-                    ui,
-                    "🔬 Advanced",
-                    self.state.current_tab == TabView::Advanced,
-                )
-                .clicked()
-            {
-                self.state.current_tab = TabView::Advanced;
+            if self.tab_button(ui, "🔬 Advanced", self.state.current_tab == state::TabView::Advanced).clicked() {
+                self.state.current_tab = state::TabView::Advanced;
                 self.clear_results();
             }
 
-            if self
-                .tab_button(
-                    ui,
-                    "🍺 Brewing",
-                    self.state.current_tab == TabView::Brewing,
-                )
-                .clicked()
-            {
-                self.state.current_tab = TabView::Brewing;
+            if self.tab_button(ui, "🍺 Brewing", self.state.current_tab == state::TabView::Brewing).clicked() {
+                self.state.current_tab = state::TabView::Brewing;
                 self.clear_results();
             }
 
-            if self
-                .tab_button(
-                    ui,
-                    "✨ Finishing",
-                    self.state.current_tab == TabView::Finishing,
-                )
-                .clicked()
-            {
-                self.state.current_tab = TabView::Finishing;
-                self.clear_results();
-            }
-
-            if self
-                .tab_button(
-                    ui,
-                    "📐 Conversions",
-                    self.state.current_tab == TabView::Conversions,
-                )
-                .clicked()
-            {
-                self.state.current_tab = TabView::Conversions;
-                self.clear_results();
-            }
-
-            if self
-                .tab_button(
-                    ui,
-                    "⚙️ Settings",
-                    self.state.current_tab == TabView::Settings,
-                )
-                .clicked()
-            {
-                self.state.current_tab = TabView::Settings;
+            if self.tab_button(ui, "✨ Finishing", self.state.current_tab == state::TabView::Finishing).clicked() {
+                self.state.current_tab = state::TabView::Finishing;
                 self.clear_results();
             }
         });
     }
 
     fn tab_button(&self, ui: &mut egui::Ui, text: &str, active: bool) -> egui::Response {
-        let (bg_color, text_color) = if active {
-            (colors::TAB_ACTIVE, Color32::WHITE)
-        } else {
-            (colors::TAB_INACTIVE, colors::TEXT_MAIN)
-        };
-
+        let color = if active { state::colors::HONEY_GOLD } else { state::colors::LIGHT_CREAM };
+        let text_color = if active { Color32::WHITE } else { state::colors::SADDLE_BROWN };
         let button = egui::Button::new(RichText::new(text).color(text_color).size(14.0))
-            .fill(bg_color)
-            .rounding(Rounding::same(5.0))
-            .min_size(Vec2::new(115.0, 35.0));
-
+            .fill(color)
+            .corner_radius(CornerRadius::same(5))
+            .min_size(Vec2::new(120.0, 35.0));
         ui.add(button)
     }
 
     fn clear_results(&mut self) {
-        self.state.result = None;
-        self.state.warnings.clear();
-        self.state.metadata.clear();
-        self.state.conv_result = None;
+        self.result = None;
+        self.warnings.clear();
+        self.metadata.clear();
     }
 
     fn render_results(&self, ui: &mut egui::Ui) {
-        if self.state.result.is_none() && self.state.warnings.is_empty() {
+        if self.result.is_none() && self.warnings.is_empty() {
             return;
         }
 
         ui.separator();
         ui.add_space(5.0);
 
-        egui::Frame::none()
-            .fill(colors::BG_PANEL)
-            .stroke(Stroke::new(2.0, colors::ACCENT))
-            .rounding(Rounding::same(10.0))
+        egui::Frame::new()
+            .fill(state::colors::LIGHT_CREAM)
+            .stroke(Stroke::new(2.0, state::colors::HONEY_GOLD))
+            .corner_radius(CornerRadius::same(10))
             .inner_margin(15.0)
             .show(ui, |ui| {
-                ui.heading(RichText::new("📋 Results").color(colors::ACCENT));
+                ui.heading(RichText::new("📋 Results").color(state::colors::SADDLE_BROWN));
                 ui.add_space(5.0);
 
-                if let Some(ref result) = self.state.result {
-                    ui.label(
-                        RichText::new(result)
-                            .size(18.0)
-                            .color(colors::TEXT_SUCCESS)
-                            .strong(),
-                    );
+                if let Some(ref result) = self.result {
+                    ui.label(RichText::new(format!("✓ {}", result))
+                        .size(18.0)
+                        .color(state::colors::FOREST_GREEN)
+                        .strong());
                 }
 
-                // Only show warnings if setting is enabled
-                if self.state.show_warnings && !self.state.warnings.is_empty() {
+                if !self.warnings.is_empty() {
                     ui.add_space(8.0);
-                    for warning in &self.state.warnings {
-                        ui.label(
-                            RichText::new(format!("⚠️ {}", warning))
-                                .size(14.0)
-                                .color(colors::TEXT_WARNING),
-                        );
+                    for warning in &self.warnings {
+                        ui.label(RichText::new(format!("⚠️ {}", warning))
+                            .size(14.0)
+                            .color(state::colors::DARK_ORANGE));
                     }
                 }
 
-                // Only show metadata if setting is enabled
-                if self.state.show_metadata && !self.state.metadata.is_empty() {
+                if !self.metadata.is_empty() {
                     ui.add_space(8.0);
                     ui.collapsing("ℹ️ Additional Information", |ui| {
-                        for (key, value) in &self.state.metadata {
+                        for (key, value) in &self.metadata {
                             ui.label(format!("  • {}: {}", key, value));
                         }
                     });
@@ -282,11 +227,26 @@ impl MazerionApp {
     }
 }
 
+pub fn input_field(ui: &mut egui::Ui, label: &str, value: &mut String, hint: &str) {
+    ui.horizontal(|ui| {
+        ui.label(RichText::new(label).strong());
+        ui.text_edit_singleline(value).on_hover_text(hint);
+    });
+}
+
+pub fn calculate_button(ui: &mut egui::Ui, text: &str) -> bool {
+    let button = egui::Button::new(RichText::new(text).size(16.0).strong())
+        .fill(state::colors::FOREST_GREEN)
+        .corner_radius(CornerRadius::same(8))
+        .min_size(Vec2::new(200.0, 40.0));
+    ui.add(button).clicked()
+}
+
 pub fn run() -> eframe::Result {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_inner_size([950.0, 750.0])
-            .with_min_inner_size([850.0, 650.0]),
+            .with_inner_size([900.0, 700.0])
+            .with_min_inner_size([800.0, 600.0]),
         ..Default::default()
     };
 

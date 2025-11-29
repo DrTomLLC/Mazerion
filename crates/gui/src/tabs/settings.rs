@@ -144,7 +144,7 @@ fn section(ui: &mut egui::Ui, title: &str, content: impl FnOnce(&mut egui::Ui)) 
     egui::Frame::none()
         .fill(BG_PANEL)
         .stroke(Stroke::new(1.5, BORDER))
-        .rounding(Rounding::same(8.0))
+        .rounding(Rounding::same(8.0 as u8))
         .inner_margin(15.0)
         .show(ui, |ui| {
             ui.label(RichText::new(title).color(TEXT_ACCENT).size(18.0).strong());
@@ -164,7 +164,7 @@ fn radio_button_styled(ui: &mut egui::Ui, label: &str, is_selected: bool) -> egu
             .strong()
     )
         .fill(button_color)
-        .rounding(Rounding::same(6.0))
+        .rounding(Rounding::same(6.0 as u8))
         .min_size(egui::Vec2::new(100.0, 32.0));
 
     ui.add(button)

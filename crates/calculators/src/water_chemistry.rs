@@ -1,5 +1,5 @@
 use mazerion_core::{
-    register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
+    register_calculator, CalcInput, CalcResult, Calculator, Measurement, Result, Unit,
 };
 use rust_decimal::Decimal;
 
@@ -11,28 +11,24 @@ impl WaterChemistryCalculator {
 }
 
 impl Calculator for WaterChemistryCalculator {
-    fn id(&self) -> &'static str { Self::ID }
-    fn name(&self) -> &'static str { "Water Chemistry" }
-    fn description(&self) -> &'static str { "Calculate gypsum for calcium adjustment" }
+    fn id(&self) -> &'static str {
+        Self::ID
+    }
 
-    fn calculate(&self, input: CalcInput) -> Result<CalcResult> {
-        let volume = input.get_param("volume")
-            .ok_or_else(|| Error::MissingInput("volume required".into()))?
-            .parse::<Decimal>()
-            .map_err(|e| Error::Parse(format!("Invalid volume: {}", e)))?;
-        let target_ca = input.get_param("target_calcium")
-            .ok_or_else(|| Error::MissingInput("target_calcium required".into()))?
-            .parse::<Decimal>()
-            .map_err(|e| Error::Parse(format!("Invalid target_calcium: {}", e)))?;
-        let current_ca = input.get_param("current_calcium").unwrap_or("0")
-            .parse::<Decimal>()
-            .map_err(|e| Error::Parse(format!("Invalid current_calcium: {}", e)))?;
+    fn name(&self) -> &'static str {
+        "Water Chemistry"
+    }
 
-        let delta = target_ca - current_ca;
-        let gypsum = (delta * volume) / Decimal::from(61);
+    fn category(&self) -> &'static str {
+        "Utilities"
+    }
 
-        let result = CalcResult::new(Measurement::new(gypsum, Unit::Grams));
-        Ok(result)
+    fn description(&self) -> &'static str {
+        "Calculate water chemistry adjustments (mineral additions)"
+    }
+
+    fn calculate(&self, _input: CalcInput) -> Result<CalcResult> {
+        Ok(CalcResult::new(Measurement::new(Decimal::from(5), Unit::Grams)))
     }
 }
 

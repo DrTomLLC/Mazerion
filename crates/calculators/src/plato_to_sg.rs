@@ -11,31 +11,28 @@ impl PlatoToSgCalculator {
 }
 
 impl Calculator for PlatoToSgCalculator {
-    fn id(&self) -> &'static str { Self::ID }
-    fn name(&self) -> &'static str { "Plato to SG" }
-    fn description(&self) -> &'static str { "Convert degrees Plato to specific gravity" }
+    fn id(&self) -> &'static str {
+        Self::ID
+    }
+
+    fn name(&self) -> &'static str {
+        "Plato to SG"
+    }
+
+    fn category(&self) -> &'static str {
+        "Basic"
+    }
+
+    fn description(&self) -> &'static str {
+        "Convert degrees Plato to specific gravity"
+    }
 
     fn calculate(&self, input: CalcInput) -> Result<CalcResult> {
         let plato_meas = input.get_measurement(Unit::Plato)?;
         let plato = plato_meas.value;
         Validator::plato(plato)?;
-
         let sg = Decimal::ONE + (plato * Decimal::new(4, 3));
-        let mut result = CalcResult::new(Measurement::sg(sg)?);
-
-        if let Some(warning) = Validator::plato_warning(plato) {
-            result = result.with_warning(warning);
-        }
-
-        result = result
-            .with_meta("plato", plato.to_string())
-            .with_meta("formula", "SG ≈ 1.0 + (Plato × 0.004)");
-        Ok(result)
-    }
-
-    fn validate(&self, input: &CalcInput) -> Result<()> {
-        input.get_measurement(Unit::Plato)?;
-        Ok(())
+        Ok(CalcResult::new(Measurement::sg(sg)?))
     }
 }
 
