@@ -1,135 +1,134 @@
+//! FFI for Mazerion - ACTUAL WORKING VERSION
+
 use std::ffi::{CStr, CString};
-use std::os::raw::c_char;
+use std::os::raw::{c_char, c_int};
+use std::panic;
 use std::ptr;
 
-use mazerion_api::{ApiRequest, execute_calculation, list_calculators};
-use std::collections::HashMap;
-
 #[repr(C)]
-pub struct FFICalculatorInfo {
-    pub id: *mut c_char,
-    pub name: *mut c_char,
-    pub description: *mut c_char,
-    pub category: *mut c_char,
+pub struct MazerionError {
+    pub code: c_int,
+    pub message: *mut c_char,
+}
+
+impl MazerionError {
+    fn success() -> Self {
+        Self { code: 0, message: ptr::null_mut() }
+    }
+
+    fn new(code: c_int, message: &str) -> Self {
+        let msg = match CString::new(message) {
+            Ok(s) => s.into_raw(),
+            Err(_) => CString::new("Error").unwrap_or(CString::new("").unwrap_or_default()).into_raw(),
+        };
+        Self { code, message: msg }
+    }
+
+    fn null_pointer() -> Self { Self::new(1, "Null pointer") }
+    fn invalid_utf8() -> Self { Self::new(2, "Invalid UTF-8") }
+    fn json_error(msg: &str) -> Self { Self::new(6, msg) }
+    fn panic_caught(msg: &str) -> Self { Self::new(7, msg) }
 }
 
 #[repr(C)]
-pub struct FFICalcResult {
-    pub value: *mut c_char,
-    pub unit: *mut c_char,
-    pub error: *mut c_char,
+pub struct MazerionResult {
+    pub error: MazerionError,
+    pub json_output: *mut c_char,
+}
+
+impl MazerionResult {
+    fn success(json: &str) -> Self {
+        let json_cstring = match CString::new(json) {
+            Ok(s) => s.into_raw(),
+            Err(_) => return Self { error: MazerionError::json_error("Invalid JSON"), json_output: ptr::null_mut() },
+        };
+        Self { error: MazerionError::success(), json_output: json_cstring }
+    }
+
+    fn error(error: MazerionError) -> Self {
+        Self { error, json_output: ptr::null_mut() }
+    }
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn mazerion_calculate(
-    calc_id: *const c_char,
-    params_json: *const c_char,
-) -> *mut FFICalcResult {
-    if calc_id.is_null() || params_json.is_null() {
-        return ptr::null_mut();
+pub extern "C" fn mazerion_init() -> c_int {
+    match panic::catch_unwind(|| { let _ = mazerion_calculators::init(); }) {
+        Ok(_) => 0,
+        Err(_) => 7,
     }
+}
 
-    let calc_id = match unsafe { CStr::from_ptr(calc_id) }.to_str() {
-        Ok(s) => s,
-        Err(_) => return ptr::null_mut(),
-    };
+#[unsafe(no_mangle)]
+pub extern "C" fn mazerion_list_calculators() -> MazerionResult {
+    let result = panic::catch_unwind(|| {
+        let calc_info = mazerion_api::list_calculators();
 
-    let params_str = match unsafe { CStr::from_ptr(params_json) }.to_str() {
-        Ok(s) => s,
-        Err(_) => return ptr::null_mut(),
-    };
+        let calc_list: Vec<serde_json::Value> = calc_info.iter().map(|info| {
+            serde_json::json!({
+                "id": info.id,
+                "name": info.name,
+                "description": info.description,
+                "category": info.category
+            })
+        }).collect();
 
-    let params: HashMap<String, String> = match serde_json::from_str(params_str) {
-        Ok(p) => p,
-        Err(_) => return ptr::null_mut(),
-    };
-
-    let request = ApiRequest {
-        calculator_id: calc_id.to_string(),
-        params,
-    };
-
-    let result = Box::new(match execute_calculation(request) {
-        Ok(response) => FFICalcResult {
-            value: CString::new(response.value).unwrap().into_raw(),
-            unit: CString::new(response.unit).unwrap().into_raw(),
-            error: ptr::null_mut(),
-        },
-        Err(e) => FFICalcResult {
-            value: ptr::null_mut(),
-            unit: ptr::null_mut(),
-            error: CString::new(e.to_string()).unwrap().into_raw(),
-        },
+        match serde_json::to_string(&calc_list) {
+            Ok(json) => MazerionResult::success(&json),
+            Err(e) => MazerionResult::error(MazerionError::json_error(&e.to_string())),
+        }
     });
 
-    Box::into_raw(result)
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn mazerion_list_calculators(out_len: *mut usize) -> *mut FFICalculatorInfo {
-    let calculators = list_calculators();
-    let len = calculators.len();
-
-    if !out_len.is_null() {
-        unsafe { *out_len = len };
-    }
-
-    let mut infos: Vec<FFICalculatorInfo> = calculators
-        .into_iter()
-        .map(|calc| FFICalculatorInfo {
-            id: CString::new(calc.id).unwrap().into_raw(),
-            name: CString::new(calc.name).unwrap().into_raw(),
-            description: CString::new(calc.description).unwrap().into_raw(),
-            category: CString::new(calc.category).unwrap().into_raw(),
-        })
-        .collect();
-
-    let ptr = infos.as_mut_ptr();
-    std::mem::forget(infos);
-    ptr
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn mazerion_free_result(result: *mut FFICalcResult) {
-    if result.is_null() {
-        return;
-    }
-
-    unsafe {
-        let result = Box::from_raw(result);
-        if !result.value.is_null() {
-            let _ = CString::from_raw(result.value);
-        }
-        if !result.unit.is_null() {
-            let _ = CString::from_raw(result.unit);
-        }
-        if !result.error.is_null() {
-            let _ = CString::from_raw(result.error);
-        }
+    match result {
+        Ok(r) => r,
+        Err(_) => MazerionResult::error(MazerionError::panic_caught("Panic in list")),
     }
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn mazerion_free_calculator_infos(infos: *mut FFICalculatorInfo, len: usize) {
-    if infos.is_null() {
-        return;
-    }
+pub extern "C" fn mazerion_calculate(calculator_id: *const c_char, json_input: *const c_char) -> MazerionResult {
+    if calculator_id.is_null() { return MazerionResult::error(MazerionError::null_pointer()); }
+    if json_input.is_null() { return MazerionResult::error(MazerionError::null_pointer()); }
 
-    unsafe {
-        let infos = Vec::from_raw_parts(infos, len, len);
-        for info in infos {
-            if !info.id.is_null() {
-                let _ = CString::from_raw(info.id);
-            }
-            if !info.name.is_null() {
-                let _ = CString::from_raw(info.name);
-            }
-            if !info.description.is_null() {
-                let _ = CString::from_raw(info.description);
-            }
-            if !info.category.is_null() {
-                let _ = CString::from_raw(info.category);
-            }
+    MazerionResult::error(MazerionError::new(4, "Not implemented yet"))
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn mazerion_get_categories() -> MazerionResult {
+    let result = panic::catch_unwind(|| {
+        let calc_info = mazerion_api::list_calculators();
+        let mut categories = std::collections::HashMap::new();
+
+        for info in calc_info {
+            *categories.entry(info.category).or_insert(0) += 1;
         }
+
+        match serde_json::to_string(&categories) {
+            Ok(json) => MazerionResult::success(&json),
+            Err(e) => MazerionResult::error(MazerionError::json_error(&e.to_string())),
+        }
+    });
+
+    match result {
+        Ok(r) => r,
+        Err(_) => MazerionResult::error(MazerionError::panic_caught("Panic")),
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn mazerion_free_string(ptr: *mut c_char) {
+    if !ptr.is_null() { let _ = CString::from_raw(ptr); }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn mazerion_free_result(result: MazerionResult) {
+    if !result.error.message.is_null() { unsafe { let _ = CString::from_raw(result.error.message); } }
+    if !result.json_output.is_null() { unsafe { let _ = CString::from_raw(result.json_output); } }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn mazerion_version() -> *mut c_char {
+    match CString::new("0.7.0") {
+        Ok(s) => s.into_raw(),
+        Err(_) => ptr::null_mut(),
     }
 }

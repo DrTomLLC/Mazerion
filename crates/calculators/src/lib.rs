@@ -169,11 +169,14 @@ fn force_calculator_linking() {
 }
 
 /// Initialize calculator registry (call this before using calculators)
-pub fn init() {
+///
+/// Returns an error if no calculators are registered.
+pub fn init() -> Result<(), &'static str> {
     force_calculator_linking();
     let count = mazerion_core::traits::calculator_count();
     if count == 0 {
-        panic!("ERROR: No calculators registered! Check linkme configuration.");
+        return Err("No calculators registered! Check linkme configuration.");
     }
     println!("✓ Loaded {} calculators", count);
+    Ok(())
 }

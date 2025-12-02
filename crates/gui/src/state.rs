@@ -1,4 +1,4 @@
-//! State management for Mazerion GUI
+use eframe::egui::Color32;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TabView {
@@ -6,6 +6,7 @@ pub enum TabView {
     Advanced,
     Brewing,
     Finishing,
+    Settings,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -57,12 +58,9 @@ impl Default for AppState {
 
 pub mod colors {
     use eframe::egui::Color32;
-
     pub const HONEY_GOLD: Color32 = Color32::from_rgb(240, 165, 0);
-    pub const SADDLE_BROWN: Color32 = Color32::from_rgb(139, 69, 19);
     pub const CORNSILK: Color32 = Color32::from_rgb(255, 248, 220);
-    pub const GOLDENROD: Color32 = Color32::from_rgb(218, 165, 32);
     pub const FOREST_GREEN: Color32 = Color32::from_rgb(34, 139, 34);
-    pub const DARK_ORANGE: Color32 = Color32::from_rgb(255, 140, 0);
     pub const LIGHT_CREAM: Color32 = Color32::from_rgb(255, 253, 245);
+    pub const DARK_TEXT: Color32 = Color32::from_rgb(40, 40, 40);
 }

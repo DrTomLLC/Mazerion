@@ -1,5 +1,6 @@
 //! Production CLI with automatic MCL integration
 
+use mazerion_gui::run;
 use mazerion_core::{CalcInput, get_calculator, get_calculators_by_category, VALID_CATEGORIES};
 use std::env;
 
@@ -23,7 +24,7 @@ fn main() {
 
 fn launch_gui() {
     println!("🚀 Launching GUI...");
-    if let Err(e) = mazerion_gui::run() {
+    if let Err(e) = run() {
         eprintln!("❌ GUI error: {}", e);
         std::process::exit(1);
     }

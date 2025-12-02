@@ -1,4 +1,4 @@
-use mazerion_core::{CalcInput, CalcResult, Error as CoreError};
+pub use mazerion_core::{CalcInput, CalcResult, Error as CoreError};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use thiserror::Error;
