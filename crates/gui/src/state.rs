@@ -6,6 +6,9 @@ pub enum TabView {
     Advanced,
     Brewing,
     Finishing,
+    Beer,
+    MeadStyles,
+    Utilities,
     Settings,
 }
 

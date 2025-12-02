@@ -6,7 +6,7 @@ use std::env;
 
 fn main() {
     // CRITICAL: Initialize calculators to force linking
-    mazerion_calculators::init();
+    let _ = mazerion_calculators::init();
 
     let args: Vec<String> = env::args().collect();
     let command = args.get(1).map(String::as_str);

@@ -9,6 +9,7 @@ pub mod error;
 pub mod traits;
 pub mod units;
 pub mod validation;
+pub mod conversions;
 
 #[cfg(test)]
 mod calc_input_tests;
@@ -21,12 +22,11 @@ pub use error::{Error, Result};
 pub use traits::{Calculator, get_calculator, get_all_calculators, list_calculator_ids, calculator_count};
 pub use units::*;
 pub use validation::*;
+pub use conversions::*;
 
-// Re-export linkme and CALCULATORS for public use
 pub use linkme;
 pub use traits::CALCULATORS;
 
-/// Valid calculator categories (enforced at runtime)
 pub const VALID_CATEGORIES: &[&str] = &[
     "Basic",
     "Advanced",
@@ -37,7 +37,6 @@ pub const VALID_CATEGORIES: &[&str] = &[
     "Utilities",
 ];
 
-/// Validate that a category string is valid
 pub fn validate_category(category: &str) -> Result<()> {
     if VALID_CATEGORIES.contains(&category) {
         Ok(())
@@ -50,7 +49,6 @@ pub fn validate_category(category: &str) -> Result<()> {
     }
 }
 
-/// Get all calculators organized by category
 pub fn get_calculators_by_category() -> HashMap<String, Vec<Box<dyn Calculator>>> {
     let mut by_category: HashMap<String, Vec<Box<dyn Calculator>>> = HashMap::new();
 
@@ -62,7 +60,6 @@ pub fn get_calculators_by_category() -> HashMap<String, Vec<Box<dyn Calculator>>
     by_category
 }
 
-/// Measurement with unit and precision.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Measurement {
     pub value: Decimal,
@@ -106,7 +103,6 @@ impl fmt::Display for Measurement {
     }
 }
 
-/// Calculation result with metadata.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CalcResult {
     pub output: Measurement,
@@ -134,7 +130,6 @@ impl CalcResult {
     }
 }
 
-/// Input parameters for calculations.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CalcInput {
     pub measurements: Vec<Measurement>,
