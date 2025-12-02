@@ -1,24 +1,40 @@
-use crate::MazerionApp;
-use crate::state::colors;
-use eframe::egui::{self, RichText, Rounding};
+//! Settings tab with working theme selector
 
-impl MazerionApp {
-    pub fn render_settings_tab(&mut self, ui: &mut egui::Ui) {
-        egui::Frame::none()
-            .fill(colors::LIGHT_CREAM)
-            .stroke(egui::Stroke::new(1.5, colors::HONEY_GOLD))
-            .rounding(Rounding::same(8.0 as u8))
-            .inner_margin(15.0)
-            .show(ui, |ui| {
-                ui.heading(RichText::new("⚙️ Settings").color(colors::DARK_TEXT).size(24.0));
-                ui.add_space(15.0);
+use crate::{MazerionApp, Theme};
+use eframe::egui::{self, RichText, CornerRadius, Color32};
 
-                ui.label(RichText::new("About Mazerion").color(colors::DARK_TEXT).size(18.0).strong());
-                ui.label(RichText::new("Version: 0.7.0").color(colors::DARK_TEXT).size(14.0));
-                ui.label(RichText::new("39 calculators ready").color(colors::DARK_TEXT).size(14.0));
+pub fn render(app: &mut MazerionApp, ui: &mut egui::Ui) {
+    egui::Frame::new()
+        .fill(Color32::WHITE)
+        .stroke(egui::Stroke::new(2.0, Color32::from_rgb(240, 165, 0)))
+        .corner_radius(CornerRadius::same(8))
+        .inner_margin(15.0)
+        .show(ui, |ui| {
+            ui.heading(RichText::new("⚙️ Settings").color(Color32::BLACK).size(24.0));
+            ui.add_space(15.0);
 
-                ui.add_space(20.0);
-                ui.label(RichText::new("Theme: Honey & Gold").color(colors::DARK_TEXT).size(14.0));
+            ui.label(RichText::new("Theme Selection").color(Color32::BLACK).size(18.0).strong());
+            ui.add_space(8.0);
+
+            ui.horizontal(|ui| {
+                ui.label(RichText::new("Choose Theme:").strong().color(Color32::BLACK));
+                egui::ComboBox::from_id_salt("theme_selector")
+                    .selected_text(app.state.theme.name())
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(&mut app.state.theme, Theme::HoneyGold, Theme::HoneyGold.name());
+                        ui.selectable_value(&mut app.state.theme, Theme::ForestGreen, Theme::ForestGreen.name());
+                        ui.selectable_value(&mut app.state.theme, Theme::OceanBlue, Theme::OceanBlue.name());
+                        ui.selectable_value(&mut app.state.theme, Theme::SunsetOrange, Theme::SunsetOrange.name());
+                        ui.selectable_value(&mut app.state.theme, Theme::LavenderPurple, Theme::LavenderPurple.name());
+                    });
             });
-    }
+
+            ui.add_space(20.0);
+            ui.separator();
+            ui.add_space(10.0);
+
+            ui.label(RichText::new("About Mazerion").color(Color32::BLACK).size(18.0).strong());
+            ui.label(RichText::new("Version: 0.7.0").color(Color32::BLACK).size(14.0));
+            ui.label(RichText::new("39 calculators ready").color(Color32::BLACK).size(14.0));
+        });
 }

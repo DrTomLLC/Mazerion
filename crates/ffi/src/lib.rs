@@ -1,6 +1,6 @@
 //! FFI for Mazerion - ACTUAL WORKING VERSION
 
-use std::ffi::{CStr, CString};
+use std::ffi::CString;
 use std::os::raw::{c_char, c_int};
 use std::panic;
 use std::ptr;
@@ -19,13 +19,11 @@ impl MazerionError {
     fn new(code: c_int, message: &str) -> Self {
         let msg = match CString::new(message) {
             Ok(s) => s.into_raw(),
-            Err(_) => CString::new("Error").unwrap_or(CString::new("").unwrap_or_default()).into_raw(),
+            Err(_) => CString::new("Error").unwrap_or_else(|_| CString::new("").unwrap_or_default()).into_raw(),
         };
         Self { code, message: msg }
     }
 
-    fn null_pointer() -> Self { Self::new(1, "Null pointer") }
-    fn invalid_utf8() -> Self { Self::new(2, "Invalid UTF-8") }
     fn json_error(msg: &str) -> Self { Self::new(6, msg) }
     fn panic_caught(msg: &str) -> Self { Self::new(7, msg) }
 }
@@ -85,10 +83,7 @@ pub extern "C" fn mazerion_list_calculators() -> MazerionResult {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn mazerion_calculate(calculator_id: *const c_char, json_input: *const c_char) -> MazerionResult {
-    if calculator_id.is_null() { return MazerionResult::error(MazerionError::null_pointer()); }
-    if json_input.is_null() { return MazerionResult::error(MazerionError::null_pointer()); }
-
+pub extern "C" fn mazerion_calculate(_calculator_id: *const c_char, _json_input: *const c_char) -> MazerionResult {
     MazerionResult::error(MazerionError::new(4, "Not implemented yet"))
 }
 
@@ -116,13 +111,28 @@ pub extern "C" fn mazerion_get_categories() -> MazerionResult {
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn mazerion_free_string(ptr: *mut c_char) {
-    if !ptr.is_null() { let _ = CString::from_raw(ptr); }
+    if !ptr.is_null() {
+        // SAFETY: Caller must ensure ptr is valid and was allocated by CString::into_raw
+        unsafe {
+            let _ = CString::from_raw(ptr);
+        }
+    }
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn mazerion_free_result(result: MazerionResult) {
-    if !result.error.message.is_null() { unsafe { let _ = CString::from_raw(result.error.message); } }
-    if !result.json_output.is_null() { unsafe { let _ = CString::from_raw(result.json_output); } }
+    if !result.error.message.is_null() {
+        // SAFETY: message was allocated by CString::into_raw in MazerionError::new
+        unsafe {
+            let _ = CString::from_raw(result.error.message);
+        }
+    }
+    if !result.json_output.is_null() {
+        // SAFETY: json_output was allocated by CString::into_raw in MazerionResult::success
+        unsafe {
+            let _ = CString::from_raw(result.json_output);
+        }
+    }
 }
 
 #[unsafe(no_mangle)]

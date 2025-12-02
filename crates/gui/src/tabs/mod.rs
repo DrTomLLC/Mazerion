@@ -9,5 +9,4 @@ pub use basic::render as render_basic;
 pub use advanced::render as render_advanced;
 pub use brewing::render as render_brewing;
 pub use finishing::render as render_finishing;
-// Comment out or remove this line until the settings render function is properly implemented
-// pub use settings::render as render_settings;
+pub use settings::render as render_settings;
