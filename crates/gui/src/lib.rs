@@ -5,8 +5,7 @@ use eframe::egui::{self, Color32, RichText, CornerRadius};
 pub mod state;
 pub mod tabs;
 
-pub use state::{AppState, TabView, Theme};
-
+pub use state::{AppState, TabView, Theme, UnitSystem};
 pub struct MazerionApp {
     pub state: AppState,
     pub result: Option<String>,
