@@ -49,7 +49,7 @@ impl eframe::App for MazerionApp {
         egui::CentralPanel::default().frame(egui::Frame::central_panel(&ctx.style()).fill(bg)).show(ctx, |ui| {
             ui.horizontal(|ui| {
                 ui.heading(RichText::new("🍯 Mazerion").size(24.0).color(state::colors::HONEY_GOLD));
-                ui.label(RichText::new("v0.7.0").size(14.0).color(state::colors::DARK_TEXT));
+                ui.label(RichText::new("v0.8.0").size(14.0).color(state::colors::DARK_TEXT));
             });
             ui.separator();
             ui.horizontal(|ui| {
