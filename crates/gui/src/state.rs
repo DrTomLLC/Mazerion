@@ -31,6 +31,21 @@ impl Theme {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UnitSystem {
+    Imperial,
+    Metric,
+}
+
+impl UnitSystem {
+    pub fn name(&self) -> &'static str {
+        match self {
+            UnitSystem::Imperial => "Imperial / US Standard",
+            UnitSystem::Metric => "Metric",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BasicCalculator {
     Abv,
     BrixSgConverter,
@@ -64,6 +79,10 @@ pub struct AppState {
     pub brewing_calc: BrewingCalculator,
     pub finishing_calc: FinishingCalculator,
     pub theme: Theme,
+    pub unit_system: UnitSystem,
+    pub sg_decimals: u32,
+    pub ph_decimals: u32,
+    pub brix_decimals: u32,
 }
 
 impl Default for AppState {
@@ -75,6 +94,10 @@ impl Default for AppState {
             brewing_calc: BrewingCalculator::Nutrition,
             finishing_calc: FinishingCalculator::Backsweetening,
             theme: Theme::HoneyGold,
+            unit_system: UnitSystem::Imperial,
+            sg_decimals: 4,
+            ph_decimals: 3,
+            brix_decimals: 2,
         }
     }
 }
