@@ -76,7 +76,8 @@ fn render_dilution(app: &mut MazerionApp, ui: &mut egui::Ui) {
     ui.label("Calculate water needed to reduce ABV");
     ui.add_space(10.0);
 
-    crate::input_field(ui, "Current Volume (L):", &mut app.current_vol, "Current volume in liters");
+    let vol_unit = if matches!(app.state.unit_system, crate::state::UnitSystem::Metric) { "L" } else { "gal" };
+    crate::input_field(ui, &format!("Current Volume ({}):", vol_unit), &mut app.current_vol, "Current volume");
     crate::input_field(ui, "Current ABV (%):", &mut app.current_abv, "Current alcohol percentage");
     crate::input_field(ui, "Target ABV (%):", &mut app.target_abv, "Desired alcohol percentage");
 
@@ -171,7 +172,8 @@ fn calc_dilution(app: &mut MazerionApp) {
 
     match calc.calculate(input) {
         Ok(res) => {
-            app.result = Some(format!("Water to Add: {:.2} L", res.output.value));
+            let vol_unit = if matches!(app.state.unit_system, crate::state::UnitSystem::Metric) { "L" } else { "gal" };
+            app.result = Some(format!("Water to Add: {:.2} {}", res.output.value, vol_unit));
             app.warnings = res.warnings;
             app.metadata = res.metadata;
         }

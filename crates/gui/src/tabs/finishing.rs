@@ -48,7 +48,9 @@ fn render_backsweetening(app: &mut MazerionApp, ui: &mut egui::Ui) {
     ui.label(RichText::new("⚠️ MUST stabilize before backsweetening!").color(colors::DARK_ORANGE).strong());
     ui.add_space(10.0);
 
-    crate::input_field(ui, "Volume (L):", &mut app.sweet_vol, "Total volume to sweeten");
+    let vol_unit = if matches!(app.state.unit_system, crate::state::UnitSystem::Metric) { "L" } else { "gal" };
+
+    crate::input_field(ui, &format!("Volume ({}):", vol_unit), &mut app.sweet_vol, "Total volume to sweeten");
     crate::input_field(ui, "Current SG:", &mut app.current_sg, "Current specific gravity");
     crate::input_field(ui, "Target SG:", &mut app.target_sg, "Desired final gravity");
 
@@ -76,7 +78,9 @@ fn render_sulfite(app: &mut MazerionApp, ui: &mut egui::Ui) {
     ui.label("Calculate K-meta additions with pH-dependent effectiveness");
     ui.add_space(10.0);
 
-    crate::input_field(ui, "Volume (L):", &mut app.sulfite_vol, "Total volume to treat");
+    let vol_unit = if matches!(app.state.unit_system, crate::state::UnitSystem::Metric) { "L" } else { "gal" };
+
+    crate::input_field(ui, &format!("Volume ({}):", vol_unit), &mut app.sulfite_vol, "Total volume to treat");
     crate::input_field(ui, "pH:", &mut app.ph, "Current pH (critical for effectiveness!)");
     crate::input_field(ui, "Target Free SO₂ (ppm):", &mut app.target_so2, "Desired free SO₂ level (20-50 ppm typical)");
 
@@ -92,7 +96,9 @@ fn render_acid(app: &mut MazerionApp, ui: &mut egui::Ui) {
     ui.label("Calculate acid additions to adjust pH");
     ui.add_space(10.0);
 
-    crate::input_field(ui, "Volume (L):", &mut app.acid_vol, "Total volume to treat");
+    let vol_unit = if matches!(app.state.unit_system, crate::state::UnitSystem::Metric) { "L" } else { "gal" };
+
+    crate::input_field(ui, &format!("Volume ({}):", vol_unit), &mut app.acid_vol, "Total volume to treat");
     crate::input_field(ui, "Current pH:", &mut app.current_ph, "Current pH measurement");
     crate::input_field(ui, "Target pH:", &mut app.target_ph_acid, "Desired pH (must be lower than current)");
 
@@ -148,7 +154,8 @@ fn calc_backsweetening(app: &mut MazerionApp) {
 
     match calc.calculate(input) {
         Ok(res) => {
-            app.result = Some(format!("{}: {:.0} g ({:.2} kg)",
+            let weight_unit = if matches!(app.state.unit_system, crate::state::UnitSystem::Metric) { "g" } else { "oz" };
+            app.result = Some(format!("{}: {:.0} {}",
                                       match app.sweetener.as_str() {
                                           "honey" => "Honey",
                                           "table_sugar" => "Table Sugar",
@@ -157,7 +164,7 @@ fn calc_backsweetening(app: &mut MazerionApp) {
                                           _ => "Sweetener"
                                       },
                                       res.output.value,
-                                      res.output.value / Decimal::from(1000)
+                                      weight_unit
             ));
             app.warnings = res.warnings;
             app.metadata = res.metadata;
@@ -202,7 +209,8 @@ fn calc_sulfite(app: &mut MazerionApp) {
 
     match calc.calculate(input) {
         Ok(res) => {
-            app.result = Some(format!("K-meta: {:.2} g", res.output.value));
+            let weight_unit = if matches!(app.state.unit_system, crate::state::UnitSystem::Metric) { "g" } else { "oz" };
+            app.result = Some(format!("K-meta: {:.2} {}", res.output.value, weight_unit));
             app.warnings = res.warnings;
             app.metadata = res.metadata;
         }
@@ -247,7 +255,8 @@ fn calc_acid_addition(app: &mut MazerionApp) {
 
     match calc.calculate(input) {
         Ok(res) => {
-            app.result = Some(format!("{} Acid: {:.2} g",
+            let weight_unit = if matches!(app.state.unit_system, crate::state::UnitSystem::Metric) { "g" } else { "oz" };
+            app.result = Some(format!("{} Acid: {:.2} {}",
                                       match app.acid_type.as_str() {
                                           "tartaric" => "Tartaric",
                                           "citric" => "Citric",
@@ -255,7 +264,8 @@ fn calc_acid_addition(app: &mut MazerionApp) {
                                           "lactic" => "Lactic",
                                           _ => "Acid"
                                       },
-                                      res.output.value
+                                      res.output.value,
+                                      weight_unit
             ));
             app.warnings = res.warnings;
             app.metadata = res.metadata;

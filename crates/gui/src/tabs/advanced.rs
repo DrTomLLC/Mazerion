@@ -47,13 +47,15 @@ fn render_blending(app: &mut MazerionApp, ui: &mut egui::Ui) {
     ui.label("Calculate final properties when mixing two batches");
     ui.add_space(10.0);
 
+    let vol_unit = if matches!(app.state.unit_system, crate::state::UnitSystem::Metric) { "L" } else { "gal" };
+
     ui.label(RichText::new("Batch 1:").strong().color(colors::GOLDENROD));
-    crate::input_field(ui, "Volume (L):", &mut app.vol1, "Volume of first batch");
+    crate::input_field(ui, &format!("Volume ({}):", vol_unit), &mut app.vol1, "Volume of first batch");
     crate::input_field(ui, "ABV (%):", &mut app.abv1, "ABV of first batch");
 
     ui.add_space(8.0);
     ui.label(RichText::new("Batch 2:").strong().color(colors::GOLDENROD));
-    crate::input_field(ui, "Volume (L):", &mut app.vol2, "Volume of second batch");
+    crate::input_field(ui, &format!("Volume ({}):", vol_unit), &mut app.vol2, "Volume of second batch");
     crate::input_field(ui, "ABV (%):", &mut app.abv2, "ABV of second batch");
 
     ui.add_space(10.0);
@@ -83,8 +85,10 @@ fn render_sg_correction(app: &mut MazerionApp, ui: &mut egui::Ui) {
     ui.label("Correct gravity readings for temperature (calibrated at 20°C)");
     ui.add_space(10.0);
 
+    let temp_unit = if matches!(app.state.unit_system, crate::state::UnitSystem::Metric) { "°C" } else { "°F" };
+
     crate::input_field(ui, "Measured SG:", &mut app.sg, "Specific gravity reading");
-    crate::input_field(ui, "Temperature (°C):", &mut app.temp, "Temperature at measurement");
+    crate::input_field(ui, &format!("Temperature ({}):", temp_unit), &mut app.temp, "Temperature at measurement");
 
     ui.add_space(10.0);
 

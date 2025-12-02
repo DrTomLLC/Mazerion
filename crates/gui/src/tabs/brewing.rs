@@ -42,7 +42,9 @@ fn render_nutrition(app: &mut MazerionApp, ui: &mut egui::Ui) {
     ui.label("Calculate Fermaid-O schedule using TOSNA 2.0 protocol");
     ui.add_space(10.0);
 
-    crate::input_field(ui, "Volume (L):", &mut app.volume, "Total must volume");
+    let vol_unit = if matches!(app.state.unit_system, crate::state::UnitSystem::Metric) { "L" } else { "gal" };
+
+    crate::input_field(ui, &format!("Volume ({}):", vol_unit), &mut app.volume, "Total must volume");
     crate::input_field(ui, "Target ABV (%):", &mut app.target_abv_brew, "Expected final ABV");
 
     ui.horizontal(|ui| {
@@ -68,8 +70,11 @@ fn render_carbonation(app: &mut MazerionApp, ui: &mut egui::Ui) {
     ui.label("Calculate priming sugar or keg PSI for target carbonation");
     ui.add_space(10.0);
 
-    crate::input_field(ui, "Volume (L):", &mut app.volume, "Total volume to carbonate");
-    crate::input_field(ui, "Temperature (°C):", &mut app.carb_temp, "Current temperature");
+    let vol_unit = if matches!(app.state.unit_system, crate::state::UnitSystem::Metric) { "L" } else { "gal" };
+    let temp_unit = if matches!(app.state.unit_system, crate::state::UnitSystem::Metric) { "°C" } else { "°F" };
+
+    crate::input_field(ui, &format!("Volume ({}):", vol_unit), &mut app.volume, "Total volume to carbonate");
+    crate::input_field(ui, &format!("Temperature ({}):", temp_unit), &mut app.carb_temp, "Current temperature");
     crate::input_field(ui, "Target CO₂ (volumes):", &mut app.target_co2, "Desired carbonation level (1.5-4.5)");
 
     ui.horizontal(|ui| {
