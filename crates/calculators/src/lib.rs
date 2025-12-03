@@ -1,7 +1,7 @@
 //! Calculator implementations for Mazerion MCL
 
 // ═══════════════════════════════════════════════════════════════════════
-// BASIC CALCULATORS (6)
+// BASIC CALCULATORS (7)
 // ═══════════════════════════════════════════════════════════════════════
 pub mod abv;
 pub mod brix_to_sg;
@@ -115,13 +115,11 @@ pub use water_chemistry::WaterChemistryCalculator;
 // FORCE LINKER TO INCLUDE ALL CALCULATORS
 // ═══════════════════════════════════════════════════════════════════════
 
-/// CRITICAL: This function forces the linker to include all calculator modules.
-/// Without this, linkme distributed slices get optimized away.
 #[used]
 static FORCE_LINK: fn() = force_calculator_linking;
 
 fn force_calculator_linking() {
-    // Reference each calculator to prevent linker from dropping them
+    // Basic
     let _ = AbvCalculator::default();
     let _ = BrixToSgCalculator::default();
     let _ = SgCorrectionCalculator::default();
@@ -129,6 +127,7 @@ fn force_calculator_linking() {
     let _ = HydrometerCorrectionCalculator::default();
     let _ = GravityFromIngredientsCalculator::default();
 
+    // Advanced
     let _ = DilutionCalculator::default();
     let _ = BlendingCalculator::default();
     let _ = RefractometerCalculator::default();
@@ -137,14 +136,17 @@ fn force_calculator_linking() {
     let _ = BenchTrialsCalculator::default();
     let _ = AlcoholToleranceCalculator::default();
 
+    // Brewing
     let _ = NutritionCalculator::default();
     let _ = YeastPitchCalculator::default();
     let _ = YeastStarterCalculator::default();
     let _ = FermentationTimelineCalculator::default();
     let _ = CarbonationCalculator::default();
 
+    // Beer
     let _ = IbuCalculator::default();
 
+    // Finishing
     let _ = SulfiteCalculator::default();
     let _ = AcidAdditionCalculator::default();
     let _ = BacksweeteningCalculator::default();
@@ -152,6 +154,7 @@ fn force_calculator_linking() {
     let _ = TanninCalculator::default();
     let _ = BottlingCalculator::default();
 
+    // Mead Styles
     let _ = CyserCalculator::default();
     let _ = AcerglynCalculator::default();
     let _ = BochetCalculator::default();
@@ -163,14 +166,12 @@ fn force_calculator_linking() {
     let _ = MetheglinCalculator::default();
     let _ = SackCalculator::default();
 
+    // Utilities
     let _ = CostCalculator::default();
     let _ = PrimingAlternativesCalculator::default();
     let _ = WaterChemistryCalculator::default();
 }
 
-/// Initialize calculator registry (call this before using calculators)
-///
-/// Returns an error if no calculators are registered.
 pub fn init() -> Result<(), &'static str> {
     force_calculator_linking();
     let count = mazerion_core::traits::calculator_count();

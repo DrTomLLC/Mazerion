@@ -12,6 +12,7 @@ eframe = "0.33.2"
 egui = "0.33.2"
 rust_decimal = "1.39.0"
 serde = { version = "1.0.228", features = ["derive"] }
+winit = "0.30.12"
 
 [lints.clippy]
 unwrap_used = "deny"

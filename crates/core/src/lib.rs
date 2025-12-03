@@ -1,4 +1,5 @@
 //! Core types for Mazerion MCL - Production Ready
+//! SAFETY-CRITICAL: Zero panics, comprehensive error handling
 
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -9,7 +10,6 @@ pub mod error;
 pub mod traits;
 pub mod units;
 pub mod validation;
-pub mod conversions;
 
 #[cfg(test)]
 mod calc_input_tests;
@@ -17,16 +17,18 @@ mod calc_input_tests;
 mod calc_result_tests;
 #[cfg(test)]
 mod units_tests;
+#[cfg(test)]
+mod validation_tests;
 
 pub use error::{Error, Result};
 pub use traits::{Calculator, get_calculator, get_all_calculators, list_calculator_ids, calculator_count};
 pub use units::*;
 pub use validation::*;
-pub use conversions::*;
 
 pub use linkme;
 pub use traits::CALCULATORS;
 
+/// Valid calculator categories (enforced at runtime)
 pub const VALID_CATEGORIES: &[&str] = &[
     "Basic",
     "Advanced",
@@ -37,6 +39,7 @@ pub const VALID_CATEGORIES: &[&str] = &[
     "Utilities",
 ];
 
+/// Validate that a category string is valid
 pub fn validate_category(category: &str) -> Result<()> {
     if VALID_CATEGORIES.contains(&category) {
         Ok(())
@@ -49,6 +52,7 @@ pub fn validate_category(category: &str) -> Result<()> {
     }
 }
 
+/// Get all calculators organized by category
 pub fn get_calculators_by_category() -> HashMap<String, Vec<Box<dyn Calculator>>> {
     let mut by_category: HashMap<String, Vec<Box<dyn Calculator>>> = HashMap::new();
 
@@ -60,6 +64,7 @@ pub fn get_calculators_by_category() -> HashMap<String, Vec<Box<dyn Calculator>>
     by_category
 }
 
+/// Measurement with unit and precision.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Measurement {
     pub value: Decimal,
@@ -103,6 +108,7 @@ impl fmt::Display for Measurement {
     }
 }
 
+/// Calculation result with metadata.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CalcResult {
     pub output: Measurement,
@@ -130,6 +136,7 @@ impl CalcResult {
     }
 }
 
+/// Input parameters for calculations.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CalcInput {
     pub measurements: Vec<Measurement>,
@@ -173,4 +180,48 @@ impl Default for CalcInput {
     fn default() -> Self {
         Self::new()
     }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// UNIT CONVERSION FUNCTIONS (GUI SUPPORT)
+// ═══════════════════════════════════════════════════════════════════════
+
+/// Convert US gallons to liters
+pub fn gallons_to_liters(gallons: Decimal) -> Decimal {
+    gallons * Decimal::new(378541, 5) // 3.78541
+}
+
+/// Convert liters to US gallons
+pub fn liters_to_gallons(liters: Decimal) -> Decimal {
+    liters * Decimal::new(264172, 6) // 0.264172
+}
+
+/// Convert pounds to kilograms
+pub fn pounds_to_kilograms(pounds: Decimal) -> Decimal {
+    pounds * Decimal::new(453592, 6) // 0.453592
+}
+
+/// Convert kilograms to pounds
+pub fn kilograms_to_pounds(kilograms: Decimal) -> Decimal {
+    kilograms * Decimal::new(2204622, 6) // 2.204622
+}
+
+/// Convert ounces to grams
+pub fn ounces_to_grams(ounces: Decimal) -> Decimal {
+    ounces * Decimal::new(2835, 2) // 28.35
+}
+
+/// Convert grams to ounces
+pub fn grams_to_ounces(grams: Decimal) -> Decimal {
+    grams * Decimal::new(353, 5) // 0.0353
+}
+
+/// Convert Celsius to Fahrenheit
+pub fn celsius_to_fahrenheit(celsius: Decimal) -> Decimal {
+    (celsius * Decimal::new(9, 0) / Decimal::new(5, 0)) + Decimal::from(32)
+}
+
+/// Convert Fahrenheit to Celsius
+pub fn fahrenheit_to_celsius(fahrenheit: Decimal) -> Decimal {
+    (fahrenheit - Decimal::from(32)) * Decimal::new(5, 0) / Decimal::new(9, 0)
 }

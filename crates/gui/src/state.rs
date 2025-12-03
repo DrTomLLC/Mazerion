@@ -5,8 +5,8 @@ pub enum TabView {
     Basic,
     Advanced,
     Brewing,
-    Finishing,
     Beer,
+    Finishing,
     MeadStyles,
     Utilities,
     Settings,
@@ -35,15 +35,15 @@ impl Theme {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnitSystem {
-    Imperial,
     Metric,
+    Imperial,
 }
 
 impl UnitSystem {
     pub fn name(&self) -> &'static str {
         match self {
-            UnitSystem::Imperial => "Imperial / US Standard",
             UnitSystem::Metric => "Metric",
+            UnitSystem::Imperial => "Imperial/US",
         }
     }
 }
@@ -69,6 +69,14 @@ pub enum BrewingCalculator {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BeerCalculator {
+    Ibu,
+    Srm,
+    Mash,
+    Efficiency,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FinishingCalculator {
     Backsweetening,
     Sulfite,
@@ -80,12 +88,13 @@ pub struct AppState {
     pub basic_calc: BasicCalculator,
     pub advanced_calc: AdvancedCalculator,
     pub brewing_calc: BrewingCalculator,
+    pub beer_calc: BeerCalculator,
     pub finishing_calc: FinishingCalculator,
     pub theme: Theme,
     pub unit_system: UnitSystem,
-    pub sg_decimals: u32,
-    pub ph_decimals: u32,
-    pub brix_decimals: u32,
+    pub sg_precision: u32,
+    pub ph_precision: u32,
+    pub brix_precision: u32,
 }
 
 impl Default for AppState {
@@ -95,12 +104,13 @@ impl Default for AppState {
             basic_calc: BasicCalculator::Abv,
             advanced_calc: AdvancedCalculator::Blending,
             brewing_calc: BrewingCalculator::Nutrition,
+            beer_calc: BeerCalculator::Ibu,
             finishing_calc: FinishingCalculator::Backsweetening,
             theme: Theme::HoneyGold,
-            unit_system: UnitSystem::Imperial,
-            sg_decimals: 4,
-            ph_decimals: 3,
-            brix_decimals: 2,
+            unit_system: UnitSystem::Metric,
+            sg_precision: 4,
+            ph_precision: 3,
+            brix_precision: 2,
         }
     }
 }
@@ -125,6 +135,6 @@ pub mod colors {
     pub const LIGHT_CREAM: Color32 = Color32::from_rgb(255, 253, 245);
     pub const DARK_TEXT: Color32 = Color32::from_rgb(40, 40, 40);
     pub const SADDLE_BROWN: Color32 = Color32::from_rgb(139, 69, 19);
-    pub const GOLDENROD: Color32 = Color32::from_rgb(218, 165, 32);
     pub const DARK_ORANGE: Color32 = Color32::from_rgb(255, 140, 0);
+    pub const GOLDENROD: Color32 = Color32::from_rgb(218, 165, 32);
 }
