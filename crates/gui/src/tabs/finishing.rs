@@ -146,28 +146,60 @@ fn calc_backsweetening(app: &mut MazerionApp) {
         }
     };
 
+    // CRITICAL FIX: Convert volume to LITERS before sending to calculator
+    let volume_val = match Decimal::from_str(&app.sweet_vol) {
+        Ok(v) => v,
+        Err(_) => {
+            app.result = Some("Error: Invalid volume".to_string());
+            return;
+        }
+    };
+
+    let is_metric = matches!(app.state.unit_system, crate::state::UnitSystem::Metric);
+
+    // Convert gallons to liters if in Imperial mode
+    let volume_liters = if is_metric {
+        volume_val
+    } else {
+        mazerion_core::gallons_to_liters(volume_val)
+    };
+
     let input = CalcInput::new()
         .add_measurement(sg_meas)
-        .add_param("volume", &app.sweet_vol)
+        .add_param("volume", &volume_liters.to_string())  // Send as LITERS
         .add_param("target_sg", &app.target_sg)
         .add_param("sweetener", &app.sweetener);
 
     match calc.calculate(input) {
         Ok(res) => {
-            let weight_unit = if matches!(app.state.unit_system, crate::state::UnitSystem::Metric) { "g" } else { "oz" };
-            app.result = Some(format!("{}: {:.0} {}",
-                                      match app.sweetener.as_str() {
-                                          "honey" => "Honey",
-                                          "table_sugar" => "Table Sugar",
-                                          "agave" => "Agave",
-                                          "maple_syrup" => "Maple Syrup",
-                                          _ => "Sweetener"
-                                      },
-                                      res.output.value,
-                                      weight_unit
-            ));
+            // Result is in GRAMS - convert to ounces/pounds if in Imperial mode
+            let honey_grams = res.output.value;
+
+            // CORRECT conversion: 1 g = 0.035274 oz
+            let (honey_display, weight_unit) = if is_metric {
+                (honey_grams, "g")
+            } else {
+                let honey_oz = honey_grams * Decimal::new(35273962, 9); // Correct: 0.035273962
+                (honey_oz, "oz")
+            };
+
+            // Also show in pounds if ounces > 16
+            let result_text = if !is_metric && honey_display > Decimal::from(16) {
+                let honey_lbs = honey_display / Decimal::from(16);
+                format!("Honey: {:.1} oz ({:.2} lbs)", honey_display, honey_lbs)
+            } else {
+                format!("Honey: {:.0} {}", honey_display, weight_unit)
+            };
+
+            app.result = Some(result_text);
             app.warnings = res.warnings;
-            app.metadata = res.metadata;
+
+            // Convert metadata to Imperial if needed
+            if is_metric {
+                app.metadata = res.metadata;
+            } else {
+                app.metadata = convert_metadata_to_imperial(&res.metadata);
+            }
         }
         Err(e) => {
             app.result = Some(format!("Error: {}", e));
@@ -175,6 +207,40 @@ fn calc_backsweetening(app: &mut MazerionApp) {
             app.metadata.clear();
         }
     }
+}
+
+/// Convert metadata from metric (L, kg, g) to Imperial (gal, lbs, oz)
+fn convert_metadata_to_imperial(metadata: &[(String, String)]) -> Vec<(String, String)> {
+    metadata.iter().map(|(key, value)| {
+        let converted_value = match key.as_str() {
+            "current_volume" | "honey_volume" | "final_volume" => {
+                // Convert liters to gallons
+                if let Some(l_str) = value.strip_suffix(" L") {
+                    if let Ok(liters) = Decimal::from_str(l_str.trim()) {
+                        let gallons = mazerion_core::liters_to_gallons(liters);
+                        return (key.clone(), format!("{:.2} gal", gallons));
+                    }
+                }
+                value.clone()
+            },
+            "honey_needed" => {
+                // Parse "0.84 kg (842 g)" format and convert
+                if let Some(start) = value.find('(') {
+                    if let Some(end) = value.find(" g)") {
+                        let g_str = &value[start+1..end].trim();
+                        if let Ok(grams) = Decimal::from_str(g_str) {
+                            let ounces = grams * Decimal::new(35273962, 9); // 0.035273962
+                            let pounds = ounces / Decimal::from(16);
+                            return (key.clone(), format!("{:.2} lbs ({:.0} oz)", pounds, ounces));
+                        }
+                    }
+                }
+                value.clone()
+            },
+            _ => value.clone()
+        };
+        (key.clone(), converted_value)
+    }).collect()
 }
 
 fn calc_sulfite(app: &mut MazerionApp) {
@@ -234,12 +300,20 @@ fn calc_acid_addition(app: &mut MazerionApp) {
     let current_ph_val = match Decimal::from_str(&app.current_ph) {
         Ok(v) => v,
         Err(_) => {
-            app.result = Some("Error: Invalid current pH value".to_string());
+            app.result = Some("Error: Invalid current pH".to_string());
             return;
         }
     };
 
-    let ph_meas = match Measurement::ph(current_ph_val) {
+    let target_ph_val = match Decimal::from_str(&app.target_ph_acid) {
+        Ok(v) => v,
+        Err(_) => {
+            app.result = Some("Error: Invalid target pH".to_string());
+            return;
+        }
+    };
+
+    let current_ph_meas = match Measurement::ph(current_ph_val) {
         Ok(m) => m,
         Err(e) => {
             app.result = Some(format!("Error: {}", e));
@@ -248,7 +322,7 @@ fn calc_acid_addition(app: &mut MazerionApp) {
     };
 
     let input = CalcInput::new()
-        .add_measurement(ph_meas)
+        .add_measurement(current_ph_meas)
         .add_param("volume", &app.acid_vol)
         .add_param("target_ph", &app.target_ph_acid)
         .add_param("acid_type", &app.acid_type);
@@ -256,17 +330,7 @@ fn calc_acid_addition(app: &mut MazerionApp) {
     match calc.calculate(input) {
         Ok(res) => {
             let weight_unit = if matches!(app.state.unit_system, crate::state::UnitSystem::Metric) { "g" } else { "oz" };
-            app.result = Some(format!("{} Acid: {:.2} {}",
-                                      match app.acid_type.as_str() {
-                                          "tartaric" => "Tartaric",
-                                          "citric" => "Citric",
-                                          "malic" => "Malic",
-                                          "lactic" => "Lactic",
-                                          _ => "Acid"
-                                      },
-                                      res.output.value,
-                                      weight_unit
-            ));
+            app.result = Some(format!("Acid: {:.2} {}", res.output.value, weight_unit));
             app.warnings = res.warnings;
             app.metadata = res.metadata;
         }

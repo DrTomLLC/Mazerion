@@ -24,36 +24,42 @@ impl Calculator for MetheglinCalculator {
     }
 
     fn description(&self) -> &'static str {
-        "Calculate ingredients for spiced mead (metheglin)"
+        "Calculate ingredients for spiced mead (metheglin) with spice dosage"
     }
 
     fn calculate(&self, input: CalcInput) -> Result<CalcResult> {
-        let volume = input
-            .get_param("volume")
+        let volume = input.get_param("volume")
             .ok_or_else(|| Error::MissingInput("volume required".into()))?;
-        let target_abv = input.get_param("target_abv").unwrap_or("12");
-        let spice_intensity = input.get_param("spice_intensity").unwrap_or("medium");
+        let target_abv = input.get_param("target_abv")
+            .ok_or_else(|| Error::MissingInput("target_abv required".into()))?;
+        let spice_level = input.get_param("spice_level").unwrap_or("medium");
 
-        let vol: Decimal = volume.parse().map_err(|_| Error::Parse("Invalid volume".into()))?;
-        let abv: Decimal = target_abv.parse().map_err(|_| Error::Parse("Invalid target_abv".into()))?;
+        let vol: Decimal = volume.parse()
+            .map_err(|_| Error::Parse("Invalid volume".into()))?;
+        let abv: Decimal = target_abv.parse()
+            .map_err(|_| Error::Parse("Invalid target_abv".into()))?;
 
-        let honey_g_per_l_per_abv = Decimal::from(135);
-        let honey_needed = vol * abv * honey_g_per_l_per_abv;
+        let honey_needed = vol * abv * Decimal::new(135, 0);
 
-        // Spice recommendations (grams per liter total)
-        let spice_amount = match spice_intensity {
-            "light" => vol * Decimal::new(5, 1),    // 0.5 g/L
-            "heavy" => vol * Decimal::new(2, 0),    // 2.0 g/L
-            _ => vol * Decimal::ONE,                 // 1.0 g/L (medium)
+        // Spice dosage per liter (varies by spice type)
+        let spice_per_liter = match spice_level {
+            "light" => Decimal::new(5, 1),      // 0.5 g/L
+            "medium" => Decimal::new(10, 1),    // 1.0 g/L
+            "heavy" => Decimal::new(20, 1),     // 2.0 g/L
+            _ => Decimal::new(10, 1),
         };
 
-        let mut result = CalcResult::new(Measurement::new(honey_needed / Decimal::from(1000), Unit::Grams));
+        let spice_needed = vol * spice_per_liter;
+
+        let mut result = CalcResult::new(Measurement::new(honey_needed, Unit::Grams));
 
         result = result
-            .with_meta("honey", format!("{:.2} kg", honey_needed / Decimal::from(1000)))
-            .with_meta("spices_total", format!("{:.1} g", spice_amount))
-            .with_meta("spice_intensity", spice_intensity)
-            .with_meta("tip", "Add spices in secondary, taste test regularly");
+            .with_meta("honey_kg", format!("{:.2} kg", honey_needed / Decimal::from(1000)))
+            .with_meta("spice_g", format!("{:.1} g", spice_needed))
+            .with_meta("spice_level", spice_level)
+            .with_meta("dosage", format!("{:.1} g/L", spice_per_liter));
+
+        result = result.with_warning("Dosage varies by spice - start conservative, can always add more");
 
         Ok(result)
     }

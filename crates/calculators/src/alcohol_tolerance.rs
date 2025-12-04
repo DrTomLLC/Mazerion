@@ -24,7 +24,7 @@ impl Calculator for AlcoholToleranceCalculator {
     }
 
     fn description(&self) -> &'static str {
-        "Calculate maximum ABV for yeast strain"
+        "Calculate maximum ABV and estimated FG for yeast strain"
     }
 
     fn calculate(&self, input: CalcInput) -> Result<CalcResult> {
@@ -101,8 +101,23 @@ impl Calculator for AlcoholToleranceCalculator {
             .with_meta("max_abv", format!("{}%", tolerance))
             .with_meta("yeast_strain", yeast_strain)
             .with_meta("temperature_range", temp_range)
-            .with_meta("characteristics", characteristics)
-            .with_meta("tip", "Actual tolerance varies with nutrition and fermentation conditions");
+            .with_meta("characteristics", characteristics);
+
+        // If OG provided, calculate estimated FG
+        if let Some(og_str) = input.get_param("og") {
+            let og: Decimal = og_str.parse().map_err(|_| Error::Parse("Invalid OG".into()))?;
+
+            // Formula: ABV = (OG - FG) × 131.25
+            // Rearranging: FG = OG - (ABV / 131.25)
+            let estimated_fg = og - (tolerance / Decimal::new(13125, 2));
+
+            result = result
+                .with_meta("original_gravity", format!("{:.3}", og))
+                .with_meta("estimated_fg", format!("{:.3}", estimated_fg))
+                .with_meta("calculation", format!("FG = {:.3} - ({} / 131.25) = {:.3}", og, tolerance, estimated_fg));
+        }
+
+        result = result.with_meta("tip", "Actual tolerance varies with nutrition and fermentation conditions");
 
         Ok(result)
     }

@@ -5,6 +5,8 @@
 // ═══════════════════════════════════════════════════════════════════════
 pub mod abv;
 pub mod brix_to_sg;
+pub mod sg_to_brix;
+pub use sg_to_brix::SgToBrixCalculator;
 pub mod sg_correction;
 pub mod plato_to_sg;
 pub mod hydrometer_correction;

@@ -1,4 +1,4 @@
-// Convert degrees Brix to specific gravity.
+// Convert degrees Brix to specific gravity using accurate Brew Your Own formula.
 
 use mazerion_core::{
     register_calculator, CalcInput, CalcResult, Calculator, Measurement, Result, Unit,
@@ -6,7 +6,7 @@ use mazerion_core::{
 };
 use rust_decimal::Decimal;
 
-/// Convert Brix to SG using polynomial approximation.
+/// Convert Brix to SG using accurate Brew Your Own / Brewer's Friend formula.
 #[derive(Default)]
 pub struct BrixToSgCalculator;
 
@@ -28,7 +28,7 @@ impl Calculator for BrixToSgCalculator {
     }
 
     fn description(&self) -> &'static str {
-        "Convert degrees Brix to specific gravity"
+        "Convert degrees Brix to specific gravity (Brew Your Own formula)"
     }
 
     fn calculate(&self, input: CalcInput) -> Result<CalcResult> {
@@ -37,7 +37,11 @@ impl Calculator for BrixToSgCalculator {
 
         Validator::brix(brix)?;
 
-        let sg = Decimal::ONE + (brix * Decimal::new(4, 3)); // 0.004
+        // CORRECT FORMULA (Brew Your Own / Brewer's Friend):
+        // SG = (Brix / (258.6 - (Brix/258.2)×227.1)) + 1
+
+        let denominator = Decimal::new(2586, 1) - ((brix / Decimal::new(2582, 1)) * Decimal::new(2271, 1));
+        let sg = (brix / denominator) + Decimal::ONE;
 
         let mut result = CalcResult::new(Measurement::sg(sg)?);
 
@@ -46,8 +50,10 @@ impl Calculator for BrixToSgCalculator {
         }
 
         result = result
-            .with_meta("brix", brix.to_string())
-            .with_meta("formula", "SG ≈ 1.0 + (Brix × 0.004)");
+            .with_meta("brix", format!("{:.2}°Bx", brix))
+            .with_meta("sg", format!("{:.4}", sg))
+            .with_meta("formula", "Brew Your Own (accurate)")
+            .with_meta("calculation", format!("{}/(258.6 - ({}÷258.2)×227.1) + 1", brix, brix));
 
         Ok(result)
     }

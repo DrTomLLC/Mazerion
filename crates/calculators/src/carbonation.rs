@@ -42,10 +42,13 @@ impl Calculator for CarbonationCalculator {
         let target: Decimal = target_co2.parse()
             .map_err(|_| Error::Parse("Invalid target_co2".into()))?;
 
+        // Calculate residual CO2 at current temperature (Fahrenheit formula)
+        // CO2_residual = 3.0378 - 0.050062×T + 0.00026555×T²
         let temp_f64 = temp.to_string().parse::<f64>().unwrap_or(20.0);
         let residual_co2_f64 = 3.0378 - (0.050062 * temp_f64) + (0.00026555 * temp_f64 * temp_f64);
         let residual_co2 = Decimal::from_f64_retain(residual_co2_f64).unwrap_or(Decimal::new(25, 1));
 
+        // CO2 that needs to be added
         let co2_needed = target - residual_co2;
 
         if co2_needed < Decimal::ZERO {
@@ -57,6 +60,7 @@ impl Calculator for CarbonationCalculator {
         let method = input.get_param("method").unwrap_or("priming");
 
         let result = if method == "keg" {
+            // Force carbonation PSI calculation
             let t = temp_f64;
             let co2 = target.to_string().parse::<f64>().unwrap_or(2.5);
             let psi_f64 = -16.6999 - (0.0101059 * t) + (0.00116512 * t * t)
@@ -69,26 +73,34 @@ impl Calculator for CarbonationCalculator {
                 .with_meta("target_co2", target_co2)
                 .with_meta("residual_co2", format!("{:.2}", residual_co2))
         } else {
+            // Bottle priming calculation
+            // Formula: Sugar_g = ΔCO2 × factor × volume_L
             let sugar_type = input.get_param("sugar_type").unwrap_or("table_sugar");
 
+            // CORRECT FACTORS from brewing formulas:
             let factor = match sugar_type {
-                "table_sugar" => Decimal::new(4, 0),
-                "corn_sugar" => Decimal::new(37, 1),
-                "honey" => Decimal::new(5, 0),
-                "dme" => Decimal::new(46, 1),
-                _ => Decimal::new(4, 0),
+                "table_sugar" => Decimal::new(40, 1),     // 4.0 (sucrose)
+                "corn_sugar" => Decimal::new(386, 2),     // 3.86 (dextrose)
+                "honey" => Decimal::new(50, 1),           // 5.0 (~80% fermentable)
+                "dme" => Decimal::new(460, 2),            // 4.6 (~87% fermentable)
+                _ => Decimal::new(40, 1),
             };
 
-            let co2_grams_per_l = co2_needed * Decimal::new(2, 0);
-            let total_co2_grams = co2_grams_per_l * vol;
-            let priming_sugar = total_co2_grams * factor;
+            // Direct formula: Sugar = ΔCO2 × factor × volume
+            let priming_sugar = co2_needed * factor * vol;
 
-            CalcResult::new(Measurement::new(priming_sugar, Unit::Grams))
+            let mut res = CalcResult::new(Measurement::new(priming_sugar, Unit::Grams))
                 .with_meta("method", "Bottle Priming")
                 .with_meta("sugar_type", sugar_type)
                 .with_meta("target_co2", target_co2)
                 .with_meta("residual_co2", format!("{:.2}", residual_co2))
-                .with_meta("co2_needed", format!("{:.2}", co2_needed))
+                .with_meta("co2_needed", format!("{:.2} volumes", co2_needed));
+
+            if priming_sugar > vol * Decimal::from(10) {
+                res = res.with_warning("Very high priming sugar - double-check target CO2");
+            }
+
+            res
         };
 
         Ok(result)

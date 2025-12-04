@@ -24,52 +24,49 @@ impl Calculator for TanninCalculator {
     }
 
     fn description(&self) -> &'static str {
-        "Calculate tannin additions for mouthfeel and structure"
+        "Calculate tannin additions for body and mouthfeel"
     }
 
     fn calculate(&self, input: CalcInput) -> Result<CalcResult> {
-        let volume = input
-            .get_param("volume")
+        let volume = input.get_param("volume")
             .ok_or_else(|| Error::MissingInput("volume required".into()))?;
-        let target_level = input.get_param("target_level").unwrap_or("medium");
+        let tannin_level = input.get_param("tannin_level").unwrap_or("medium");
+        let tannin_type = input.get_param("tannin_type").unwrap_or("wine_tannin");
 
-        let vol: Decimal = volume
-            .parse()
+        let vol: Decimal = volume.parse()
             .map_err(|_| Error::Parse("Invalid volume".into()))?;
 
-        // Typical tannin additions:
-        // Light: 0.25 g/L (subtle structure)
-        // Medium: 0.5 g/L (balanced)
-        // Heavy: 1.0 g/L (bold, wine-like)
-
-        let g_per_liter = match target_level {
-            "light" => Decimal::new(25, 2),   // 0.25
-            "heavy" => Decimal::ONE,           // 1.0
-            _ => Decimal::new(5, 1),          // 0.5 medium
+        // Tannin dosage per liter
+        let dosage_per_liter = match tannin_level {
+            "low" => Decimal::new(5, 2),       // 0.05 g/L
+            "medium" => Decimal::new(10, 2),   // 0.10 g/L
+            "high" => Decimal::new(15, 2),     // 0.15 g/L
+            _ => Decimal::new(10, 2),
         };
 
-        let tannin_needed = vol * g_per_liter;
+        let tannin_needed = vol * dosage_per_liter;
+
+        let tannin_description = match tannin_type {
+            "wine_tannin" => "Wine Tannin (grape-derived, general purpose)",
+            "ft_blanc" => "FT Blanc (oak, for white wines/meads)",
+            "tannin_riche" => "Tannin Riche (adds body without astringency)",
+            "tannin_complex" => "Tannin Complex (mouthfeel enhancement)",
+            _ => "Wine Tannin (grape-derived)",
+        };
 
         let mut result = CalcResult::new(Measurement::new(tannin_needed, Unit::Grams));
 
-        if g_per_liter >= Decimal::ONE {
-            result = result.with_warning("Heavy tannin - may be astringent if over-added");
-        }
-
         result = result
-            .with_meta("tannin_powder", format!("{:.2} g", tannin_needed))
-            .with_meta("target_level", target_level)
-            .with_meta("concentration", format!("{} g/L", g_per_liter))
-            .with_meta("tip", "Add gradually and taste - you can always add more");
+            .with_meta("tannin_g", format!("{:.2} g", tannin_needed))
+            .with_meta("tannin_tsp", format!("{:.3} tsp", tannin_needed / Decimal::new(5, 0)))
+            .with_meta("tannin_type", tannin_description)
+            .with_meta("tannin_level", tannin_level)
+            .with_meta("dosage", format!("{:.2} g/L", dosage_per_liter));
+
+        result = result.with_warning("Add gradually, taste after 24 hours - easy to over-tannin");
+        result = result.with_warning("Tannin adds astringency/dryness - use sparingly in sweet meads");
 
         Ok(result)
-    }
-
-    fn validate(&self, input: &CalcInput) -> Result<()> {
-        if input.get_param("volume").is_none() {
-            return Err(Error::MissingInput("volume required".into()));
-        }
-        Ok(())
     }
 }
 

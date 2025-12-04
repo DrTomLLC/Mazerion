@@ -28,34 +28,46 @@ impl Calculator for BraggotCalculator {
     }
 
     fn calculate(&self, input: CalcInput) -> Result<CalcResult> {
-        let volume = input
-            .get_param("volume")
+        let volume = input.get_param("volume")
             .ok_or_else(|| Error::MissingInput("volume required".into()))?;
-        let target_abv = input.get_param("target_abv").unwrap_or("10");
-        let honey_percentage = input.get_param("honey_percentage").unwrap_or("50");
+        let target_abv = input.get_param("target_abv")
+            .ok_or_else(|| Error::MissingInput("target_abv required".into()))?;
+        let honey_percent = input.get_param("honey_percent").unwrap_or("50");
+        let malt_weight = input.get_param("malt_weight").unwrap_or("0");
 
-        let vol: Decimal = volume.parse().map_err(|_| Error::Parse("Invalid volume".into()))?;
-        let abv: Decimal = target_abv.parse().map_err(|_| Error::Parse("Invalid target_abv".into()))?;
-        let honey_pct: Decimal = honey_percentage.parse().map_err(|_| Error::Parse("Invalid honey_percentage".into()))?;
+        let vol: Decimal = volume.parse()
+            .map_err(|_| Error::Parse("Invalid volume".into()))?;
+        let abv: Decimal = target_abv.parse()
+            .map_err(|_| Error::Parse("Invalid target_abv".into()))?;
+        let honey_pct: Decimal = honey_percent.parse()
+            .map_err(|_| Error::Parse("Invalid honey_percent".into()))?;
+        let malt_kg: Decimal = malt_weight.parse()
+            .map_err(|_| Error::Parse("Invalid malt_weight".into()))?;
 
-        let honey_ratio = honey_pct / Decimal::from(100);
-        let malt_ratio = Decimal::ONE - honey_ratio;
+        // Honey: 135 g/L/%ABV, Malt: ~140 g/L/%ABV (varies by efficiency)
+        let honey_abv = abv * honey_pct / Decimal::from(100);
+        let malt_abv = abv - honey_abv;
 
-        let honey_g_per_l_per_abv = Decimal::from(135);
-        let honey_needed = vol * abv * honey_g_per_l_per_abv * honey_ratio;
+        let honey_needed = vol * honey_abv * Decimal::new(135, 0);
+        let calculated_malt = vol * malt_abv * Decimal::new(140, 0) / Decimal::from(1000); // kg
 
-        // Malt contribution: ~37 PPG (points per pound per gallon)
-        // For simplicity, use similar calculation
-        let malt_g_per_l_per_abv = Decimal::from(140);
-        let malt_needed = vol * abv * malt_g_per_l_per_abv * malt_ratio;
+        let malt_to_use = if malt_kg > Decimal::ZERO {
+            malt_kg
+        } else {
+            calculated_malt
+        };
 
-        let mut result = CalcResult::new(Measurement::new(honey_needed / Decimal::from(1000), Unit::Grams));
+        let mut result = CalcResult::new(Measurement::new(honey_needed, Unit::Grams));
 
         result = result
-            .with_meta("honey", format!("{:.2} kg", honey_needed / Decimal::from(1000)))
-            .with_meta("malt", format!("{:.2} kg", malt_needed / Decimal::from(1000)))
-            .with_meta("honey_percentage", format!("{}%", honey_pct))
-            .with_meta("target_abv", format!("{}%", abv));
+            .with_meta("honey_kg", format!("{:.2} kg", honey_needed / Decimal::from(1000)))
+            .with_meta("malt_kg", format!("{:.2} kg", malt_to_use))
+            .with_meta("honey_abv", format!("{:.1}%", honey_abv))
+            .with_meta("malt_abv", format!("{:.1}%", malt_abv));
+
+        if honey_pct < Decimal::from(30) {
+            result = result.with_warning("Low honey percentage - may be more beer than braggot");
+        }
 
         Ok(result)
     }

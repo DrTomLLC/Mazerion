@@ -24,7 +24,7 @@ impl Calculator for VolumeAdjustmentCalculator {
     }
 
     fn description(&self) -> &'static str {
-        "Calculate volume adjustments for target gravity"
+        "Calculate volume adjustments for target gravity (dilution or concentration)"
     }
 
     fn calculate(&self, input: CalcInput) -> Result<CalcResult> {
@@ -48,9 +48,11 @@ impl Calculator for VolumeAdjustmentCalculator {
             .parse()
             .map_err(|_| Error::Parse("Invalid target_gravity".into()))?;
 
+        // Only support DILUTION (adding water to reduce gravity)
+        // Concentration (boiling off water) is a different process
         if targ_grav >= curr_grav {
             return Err(Error::Validation(
-                "Target gravity must be less than current gravity for dilution".into(),
+                "Target gravity must be less than current gravity. Use boiling to concentrate wort, not this calculator.".into(),
             ));
         }
 

@@ -28,52 +28,56 @@ impl Calculator for PrimingAlternativesCalculator {
     }
 
     fn calculate(&self, input: CalcInput) -> Result<CalcResult> {
-        let volume = input
-            .get_param("volume")
+        let volume = input.get_param("volume")
             .ok_or_else(|| Error::MissingInput("volume required".into()))?;
-        let target_co2 = input.get_param("target_co2").unwrap_or("2.5");
+        let target_co2 = input.get_param("target_co2")
+            .ok_or_else(|| Error::MissingInput("target_co2 required".into()))?;
+        let temperature = input.get_param("temperature")
+            .ok_or_else(|| Error::MissingInput("temperature required".into()))?;
 
-        let vol: Decimal = volume
-            .parse()
+        let vol: Decimal = volume.parse()
             .map_err(|_| Error::Parse("Invalid volume".into()))?;
-        let co2: Decimal = target_co2
-            .parse()
+        let target: Decimal = target_co2.parse()
             .map_err(|_| Error::Parse("Invalid target_co2".into()))?;
+        let temp: Decimal = temperature.parse()
+            .map_err(|_| Error::Parse("Invalid temperature".into()))?;
 
-        // Base calculation: table sugar
-        // Simplified: ~4g sugar per liter per volume CO2
-        let table_sugar = vol * co2 * Decimal::from(4);
+        // Calculate residual CO2 at temperature (simplified formula)
+        let residual_co2 = Decimal::new(3, 1) - (temp * Decimal::new(1, 2));
+        let co2_needed = target - residual_co2;
 
-        // Alternative sugar conversion factors (relative to table sugar)
-        let corn_sugar_factor = Decimal::new(11, 1);    // 1.1x (91% fermentability)
-        let honey_factor = Decimal::new(125, 2);        // 1.25x (80% fermentability)
-        let dme_factor = Decimal::new(135, 2);          // 1.35x (74% fermentability)
-        let maple_factor = Decimal::new(133, 2);        // 1.33x (75% fermentability)
+        if co2_needed < Decimal::ZERO {
+            return Err(Error::Validation("Target CO2 already present at this temperature".into()));
+        }
 
-        let corn_sugar = table_sugar * corn_sugar_factor;
-        let honey = table_sugar * honey_factor;
-        let dme = table_sugar * dme_factor;
-        let maple_syrup = table_sugar * maple_factor;
+        // Priming sugar factors (grams per liter per volume CO2)
+        // Base: table sugar = 4.0 g/L/vol
+        let table_sugar = vol * co2_needed * Decimal::from(4);
+        let corn_sugar = vol * co2_needed * Decimal::new(44, 1);    // 4.4 g/L/vol (dextrose)
+        let honey = vol * co2_needed * Decimal::new(35, 1);         // 3.5 g/L/vol
+        let dme = vol * co2_needed * Decimal::new(46, 1);           // 4.6 g/L/vol
+        let maple_syrup = vol * co2_needed * Decimal::new(33, 1);   // 3.3 g/L/vol
+        let agave = vol * co2_needed * Decimal::new(36, 1);         // 3.6 g/L/vol
+        let molasses = vol * co2_needed * Decimal::new(37, 1);      // 3.7 g/L/vol
 
         let mut result = CalcResult::new(Measurement::new(table_sugar, Unit::Grams));
 
         result = result
-            .with_meta("table_sugar", format!("{:.1} g", table_sugar))
-            .with_meta("corn_sugar", format!("{:.1} g", corn_sugar))
-            .with_meta("honey", format!("{:.1} g", honey))
-            .with_meta("dme", format!("{:.1} g", dme))
-            .with_meta("maple_syrup", format!("{:.1} g", maple_syrup))
-            .with_meta("target_co2", format!("{} volumes", co2))
-            .with_meta("volume", format!("{} L", vol));
+            .with_meta("table_sugar_g", format!("{:.0} g ({:.2} oz)", table_sugar, table_sugar / Decimal::new(2835, 2)))
+            .with_meta("corn_sugar_g", format!("{:.0} g ({:.2} oz)", corn_sugar, corn_sugar / Decimal::new(2835, 2)))
+            .with_meta("honey_g", format!("{:.0} g ({:.2} oz)", honey, honey / Decimal::new(2835, 2)))
+            .with_meta("dme_g", format!("{:.0} g ({:.2} oz)", dme, dme / Decimal::new(2835, 2)))
+            .with_meta("maple_syrup_g", format!("{:.0} g ({:.2} oz)", maple_syrup, maple_syrup / Decimal::new(2835, 2)))
+            .with_meta("agave_g", format!("{:.0} g ({:.2} oz)", agave, agave / Decimal::new(2835, 2)))
+            .with_meta("molasses_g", format!("{:.0} g ({:.2} oz)", molasses, molasses / Decimal::new(2835, 2)))
+            .with_meta("co2_needed", format!("{:.2} volumes", co2_needed))
+            .with_meta("residual_co2", format!("{:.2} volumes", residual_co2));
+
+        if target > Decimal::new(45, 1) {
+            result = result.with_warning("High carbonation - risk of bottle bombs, ensure bottles rated for pressure");
+        }
 
         Ok(result)
-    }
-
-    fn validate(&self, input: &CalcInput) -> Result<()> {
-        if input.get_param("volume").is_none() {
-            return Err(Error::MissingInput("volume required".into()));
-        }
-        Ok(())
     }
 }
 

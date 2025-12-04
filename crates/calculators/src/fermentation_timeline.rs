@@ -28,77 +28,79 @@ impl Calculator for FermentationTimelineCalculator {
     }
 
     fn calculate(&self, input: CalcInput) -> Result<CalcResult> {
-        let og = input
-            .get_param("og")
+        let og = input.get_param("og")
             .ok_or_else(|| Error::MissingInput("og required".into()))?;
-        let fg = input
-            .get_param("fg")
+        let fg = input.get_param("fg")
             .ok_or_else(|| Error::MissingInput("fg required".into()))?;
-        let temp = input.get_param("temperature").unwrap_or("20");
-        let yeast_speed = input.get_param("yeast_speed").unwrap_or("medium");
+        let temperature = input.get_param("temperature").unwrap_or("20");
+        let beverage_type = input.get_param("beverage_type").unwrap_or("ale");
 
-        let og_val: Decimal = og.parse().map_err(|_| Error::Parse("Invalid OG".into()))?;
-        let fg_val: Decimal = fg.parse().map_err(|_| Error::Parse("Invalid FG".into()))?;
-        let temp_val: Decimal = temp
-            .parse()
+        let og_val: Decimal = og.parse()
+            .map_err(|_| Error::Parse("Invalid og".into()))?;
+        let fg_val: Decimal = fg.parse()
+            .map_err(|_| Error::Parse("Invalid fg".into()))?;
+        let temp: Decimal = temperature.parse()
             .map_err(|_| Error::Parse("Invalid temperature".into()))?;
 
         // Calculate gravity points to ferment
-        let points = (og_val - fg_val) * Decimal::from(1000);
+        let gravity_points = (og_val - fg_val) * Decimal::from(1000);
 
-        // Base timeline: 1 day per 10 gravity points
-        let base_days = points / Decimal::from(10);
+        // Base fermentation time (days) by beverage type
+        let base_days = match beverage_type {
+            "ale" => Decimal::from(7),
+            "lager" => Decimal::from(14),
+            "mead" => Decimal::from(21),
+            "wine" => Decimal::from(14),
+            _ => Decimal::from(7),
+        };
 
-        // Temperature adjustment (optimal 18-22°C for ales)
-        let temp_factor = if temp_val < Decimal::from(18) {
-            Decimal::new(14, 1) // 1.4x slower
-        } else if temp_val > Decimal::from(22) {
-            Decimal::new(8, 1) // 0.8x faster
+        // Temperature adjustment (slower at cooler temps)
+        let temp_factor = if temp < Decimal::from(18) {
+            Decimal::new(13, 1)  // 1.3x longer
+        } else if temp > Decimal::from(25) {
+            Decimal::new(9, 1)   // 0.9x faster
         } else {
             Decimal::ONE
         };
 
-        // Yeast strain speed factor
-        let yeast_factor = match yeast_speed {
-            "fast" => Decimal::new(8, 1),     // 0.8x
-            "slow" => Decimal::new(12, 1),    // 1.2x
-            _ => Decimal::ONE,                 // medium
+        // Gravity adjustment (more points = longer time)
+        let gravity_factor = if gravity_points > Decimal::from(60) {
+            Decimal::new(12, 1)  // 1.2x longer for high gravity
+        } else if gravity_points < Decimal::from(30) {
+            Decimal::new(8, 1)   // 0.8x faster for low gravity
+        } else {
+            Decimal::ONE
         };
 
-        let estimated_days = base_days * temp_factor * yeast_factor;
+        let estimated_days = base_days * temp_factor * gravity_factor;
 
-        // Add conditioning time (typically 3-7 days)
-        let conditioning_days = Decimal::from(5);
+        // Add conditioning time
+        let conditioning_days = match beverage_type {
+            "lager" => Decimal::from(21),
+            "mead" => Decimal::from(90),
+            "wine" => Decimal::from(30),
+            _ => Decimal::from(7),
+        };
+
         let total_days = estimated_days + conditioning_days;
 
         let mut result = CalcResult::new(Measurement::new(estimated_days, Unit::Grams));
 
-        if estimated_days > Decimal::from(21) {
-            result = result.with_warning("Long fermentation - check for stuck fermentation");
-        }
-
-        if temp_val < Decimal::from(15) {
-            result = result.with_warning("Temperature is low - fermentation may be very slow");
-        }
-
         result = result
-            .with_meta("primary_fermentation", format!("{:.0} days", estimated_days))
-            .with_meta("conditioning", format!("{} days", conditioning_days))
-            .with_meta("total_time", format!("{:.0} days", total_days))
-            .with_meta("gravity_points", format!("{:.0}", points))
-            .with_meta("temperature", format!("{}°C", temp_val));
+            .with_meta("primary_days", format!("{:.0} days", estimated_days))
+            .with_meta("conditioning_days", format!("{:.0} days", conditioning_days))
+            .with_meta("total_days", format!("{:.0} days ({:.1} weeks)", total_days, total_days / Decimal::from(7)))
+            .with_meta("beverage_type", beverage_type)
+            .with_meta("gravity_points", format!("{:.0} points", gravity_points))
+            .with_meta("temperature", format!("{}°C", temp));
+
+        result = result.with_warning("Timeline is an estimate - always verify completion with stable gravity readings");
+
+        if total_days > Decimal::from(120) {
+            result = result.with_warning("Long fermentation expected - patience required!");
+        }
 
         Ok(result)
-    }
-
-    fn validate(&self, input: &CalcInput) -> Result<()> {
-        if input.get_param("og").is_none() {
-            return Err(Error::MissingInput("og required".into()));
-        }
-        if input.get_param("fg").is_none() {
-            return Err(Error::MissingInput("fg required".into()));
-        }
-        Ok(())
     }
 }
 
