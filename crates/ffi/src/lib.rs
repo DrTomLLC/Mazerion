@@ -137,7 +137,7 @@ pub extern "C" fn mazerion_free_result(result: MazerionResult) {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn mazerion_version() -> *mut c_char {
-    match CString::new("0.7.0") {
+    match CString::new("0.10.4") {
         Ok(s) => s.into_raw(),
         Err(_) => ptr::null_mut(),
     }
