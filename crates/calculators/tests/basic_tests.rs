@@ -1,5 +1,5 @@
 use mazerion_calculators::*;
-use mazerion_core::{CalcInput, Calculator};
+use mazerion_core::{CalcInput, Calculator, Measurement};
 use rust_decimal::Decimal;
 use std::str::FromStr;
 
@@ -30,8 +30,9 @@ fn test_abv_high_gravity() {
 #[test]
 fn test_brix_to_sg() {
     let calc = BrixToSgCalculator::default();
+    let brix_measurement = Measurement::brix(Decimal::from_str("20.0").unwrap()).unwrap();
     let input = CalcInput::new()
-        .add_param("brix", "20.0");
+        .add_measurement(brix_measurement);
 
     let result = calc.calculate(input).unwrap();
     let expected = Decimal::from_str("1.083").unwrap();
@@ -40,9 +41,10 @@ fn test_brix_to_sg() {
 
 #[test]
 fn test_sg_to_brix() {
-    let calc = TanninCalculator::default();
+    let calc = SgToBrixCalculator::default();
+    let sg_measurement = Measurement::sg(Decimal::from_str("1.083").unwrap()).unwrap();
     let input = CalcInput::new()
-        .add_param("sg", "1.083");
+        .add_measurement(sg_measurement);
 
     let result = calc.calculate(input).unwrap();
     let expected = Decimal::from_str("20.0").unwrap();
@@ -66,8 +68,8 @@ fn test_dilution_calculator() {
 fn test_gravity_from_ingredients() {
     let calc = GravityFromIngredientsCalculator::default();
     let input = CalcInput::new()
-        .add_param("honey_kg", "3.6")
-        .add_param("water_liters", "15");
+        .add_param("honey_weight", "3.6")
+        .add_param("water_volume", "15");
 
     let result = calc.calculate(input).unwrap();
     assert!(result.output.value > Decimal::from_str("1.070").unwrap());
@@ -79,7 +81,7 @@ fn test_hydrometer_correction() {
     let calc = HydrometerCorrectionCalculator::default();
     let input = CalcInput::new()
         .add_param("measured_sg", "1.050")
-        .add_param("measured_temp", "30")
+        .add_param("sample_temp", "30")
         .add_param("calibration_temp", "20");
 
     let result = calc.calculate(input).unwrap();

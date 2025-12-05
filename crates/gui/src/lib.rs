@@ -215,7 +215,7 @@ impl eframe::App for MazerionApp {
                 ui.add_space(10.0);
 
                 ui.horizontal(|ui| {
-                    ui.heading(RichText::new("🍯 Mazerion MCL v0.9.0").size(28.0).color(state::colors::SADDLE_BROWN));
+                    ui.heading(RichText::new("🍯 Mazerion MCL v0.10.0").size(28.0).color(state::colors::SADDLE_BROWN));
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         ui.label(RichText::new(format!("📊 40 Calculators | {} | Precision: SG {:?}, pH {:?}, Brix {:?}",
                                                        self.state.unit_system.name(),
