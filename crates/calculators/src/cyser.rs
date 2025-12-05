@@ -46,7 +46,8 @@ impl Calculator for CyserCalculator {
         let juice_sugar_per_liter = Decimal::new(104, 0); // 104 g/L
         let total_juice_sugar = juice_volume * juice_sugar_per_liter;
 
-        let juice_abv = total_juice_sugar / (vol * Decimal::new(135, 0));
+        let juice_abv = total_juice_sugar / (vol * Decimal::from(135));
+
         let remaining_abv = abv - juice_abv;
 
         let honey_needed = vol * remaining_abv * Decimal::new(135, 0);

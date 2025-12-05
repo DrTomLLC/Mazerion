@@ -1,4 +1,4 @@
-//! FFI for Mazerion - ACTUAL WORKING VERSION
+//! FFI for Mazerion
 
 use std::ffi::CString;
 use std::os::raw::{c_char, c_int};

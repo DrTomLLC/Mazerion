@@ -360,7 +360,7 @@ fn calc_traditional(app: &mut MazerionApp) {
         }
     };
 
-    let honey_g = volume_l * abv * Decimal::from(135);
+    let honey_g = volume_l * abv * Decimal::from(33);  // FIXED: 135 → 33
     let honey_kg = honey_g / Decimal::from(1000);
 
     let (honey_display, unit) = match app.state.unit_system {
@@ -374,7 +374,16 @@ fn calc_traditional(app: &mut MazerionApp) {
     app.result = Some(format!("Honey Needed: {} {}", honey_display, unit));
     app.warnings.clear();
     app.metadata.clear();
-    app.metadata.push(("Volume".to_string(), format!("{:.2} L", volume_l)));
+
+    // FIXED: Show correct units based on user selection
+    let volume_display = match app.state.unit_system {
+        UnitSystem::Metric => format!("{:.2} L", volume_l),
+        UnitSystem::Imperial => {
+            let gal = mazerion_core::liters_to_gallons(volume_l);
+            format!("{:.2} gal", gal)
+        }
+    };
+    app.metadata.push(("Volume".to_string(), volume_display));
     app.metadata.push(("Target ABV".to_string(), format!("{:.1}%", abv)));
 }
 
@@ -413,7 +422,7 @@ fn calc_hydromel(app: &mut MazerionApp) {
         app.warnings.push("⚠️ ABV above typical hydromel range (3.5-7.5%)".to_string());
     }
 
-    let honey_g = volume_l * abv * Decimal::from(135);
+    let honey_g = volume_l * abv * Decimal::from(33);  // FIXED: 135 → 33
     let honey_kg = honey_g / Decimal::from(1000);
 
     let (honey_display, unit) = match app.state.unit_system {
@@ -468,7 +477,7 @@ fn calc_sack(app: &mut MazerionApp) {
         app.warnings.push("⚠️ Very high ABV - consider high-tolerance yeast (EC-1118, K1-V1116)".to_string());
     }
 
-    let honey_g = volume_l * abv * Decimal::from(135);
+    let honey_g = volume_l * abv * Decimal::from(33);  // FIXED: 135 → 33
     let honey_kg = honey_g / Decimal::from(1000);
 
     let (honey_display, unit) = match app.state.unit_system {
@@ -537,11 +546,13 @@ fn calc_melomel(app: &mut MazerionApp) {
         _ => Decimal::from(8),
     };
 
+    // FIXED: Proper unit conversion kg → g before ABV calculation
     let fruit_sugar_kg = fruit_weight_kg * fruit_sugar_pct / Decimal::from(100);
-    let fruit_abv = fruit_sugar_kg * Decimal::new(135, 0) / volume_l / Decimal::from(135);
+    let fruit_sugar_g = fruit_sugar_kg * Decimal::from(1000);
+    let fruit_abv = fruit_sugar_g / (volume_l * Decimal::from(33));  // FIXED: 135 → 33
 
     let remaining_abv = if abv > fruit_abv { abv - fruit_abv } else { Decimal::ZERO };
-    let honey_g = volume_l * remaining_abv * Decimal::from(135);
+    let honey_g = volume_l * remaining_abv * Decimal::from(33);  // Already correct
     let honey_kg = honey_g / Decimal::from(1000);
 
     let (honey_display, fruit_display, h_unit, f_unit) = match app.state.unit_system {
@@ -606,11 +617,12 @@ fn calc_cyser(app: &mut MazerionApp) {
     };
 
     let juice_l = volume_l * juice_pct / Decimal::from(100);
-    let juice_sugar = juice_l * Decimal::new(104, 0);
-    let juice_abv = juice_sugar / volume_l / Decimal::from(135);
+    // FIXED: Proper parentheses for division order
+    let juice_sugar_g = juice_l * Decimal::new(104, 0);
+    let juice_abv = juice_sugar_g / (volume_l * Decimal::from(33));  // FIXED: 135 → 33, proper parentheses
 
     let remaining_abv = if abv > juice_abv { abv - juice_abv } else { Decimal::ZERO };
-    let honey_g = volume_l * remaining_abv * Decimal::from(135);
+    let honey_g = volume_l * remaining_abv * Decimal::from(33);  // FIXED: 135 → 33
     let honey_kg = honey_g / Decimal::from(1000);
 
     let (honey_display, juice_display, h_unit, j_unit) = match app.state.unit_system {
@@ -675,8 +687,8 @@ fn calc_acerglyn(app: &mut MazerionApp) {
     let maple_abv = abv * maple_pct / Decimal::from(100);
     let honey_abv = abv - maple_abv;
 
-    let maple_g = volume_l * maple_abv * Decimal::from(165);
-    let honey_g = volume_l * honey_abv * Decimal::from(135);
+    let maple_g = volume_l * maple_abv * Decimal::from(40);   // FIXED: 165 → 40
+    let honey_g = volume_l * honey_abv * Decimal::from(33);   // FIXED: 135 → 33
 
     let maple_kg = maple_g / Decimal::from(1000);
     let honey_kg = honey_g / Decimal::from(1000);
@@ -738,7 +750,7 @@ fn calc_bochet(app: &mut MazerionApp) {
         _ => Decimal::new(90, 2),
     };
 
-    let honey_g = volume_l * abv * Decimal::from(135) / loss_factor;
+    let honey_g = volume_l * abv * Decimal::from(33) / loss_factor;  // FIXED: 135 → 33
     let honey_kg = honey_g / Decimal::from(1000);
 
     let (honey_display, unit) = match app.state.unit_system {
@@ -797,8 +809,8 @@ fn calc_braggot(app: &mut MazerionApp) {
     let honey_abv = abv * honey_pct / Decimal::from(100);
     let malt_abv = abv - honey_abv;
 
-    let honey_g = volume_l * honey_abv * Decimal::from(135);
-    let malt_g = volume_l * malt_abv * Decimal::from(140);
+    let honey_g = volume_l * honey_abv * Decimal::from(33);  // FIXED: 135 → 33
+    let malt_g = volume_l * malt_abv * Decimal::from(34);    // FIXED: 140 → 34
 
     let honey_kg = honey_g / Decimal::from(1000);
     let malt_kg = malt_g / Decimal::from(1000);
@@ -860,7 +872,7 @@ fn calc_capsicumel(app: &mut MazerionApp) {
         _ => Decimal::ONE,
     };
 
-    let honey_g = volume_l * abv * Decimal::from(135);
+    let honey_g = volume_l * abv * Decimal::from(33);  // FIXED: 135 → 33
     let honey_kg = honey_g / Decimal::from(1000);
     let pepper_g = volume_l * pepper_rate;
 
@@ -921,7 +933,7 @@ fn calc_metheglin(app: &mut MazerionApp) {
         _ => Decimal::ONE,
     };
 
-    let honey_g = volume_l * abv * Decimal::from(135);
+    let honey_g = volume_l * abv * Decimal::from(33);  // FIXED: 135 → 33
     let honey_kg = honey_g / Decimal::from(1000);
     let spice_g = volume_l * spice_rate;
 

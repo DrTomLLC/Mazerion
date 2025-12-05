@@ -160,7 +160,7 @@ pub fn render(app: &mut MazerionApp, ui: &mut egui::Ui) {
             ui.separator();
             ui.add_space(10.0);
 
-            ui.label(RichText::new("ℹ️ About Mazerion v0.9.0").strong().size(14.0));
+            ui.label(RichText::new("ℹ️ About Mazerion v0.10.4").strong().size(14.0));
             ui.label("40 calculators • 7 categories • Zero panics");
         });
 }
