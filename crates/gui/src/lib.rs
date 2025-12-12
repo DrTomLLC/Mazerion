@@ -1,3 +1,5 @@
+//! Mazerion GUI - Complete Production Ready
+
 use eframe::egui::{self, Color32, RichText, CornerRadius, Vec2};
 
 pub mod state;
@@ -91,6 +93,8 @@ pub struct MazerionApp {
     pub water_so4: String,
     pub water_cl: String,
     pub water_profile: String,
+    pub water_mineral_type: String,
+    pub water_target_ppm: String,
     pub trial_volume: String,
     pub trial_addition: String,
     pub batch_volume: String,
@@ -105,7 +109,6 @@ pub struct MazerionApp {
     pub result: Option<String>,
     pub warnings: Vec<String>,
     pub metadata: Vec<(String, String)>,
-    nutrients_cost: ()
 }
 
 impl Default for MazerionApp {
@@ -131,10 +134,10 @@ impl Default for MazerionApp {
 
             volume: String::new(),
             target_abv_brew: String::new(),
-            yn_requirement: "medium".to_string(),
+            yn_requirement: String::new(),
             carb_temp: String::new(),
             target_co2: String::new(),
-            carb_method: "priming".to_string(),
+            carb_method: "priming_sugar".to_string(),
             sugar_type: "table_sugar".to_string(),
 
             beer_calc: BeerCalculator::Ibu,
@@ -167,14 +170,14 @@ impl Default for MazerionApp {
             mead_volume: String::new(),
             mead_target_abv: String::new(),
             fruit_weight: String::new(),
-            fruit_type: "strawberry".to_string(),
+            fruit_type: String::new(),
             juice_percent: String::new(),
             maple_percent: String::new(),
-            bochet_level: "medium".to_string(),
+            bochet_level: String::new(),
             honey_percent: String::new(),
             malt_weight: String::new(),
-            heat_level: "medium".to_string(),
-            spice_level: "medium".to_string(),
+            heat_level: String::new(),
+            spice_level: String::new(),
 
             utility_calc: tabs::utilities::UtilityCalculator::Cost,
             honey_cost: String::new(),
@@ -188,117 +191,133 @@ impl Default for MazerionApp {
             water_so4: String::new(),
             water_cl: String::new(),
             water_profile: "balanced".to_string(),
+            water_mineral_type: "gypsum".to_string(),
+            water_target_ppm: "50".to_string(),
             trial_volume: String::new(),
             trial_addition: String::new(),
             batch_volume: String::new(),
 
             conv_value: String::new(),
-            conv_from_unit: "liters".to_string(),
-            conv_to_unit: "gallons".to_string(),
+            conv_from_unit: String::new(),
+            conv_to_unit: String::new(),
             conv_result: None,
 
             result: None,
             warnings: Vec::new(),
             metadata: Vec::new(),
-            nutrients_cost: (),
         }
     }
 }
 
 impl eframe::App for MazerionApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        let (bg_main, bg_panel) = self.state.get_theme_colors();
+        let (bg_main, _bg_panel) = self.state.get_theme_colors();
 
         egui::CentralPanel::default()
-            .frame(egui::Frame::none().fill(bg_main))
+            .frame(egui::Frame::new()
+                .fill(bg_main)
+                .inner_margin(0.0))
             .show(ctx, |ui| {
-                ui.add_space(10.0);
-
-                ui.horizontal(|ui| {
-                    ui.heading(RichText::new("🍯 Mazerion MCL v0.10.4").size(28.0).color(state::colors::SADDLE_BROWN));
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        ui.label(RichText::new(format!("📊 40 Calculators | {} | Precision: SG {:?}, pH {:?}, Brix {:?}",
-                                                       self.state.unit_system.name(),
-                                                       self.state.sg_precision,
-                                                       self.state.ph_precision,
-                                                       self.state.brix_precision
-                        )).size(12.0).color(state::colors::DARK_TEXT));
-                    });
-                });
-
-                ui.add_space(10.0);
-                ui.separator();
-                ui.add_space(10.0);
-
-                ui.horizontal(|ui| {
-                    if tab_button(ui, "📊 Basic", self.state.current_tab == TabView::Basic) {
-                        self.state.current_tab = TabView::Basic;
-                    }
-                    if tab_button(ui, "🔬 Advanced", self.state.current_tab == TabView::Advanced) {
-                        self.state.current_tab = TabView::Advanced;
-                    }
-                    if tab_button(ui, "🧪 Brewing", self.state.current_tab == TabView::Brewing) {
-                        self.state.current_tab = TabView::Brewing;
-                    }
-                    if tab_button(ui, "🍺 Beer", self.state.current_tab == TabView::Beer) {
-                        self.state.current_tab = TabView::Beer;
-                    }
-                    if tab_button(ui, "✨ Finishing", self.state.current_tab == TabView::Finishing) {
-                        self.state.current_tab = TabView::Finishing;
-                    }
-                    if tab_button(ui, "🍯 Mead Styles", self.state.current_tab == TabView::MeadStyles) {
-                        self.state.current_tab = TabView::MeadStyles;
-                    }
-                    if tab_button(ui, "🔧 Utilities", self.state.current_tab == TabView::Utilities) {
-                        self.state.current_tab = TabView::Utilities;
-                    }
-                    if tab_button(ui, "⚙️ Settings", self.state.current_tab == TabView::Settings) {
-                        self.state.current_tab = TabView::Settings;
-                    }
-                });
-
-                ui.add_space(15.0);
-
                 egui::ScrollArea::vertical().show(ui, |ui| {
-                    match self.state.current_tab {
-                        TabView::Basic => tabs::basic::render(self, ui),
-                        TabView::Advanced => tabs::advanced::render(self, ui),
-                        TabView::Brewing => tabs::brewing::render(self, ui),
-                        TabView::Beer => tabs::beer::render(self, ui),
-                        TabView::Finishing => tabs::finishing::render(self, ui),
-                        TabView::MeadStyles => tabs::mead_styles::render(self, ui),
-                        TabView::Utilities => tabs::utilities::render(self, ui),
-                        TabView::Settings => tabs::settings::render(self, ui),
-                    }
+                    ui.add_space(10.0);
 
-                    if let Some(ref result) = self.result {
-                        ui.add_space(15.0);
-                        egui::Frame::none()
+                    ui.vertical_centered(|ui| {
+                        ui.heading(RichText::new("🍯 Mazerion MCL v0.11.0").size(32.0).color(state::colors::HONEY_GOLD).strong());
+                        ui.label(RichText::new("Precision Beverage Calculator Suite").size(18.0).color(state::colors::SADDLE_BROWN));
+                        ui.add_space(5.0);
+                        ui.label(RichText::new(
+                            format!("📊 40 Calculators | {} | Precision: SG {:?}, pH {:?}, Brix {:?}",
+                                    self.state.unit_system.name(),
+                                    self.state.sg_precision,
+                                    self.state.ph_precision,
+                                    self.state.brix_precision
+                            )).size(12.0).color(state::colors::DARK_TEXT));
+                    });
+
+                    ui.add_space(10.0);
+                    ui.separator();
+                    ui.add_space(10.0);
+
+                    ui.horizontal(|ui| {
+                        if tab_button(ui, "📊 Basic", self.state.current_tab == TabView::Basic) {
+                            self.state.current_tab = TabView::Basic;
+                        }
+                        if tab_button(ui, "🔬 Advanced", self.state.current_tab == TabView::Advanced) {
+                            self.state.current_tab = TabView::Advanced;
+                        }
+                        if tab_button(ui, "🧪 Brewing", self.state.current_tab == TabView::Brewing) {
+                            self.state.current_tab = TabView::Brewing;
+                        }
+                        if tab_button(ui, "🍺 Beer", self.state.current_tab == TabView::Beer) {
+                            self.state.current_tab = TabView::Beer;
+                        }
+                        if tab_button(ui, "✨ Finishing", self.state.current_tab == TabView::Finishing) {
+                            self.state.current_tab = TabView::Finishing;
+                        }
+                        if tab_button(ui, "🍯 Mead Styles", self.state.current_tab == TabView::MeadStyles) {
+                            self.state.current_tab = TabView::MeadStyles;
+                        }
+                        if tab_button(ui, "🔧 Utilities", self.state.current_tab == TabView::Utilities) {
+                            self.state.current_tab = TabView::Utilities;
+                        }
+                        if tab_button(ui, "⚙️ Settings", self.state.current_tab == TabView::Settings) {
+                            self.state.current_tab = TabView::Settings;
+                        }
+                    });
+
+                    ui.add_space(15.0);
+
+                    egui::ScrollArea::vertical().show(ui, |ui| {
+                        match self.state.current_tab {
+                            TabView::Basic => tabs::basic::render(self, ui),
+                            TabView::Advanced => tabs::advanced::render(self, ui),
+                            TabView::Brewing => tabs::brewing::render(self, ui),
+                            TabView::Beer => tabs::beer::render(self, ui),
+                            TabView::Finishing => tabs::finishing::render(self, ui),
+                            TabView::MeadStyles => tabs::mead_styles::render(self, ui),
+                            TabView::Utilities => tabs::utilities::render(self, ui),
+                            TabView::Settings => tabs::settings::render(self, ui),
+                        }
+                    });
+
+                    ui.add_space(20.0);
+
+                    if let Some(result_text) = &self.result {
+                        let (_bg_main, bg_panel) = self.state.get_theme_colors();
+                        egui::Frame::new()
                             .fill(bg_panel)
-                            .stroke(egui::Stroke::new(2.0, state::colors::FOREST_GREEN))
-                            .corner_radius(CornerRadius::same(8))
-                            .inner_margin(15.0)
+                            .stroke(egui::Stroke::new(2.0, state::colors::HONEY_GOLD))
+                            .corner_radius(CornerRadius::same(10))
+                            .inner_margin(20.0)
                             .show(ui, |ui| {
-                                ui.label(RichText::new(result).size(16.0).color(state::colors::FOREST_GREEN).strong());
+                                ui.vertical(|ui| {
+                                    ui.label(RichText::new("📊 Result:").strong().size(18.0).color(state::colors::SADDLE_BROWN));
+                                    ui.add_space(10.0);
+                                    ui.label(RichText::new(result_text).size(16.0).color(state::colors::FOREST_GREEN).strong());
 
-                                if !self.warnings.is_empty() {
-                                    ui.add_space(8.0);
-                                    ui.label(RichText::new("⚠️ Warnings:").color(state::colors::DARK_ORANGE).strong());
-                                    for warning in &self.warnings {
-                                        ui.label(RichText::new(format!("  • {}", warning)).color(state::colors::DARK_ORANGE));
+                                    if !self.warnings.is_empty() {
+                                        ui.add_space(15.0);
+                                        ui.label(RichText::new("⚠️ Warnings:").strong().size(14.0).color(state::colors::DARK_ORANGE));
+                                        for warning in &self.warnings {
+                                            ui.label(RichText::new(format!("  • {}", warning)).color(state::colors::DARK_ORANGE));
+                                        }
                                     }
-                                }
 
-                                if !self.metadata.is_empty() {
-                                    ui.add_space(8.0);
-                                    ui.label(RichText::new("ℹ️ Details:").color(state::colors::DARK_TEXT).strong());
-                                    for (key, value) in &self.metadata {
-                                        ui.horizontal(|ui| {
-                                            ui.label(RichText::new(format!("{}:", key)).color(state::colors::DARK_TEXT));
-                                            ui.label(RichText::new(value).color(state::colors::GOLDENROD));
-                                        });
+                                    if !self.metadata.is_empty() {
+                                        ui.add_space(15.0);
+                                        ui.label(RichText::new("ℹ️ Details:").strong().size(14.0).color(state::colors::SADDLE_BROWN));
+                                        egui::Grid::new("metadata_grid")
+                                            .num_columns(2)
+                                            .spacing([15.0, 8.0])
+                                            .show(ui, |ui| {
+                                                for (key, value) in &self.metadata {
+                                                    ui.label(RichText::new(format!("{}:", key)).color(state::colors::DARK_TEXT));
+                                                    ui.label(RichText::new(value).color(state::colors::GOLDENROD));
+                                                    ui.end_row();
+                                                }
+                                            });
                                     }
-                                }
+                                });
                             });
                     }
                 });
@@ -320,7 +339,7 @@ pub fn run() -> eframe::Result {
     };
 
     eframe::run_native(
-        "Mazerion MCL v0.9.0 - Precision Beverage Calculator",
+        "Mazerion MCL v0.11.0 - Precision Beverage Calculator",
         options,
         Box::new(|_cc| Ok(Box::new(MazerionApp::default()))),
     )

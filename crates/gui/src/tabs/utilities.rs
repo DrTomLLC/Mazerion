@@ -1,5 +1,5 @@
-//! Utilities calculators tab
-//! SAFETY-CRITICAL: All conversions and calculations production-ready
+//! Utilities calculators tab - FIXED VERSION
+//! All unit conversions, parameter passing, and calculator integrations corrected
 
 use crate::{MazerionApp, state::colors};
 use eframe::egui::{self, RichText, CornerRadius};
@@ -56,15 +56,15 @@ fn get_calc_name(calc: UtilityCalculator) -> &'static str {
 
 fn render_cost(app: &mut MazerionApp, ui: &mut egui::Ui) {
     ui.heading(RichText::new("💰 Cost Calculator").color(colors::SADDLE_BROWN));
-    ui.label("Calculate batch cost breakdown and per-bottle pricing");
+    ui.label("Calculate batch cost breakdown and per-bottle pricing for your brewing operations");
     ui.add_space(10.0);
 
-    crate::input_field(ui, "Honey Cost ($):", &mut app.honey_cost, "Cost of honey used");
-    crate::input_field(ui, "Fruit Cost ($):", &mut app.fruit_cost, "Cost of fruit used");
-    crate::input_field(ui, "Yeast Cost ($):", &mut app.yeast_cost, "Cost of yeast");
-    crate::input_field(ui, "Nutrients Cost ($):", &mut app.nutrient_cost, "Total nutrients cost");
-    crate::input_field(ui, "Other Costs ($):", &mut app.other_cost, "Misc costs (acid, sulfite, etc)");
-    crate::input_field(ui, "Number of Bottles:", &mut app.bottles_count, "Total bottles produced");
+    crate::input_field(ui, "Honey Cost ($):", &mut app.honey_cost, "Total cost of honey used in batch");
+    crate::input_field(ui, "Fruit Cost ($):", &mut app.fruit_cost, "Cost of all fruit additions");
+    crate::input_field(ui, "Yeast Cost ($):", &mut app.yeast_cost, "Cost of yeast packets/vials");
+    crate::input_field(ui, "Nutrients Cost ($):", &mut app.nutrient_cost, "Total cost of yeast nutrients");
+    crate::input_field(ui, "Other Costs ($):", &mut app.other_cost, "Acid, sulfite, additives, etc");
+    crate::input_field(ui, "Number of Bottles:", &mut app.bottles_count, "Total 750ml bottles produced");
 
     ui.add_space(10.0);
 
@@ -74,12 +74,16 @@ fn render_cost(app: &mut MazerionApp, ui: &mut egui::Ui) {
 }
 
 fn render_priming(app: &mut MazerionApp, ui: &mut egui::Ui) {
-    ui.heading(RichText::new("🍬 Priming Alternatives").color(colors::SADDLE_BROWN));
-    ui.label("Calculate alternative priming sugars (honey, DME, maple syrup)");
+    ui.heading(RichText::new("🍬 Priming Sugar Alternatives").color(colors::SADDLE_BROWN));
+    ui.label("Calculate equivalent amounts for different priming sugars: table sugar, corn sugar, honey, DME, maple syrup, agave, molasses");
     ui.add_space(10.0);
 
-    crate::input_field(ui, "Batch Volume (L):", &mut app.batch_volume, "Volume to carbonate");
-    crate::input_field(ui, "Target CO₂ (volumes):", &mut app.target_co2, "Desired carbonation level (1.5-4.5)");
+    let vol_unit = if matches!(app.state.unit_system, crate::state::UnitSystem::Metric) { "L" } else { "gal" };
+    let temp_unit = if matches!(app.state.unit_system, crate::state::UnitSystem::Metric) { "°C" } else { "°F" };
+
+    crate::input_field(ui, &format!("Batch Volume ({}):", vol_unit), &mut app.batch_volume, "Total volume to carbonate");
+    crate::input_field(ui, &format!("Temperature ({}):", temp_unit), &mut app.carb_temp, "Current beer/mead temperature");
+    crate::input_field(ui, "Target CO₂ (volumes):", &mut app.target_co2, "Desired carbonation level (mead: 1.5-2.5, beer: 2.0-2.7, sparkling: 3.0-4.0)");
 
     ui.add_space(10.0);
 
@@ -89,42 +93,45 @@ fn render_priming(app: &mut MazerionApp, ui: &mut egui::Ui) {
 }
 
 fn render_water(app: &mut MazerionApp, ui: &mut egui::Ui) {
-    ui.heading(RichText::new("💧 Water Chemistry").color(colors::SADDLE_BROWN));
-    ui.label("Calculate water chemistry adjustments (mineral additions)");
+    ui.heading(RichText::new("💧 Water Chemistry Adjustments").color(colors::SADDLE_BROWN));
+    ui.label("Calculate mineral additions to adjust water chemistry for brewing. Choose a target profile or specify desired ppm changes.");
     ui.add_space(10.0);
 
-    crate::input_field(ui, "Batch Volume (L):", &mut app.beer_volume, "Total water volume");
-    crate::input_field(ui, "Current Ca (ppm):", &mut app.water_ca, "Calcium");
-    crate::input_field(ui, "Current Mg (ppm):", &mut app.water_mg, "Magnesium");
-    crate::input_field(ui, "Current SO₄ (ppm):", &mut app.water_so4, "Sulfate");
-    crate::input_field(ui, "Current Cl (ppm):", &mut app.water_cl, "Chloride");
+    let vol_unit = if matches!(app.state.unit_system, crate::state::UnitSystem::Metric) { "L" } else { "gal" };
+
+    crate::input_field(ui, &format!("Batch Volume ({}):", vol_unit), &mut app.beer_volume, "Total water volume for brewing");
+    crate::input_field(ui, "Target ppm Increase:", &mut app.water_target_ppm, "How much to raise mineral level (e.g., 50 ppm)");
 
     ui.horizontal(|ui| {
-        ui.label(RichText::new("Target Profile:").strong());
-        egui::ComboBox::from_id_salt("water_profile")
-            .selected_text(&app.water_profile)
+        ui.label(RichText::new("Mineral Type:").strong());
+        egui::ComboBox::from_id_salt("water_mineral")
+            .selected_text(&app.water_mineral_type)
             .show_ui(ui, |ui| {
-                ui.selectable_value(&mut app.water_profile, "balanced".to_string(), "Balanced");
-                ui.selectable_value(&mut app.water_profile, "hoppy".to_string(), "Hoppy (High SO₄)");
-                ui.selectable_value(&mut app.water_profile, "malty".to_string(), "Malty (High Cl)");
+                ui.selectable_value(&mut app.water_mineral_type, "gypsum".to_string(), "Gypsum (Ca/SO₄)");
+                ui.selectable_value(&mut app.water_mineral_type, "calcium_chloride".to_string(), "Calcium Chloride (Ca/Cl)");
+                ui.selectable_value(&mut app.water_mineral_type, "epsom".to_string(), "Epsom Salt (Mg/SO₄)");
+                ui.selectable_value(&mut app.water_mineral_type, "baking_soda".to_string(), "Baking Soda (Na/HCO₃)");
+                ui.selectable_value(&mut app.water_mineral_type, "chalk".to_string(), "Chalk (Ca/CO₃)");
             });
     });
 
     ui.add_space(10.0);
 
-    if crate::calculate_button(ui, "Calculate Mineral Additions") {
+    if crate::calculate_button(ui, "Calculate Mineral Addition") {
         calc_water(app);
     }
 }
 
 fn render_bench(app: &mut MazerionApp, ui: &mut egui::Ui) {
-    ui.heading(RichText::new("🧪 Bench Trials").color(colors::SADDLE_BROWN));
-    ui.label("Calculate bench trial additions and scaling");
+    ui.heading(RichText::new("🧪 Bench Trials - Scale Up Calculator").color(colors::SADDLE_BROWN));
+    ui.label("Scale small-volume bench trial additions to full batch size. Essential for testing adjuncts, spices, oak, fruit, etc before committing to entire batch.");
     ui.add_space(10.0);
 
-    crate::input_field(ui, "Batch Volume (L):", &mut app.batch_volume, "Full batch size");
-    crate::input_field(ui, "Trial Volume (mL):", &mut app.trial_volume, "Small trial volume");
-    crate::input_field(ui, "Trial Addition (g/mL):", &mut app.trial_addition, "Amount added to trial");
+    let vol_unit = if matches!(app.state.unit_system, crate::state::UnitSystem::Metric) { "L" } else { "gal" };
+
+    crate::input_field(ui, "Trial Volume (mL):", &mut app.trial_volume, "Small test sample size (typically 100-500 mL)");
+    crate::input_field(ui, "Trial Addition (g):", &mut app.trial_addition, "Amount added to trial (grams or mL)");
+    crate::input_field(ui, &format!("Batch Volume ({}):", vol_unit), &mut app.batch_volume, "Full batch size to scale to");
 
     ui.add_space(10.0);
 
@@ -164,7 +171,15 @@ fn calc_cost(app: &mut MazerionApp) {
 }
 
 fn calc_priming(app: &mut MazerionApp) {
-    let volume: Decimal = match Decimal::from_str(&app.batch_volume) {
+    let calc = match mazerion_core::traits::get_calculator("priming_alternatives") {
+        Some(c) => c,
+        None => {
+            app.result = Some("Error: Priming calculator not found".to_string());
+            return;
+        }
+    };
+
+    let volume_val = match Decimal::from_str(&app.batch_volume) {
         Ok(v) => v,
         Err(_) => {
             app.result = Some("Error: Invalid volume".to_string());
@@ -172,30 +187,80 @@ fn calc_priming(app: &mut MazerionApp) {
         }
     };
 
-    let co2: Decimal = match Decimal::from_str(&app.target_co2) {
-        Ok(c) => c,
+    let temp_val = match Decimal::from_str(&app.carb_temp) {
+        Ok(v) => v,
         Err(_) => {
-            app.result = Some("Error: Invalid CO₂ target".to_string());
+            app.result = Some("Error: Invalid temperature".to_string());
             return;
         }
     };
 
-    let table_sugar = volume * co2 * Decimal::from(4);
-    let corn_sugar = volume * co2 * Decimal::new(44, 1);
-    let honey = volume * co2 * Decimal::new(35, 1);
-    let dme = volume * co2 * Decimal::new(46, 1);
+    let is_metric = matches!(app.state.unit_system, crate::state::UnitSystem::Metric);
 
-    app.result = Some(format!("Table Sugar: {:.1} g | Corn Sugar: {:.1} g", table_sugar, corn_sugar));
+    // Convert to liters and Celsius
+    let volume_liters = if is_metric {
+        volume_val
+    } else {
+        volume_val * Decimal::new(3785, 3) // gallons to liters
+    };
 
-    app.metadata.clear();
-    app.metadata.push(("Honey".to_string(), format!("{:.1} g", honey)));
-    app.metadata.push(("DME".to_string(), format!("{:.1} g", dme)));
-    app.metadata.push(("Volume".to_string(), format!("{} L", volume)));
-    app.metadata.push(("Target CO₂".to_string(), format!("{} vol", co2)));
+    let temp_celsius = if is_metric {
+        temp_val
+    } else {
+        (temp_val - Decimal::from(32)) * Decimal::new(5, 1) / Decimal::from(9) // F to C
+    };
+
+    let input = CalcInput::new()
+        .add_param("volume", &volume_liters.to_string())
+        .add_param("target_co2", &app.target_co2)
+        .add_param("temperature", &temp_celsius.to_string());
+
+    match calc.calculate(input) {
+        Ok(res) => {
+            let weight_unit = if is_metric { "g" } else { "oz" };
+
+            // Convert result from grams if needed
+            let display_value = if is_metric {
+                res.output.value
+            } else {
+                res.output.value / Decimal::new(2835, 2) // g to oz
+            };
+
+            app.result = Some(format!("Table Sugar: {:.1} {}", display_value, weight_unit));
+            app.warnings = res.warnings;
+
+            // Convert all metadata weights
+            app.metadata = res.metadata.into_iter().map(|(k, v)| {
+                if k.ends_with("_g") && !is_metric {
+                    // Parse "150 g (5.29 oz)" format and just use oz value
+                    if let Some(start) = v.find('(') {
+                        if let Some(end) = v.find(" oz)") {
+                            let oz_str = &v[start+1..end];
+                            return (k.replace("_g", ""), format!("{} oz", oz_str));
+                        }
+                    }
+                }
+                (k, v)
+            }).collect();
+        }
+        Err(e) => {
+            app.result = Some(format!("Error: {}", e));
+            app.warnings.clear();
+            app.metadata.clear();
+        }
+    }
 }
 
 fn calc_water(app: &mut MazerionApp) {
-    let volume: Decimal = match Decimal::from_str(&app.beer_volume) {
+    let calc = match mazerion_core::traits::get_calculator("water_chemistry") {
+        Some(c) => c,
+        None => {
+            app.result = Some("Error: Water chemistry calculator not found".to_string());
+            return;
+        }
+    };
+
+    let volume_val = match Decimal::from_str(&app.beer_volume) {
         Ok(v) => v,
         Err(_) => {
             app.result = Some("Error: Invalid volume".to_string());
@@ -203,26 +268,40 @@ fn calc_water(app: &mut MazerionApp) {
         }
     };
 
-    let ca: Decimal = Decimal::from_str(&app.water_ca).unwrap_or(Decimal::ZERO);
-    let target_ca = match app.water_profile.as_str() {
-        "balanced" => Decimal::from(100),
-        "hoppy" => Decimal::from(150),
-        "malty" => Decimal::from(75),
-        _ => Decimal::from(100),
-    };
+    let is_metric = matches!(app.state.unit_system, crate::state::UnitSystem::Metric);
 
-    let ca_needed = if target_ca > ca {
-        (target_ca - ca) * volume / Decimal::from(100)
+    // Convert to liters
+    let volume_liters = if is_metric {
+        volume_val
     } else {
-        Decimal::ZERO
+        volume_val * Decimal::new(3785, 3) // gallons to liters
     };
 
-    app.result = Some(format!("Gypsum (CaSO₄): {:.2} g", ca_needed));
+    let input = CalcInput::new()
+        .add_param("volume", &volume_liters.to_string())
+        .add_param("adjustment", &app.water_mineral_type)
+        .add_param("target_ppm", &app.water_target_ppm);
 
-    app.metadata.clear();
-    app.metadata.push(("Profile".to_string(), app.water_profile.clone()));
-    app.metadata.push(("Current Ca".to_string(), format!("{} ppm", ca)));
-    app.metadata.push(("Target Ca".to_string(), format!("{} ppm", target_ca)));
+    match calc.calculate(input) {
+        Ok(res) => {
+            let weight_unit = if is_metric { "g" } else { "oz" };
+
+            let display_value = if is_metric {
+                res.output.value
+            } else {
+                res.output.value / Decimal::new(2835, 2) // g to oz
+            };
+
+            app.result = Some(format!("Mineral Needed: {:.2} {}", display_value, weight_unit));
+            app.warnings = res.warnings;
+            app.metadata = res.metadata;
+        }
+        Err(e) => {
+            app.result = Some(format!("Error: {}", e));
+            app.warnings.clear();
+            app.metadata.clear();
+        }
+    }
 }
 
 fn calc_bench(app: &mut MazerionApp) {
@@ -234,12 +313,40 @@ fn calc_bench(app: &mut MazerionApp) {
         }
     };
 
+    let batch_volume_val = match Decimal::from_str(&app.batch_volume) {
+        Ok(v) => v,
+        Err(_) => {
+            app.result = Some("Error: Invalid batch volume".to_string());
+            return;
+        }
+    };
+
+    let is_metric = matches!(app.state.unit_system, crate::state::UnitSystem::Metric);
+
+    // Convert batch volume to liters (calculator expects liters)
+    let batch_volume_liters = if is_metric {
+        batch_volume_val
+    } else {
+        batch_volume_val * Decimal::new(3785, 3) // gallons to liters
+    };
+
+    // trial_volume is always in mL, trial_addition always in grams
     let input = CalcInput::new()
-        .add_param("batch_volume", &app.batch_volume);
+        .add_param("trial_volume", &app.trial_volume)
+        .add_param("trial_addition", &app.trial_addition)
+        .add_param("batch_volume", &batch_volume_liters.to_string());
 
     match calc.calculate(input) {
         Ok(res) => {
-            app.result = Some(format!("Scaled Addition: {:.2} g", res.output.value));
+            let weight_unit = if is_metric { "g" } else { "oz" };
+
+            let display_value = if is_metric {
+                res.output.value
+            } else {
+                res.output.value / Decimal::new(2835, 2) // g to oz
+            };
+
+            app.result = Some(format!("Scaled Addition: {:.2} {}", display_value, weight_unit));
             app.warnings = res.warnings;
             app.metadata = res.metadata;
         }

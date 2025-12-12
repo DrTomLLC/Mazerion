@@ -1,4 +1,31 @@
+//! Application state
+
 use eframe::egui::Color32;
+
+#[derive(Debug, Clone, Copy)]
+pub struct CustomColors {
+    pub honey_gold: Color32,
+    pub light_cream: Color32,
+    pub dark_text: Color32,
+    pub saddle_brown: Color32,
+    pub dark_orange: Color32,
+    pub forest_green: Color32,
+    pub dark_red: Color32,
+}
+
+impl Default for CustomColors {
+    fn default() -> Self {
+        Self {
+            honey_gold: Color32::from_rgb(218, 165, 32),
+            light_cream: Color32::from_rgb(255, 253, 240),
+            dark_text: Color32::from_rgb(51, 51, 51),
+            saddle_brown: Color32::from_rgb(139, 69, 19),
+            dark_orange: Color32::from_rgb(255, 140, 0),
+            forest_green: Color32::from_rgb(34, 139, 34),
+            dark_red: Color32::from_rgb(139, 0, 0),
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TabView {
@@ -81,6 +108,27 @@ pub enum FinishingCalculator {
     Backsweetening,
     Sulfite,
     AcidAddition,
+    SweetnessChart,
+}
+
+impl FinishingCalculator {
+    pub fn all() -> Vec<Self> {
+        vec![
+            Self::Backsweetening,
+            Self::Sulfite,
+            Self::AcidAddition,
+            Self::SweetnessChart,
+        ]
+    }
+
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::Backsweetening => "Backsweetening",
+            Self::Sulfite => "Sulfite",
+            Self::AcidAddition => "Acid Addition",
+            Self::SweetnessChart => "Sweetness Guide",
+        }
+    }
 }
 
 pub struct AppState {
@@ -95,6 +143,7 @@ pub struct AppState {
     pub sg_precision: u32,
     pub ph_precision: u32,
     pub brix_precision: u32,
+    pub custom_colors: CustomColors,
 }
 
 impl Default for AppState {
@@ -111,6 +160,7 @@ impl Default for AppState {
             sg_precision: 4,
             ph_precision: 3,
             brix_precision: 2,
+            custom_colors: CustomColors::default(),
         }
     }
 }
@@ -118,23 +168,24 @@ impl Default for AppState {
 impl AppState {
     pub fn get_theme_colors(&self) -> (Color32, Color32) {
         match self.theme {
-            Theme::HoneyGold => (colors::CORNSILK, colors::LIGHT_CREAM),
+            Theme::HoneyGold => (Color32::from_rgb(255, 250, 240), Color32::from_rgb(255, 253, 240)),
             Theme::ForestGreen => (Color32::from_rgb(240, 255, 240), Color32::from_rgb(245, 255, 245)),
             Theme::OceanBlue => (Color32::from_rgb(240, 248, 255), Color32::from_rgb(245, 250, 255)),
-            Theme::SunsetOrange => (Color32::from_rgb(255, 245, 235), Color32::from_rgb(255, 250, 240)),
-            Theme::LavenderPurple => (Color32::from_rgb(245, 240, 255), Color32::from_rgb(250, 245, 255)),
+            Theme::SunsetOrange => (Color32::from_rgb(255, 245, 238), Color32::from_rgb(255, 248, 243)),
+            Theme::LavenderPurple => (Color32::from_rgb(248, 240, 255), Color32::from_rgb(250, 245, 255)),
         }
     }
 }
 
 pub mod colors {
     use eframe::egui::Color32;
-    pub const HONEY_GOLD: Color32 = Color32::from_rgb(240, 165, 0);
-    pub const CORNSILK: Color32 = Color32::from_rgb(255, 248, 220);
-    pub const FOREST_GREEN: Color32 = Color32::from_rgb(34, 139, 34);
-    pub const LIGHT_CREAM: Color32 = Color32::from_rgb(255, 253, 245);
-    pub const DARK_TEXT: Color32 = Color32::from_rgb(40, 40, 40);
+
+    pub const HONEY_GOLD: Color32 = Color32::from_rgb(218, 165, 32);
+    pub const GOLDENROD: Color32 = Color32::from_rgb(218, 165, 32);
+    pub const LIGHT_CREAM: Color32 = Color32::from_rgb(255, 253, 240);
+    pub const DARK_TEXT: Color32 = Color32::from_rgb(51, 51, 51);
     pub const SADDLE_BROWN: Color32 = Color32::from_rgb(139, 69, 19);
     pub const DARK_ORANGE: Color32 = Color32::from_rgb(255, 140, 0);
-    pub const GOLDENROD: Color32 = Color32::from_rgb(218, 165, 32);
+    pub const FOREST_GREEN: Color32 = Color32::from_rgb(34, 139, 34);
+    pub const DARK_RED: Color32 = Color32::from_rgb(139, 0, 0);
 }
