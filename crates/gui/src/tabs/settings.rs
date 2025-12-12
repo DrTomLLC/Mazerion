@@ -1,7 +1,7 @@
 //! Settings tab - Theme, Units, Precision, and Font Colors
 
 use crate::MazerionApp;
-use eframe::egui::{self, RichText, Color32};
+use eframe::egui::{self, RichText};
 use crate::state::{Theme, UnitSystem};
 
 pub fn render(app: &mut MazerionApp, ui: &mut egui::Ui) {

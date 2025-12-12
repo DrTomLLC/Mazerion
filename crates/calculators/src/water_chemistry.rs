@@ -1,3 +1,5 @@
+//! Water chemistry calculator for mineral adjustments
+
 use mazerion_core::{
     register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
 };
@@ -24,52 +26,83 @@ impl Calculator for WaterChemistryCalculator {
     }
 
     fn description(&self) -> &'static str {
-        "Calculate water chemistry adjustments (mineral additions)"
+        "Calculate water profile and mineral additions"
     }
 
     fn calculate(&self, input: CalcInput) -> Result<CalcResult> {
-        let volume = input.get_param("volume")
-            .ok_or_else(|| Error::MissingInput("volume required".into()))?;
-        let adjustment = input.get_param("adjustment").unwrap_or("gypsum");
-        let target_ppm = input.get_param("target_ppm").unwrap_or("50");
+        let ca = input.get_param("calcium").unwrap_or("0");
+        let mg = input.get_param("magnesium").unwrap_or("0");
+        let so4 = input.get_param("sulfate").unwrap_or("0");
+        let cl = input.get_param("chloride").unwrap_or("0");
 
-        let vol: Decimal = volume.parse()
-            .map_err(|_| Error::Parse("Invalid volume".into()))?;
-        let target: Decimal = target_ppm.parse()
-            .map_err(|_| Error::Parse("Invalid target_ppm".into()))?;
+        let calcium: Decimal = ca.parse().unwrap_or(Decimal::ZERO);
+        let magnesium: Decimal = mg.parse().unwrap_or(Decimal::ZERO);
+        let sulfate: Decimal = so4.parse().unwrap_or(Decimal::ZERO);
+        let chloride: Decimal = cl.parse().unwrap_or(Decimal::ZERO);
 
-        // Mineral addition rates (grams per liter to raise ppm by 1)
-        let (mineral_name, rate_per_ppm, ion_name) = match adjustment {
-            "gypsum" => ("Gypsum (CaSO₄)", Decimal::new(15, 1), "Calcium & Sulfate"),        // 1.5 g/L per 100 ppm
-            "calcium_chloride" => ("Calcium Chloride (CaCl₂)", Decimal::new(14, 1), "Calcium & Chloride"), // 1.4 g/L per 100 ppm
-            "epsom" => ("Epsom Salt (MgSO₄)", Decimal::new(16, 1), "Magnesium & Sulfate"),   // 1.6 g/L per 100 ppm
-            "baking_soda" => ("Baking Soda (NaHCO₃)", Decimal::new(12, 1), "Sodium & Bicarbonate"), // 1.2 g/L per 100 ppm
-            "chalk" => ("Chalk (CaCO₃)", Decimal::new(18, 1), "Calcium & Carbonate"),        // 1.8 g/L per 100 ppm
-            _ => ("Gypsum (CaSO₄)", Decimal::new(15, 1), "Calcium & Sulfate"),
+        // Calculate sulfate to chloride ratio (key brewing metric)
+        let ratio = if chloride > Decimal::ZERO {
+            sulfate / chloride
+        } else if sulfate > Decimal::ZERO {
+            Decimal::from(999) // Very high ratio
+        } else {
+            Decimal::ONE
         };
 
-        // Calculate grams needed
-        let grams_needed = vol * target * rate_per_ppm / Decimal::from(100);
+        let profile = if ratio > Decimal::from(3) {
+            "Highly Bitter (IPA, Pale Ale)"
+        } else if ratio > Decimal::new(15, 1) {
+            "Moderately Bitter (Amber, Brown)"
+        } else if ratio > Decimal::new(5, 1) {
+            "Balanced"
+        } else if ratio > Decimal::ZERO {
+            "Malty (Stout, Porter, Mead)"
+        } else {
+            "Chloride Dominant (Sweet)"
+        };
 
-        let mut result = CalcResult::new(Measurement::new(grams_needed, Unit::Grams));
+        // Calculate mineral additions needed
+        let mineral = if calcium < Decimal::from(50) {
+            "Gypsum (CaSO4) or Calcium Chloride (CaCl2)"
+        } else if sulfate < Decimal::from(50) && chloride < Decimal::from(50) {
+            "Gypsum for bitter, CaCl2 for malty"
+        } else {
+            "Water profile adequate"
+        };
 
-        result = result
-            .with_meta("mineral", mineral_name)
-            .with_meta("ion_contribution", ion_name)
-            .with_meta("grams_needed", format!("{:.1} g", grams_needed))
-            .with_meta("teaspoons", format!("{:.1} tsp", grams_needed / Decimal::new(5, 0)))
-            .with_meta("target_ppm", format!("{} ppm", target))
-            .with_meta("volume_L", format!("{} L", vol));
+        let ion_contribution = format!(
+            "Ca: {}ppm, Mg: {}ppm, SO4: {}ppm, Cl: {}ppm",
+            calcium, magnesium, sulfate, chloride
+        );
 
-        if target > Decimal::from(150) {
-            result = result.with_warning("High mineral addition - may affect flavor profile significantly");
+        let mut result = CalcResult::new(Measurement::new(ratio, Unit::Percent))
+            .with_meta("profile", profile)
+            .with_meta("so4_cl_ratio", format!("{:.2}:1", ratio))
+            .with_meta("calcium", format!("{} ppm", calcium))
+            .with_meta("magnesium", format!("{} ppm", magnesium))
+            .with_meta("sulfate", format!("{} ppm", sulfate))
+            .with_meta("chloride", format!("{} ppm", chloride))
+            .with_meta("mineral", mineral)
+            .with_meta("ion_contribution", &ion_contribution);
+
+        if calcium < Decimal::from(50) {
+            result = result.with_warning("Calcium <50 ppm - may affect mash pH and yeast health");
         }
-
-        if adjustment == "chalk" {
-            result = result.with_warning("Chalk has poor solubility - dissolve in acid or use slaked lime instead");
+        if calcium > Decimal::from(150) {
+            result = result.with_warning("Calcium >150 ppm - may be excessive");
+        }
+        if sulfate > Decimal::from(400) {
+            result = result.with_warning("Sulfate >400 ppm - may be too bitter/astringent");
+        }
+        if chloride > Decimal::from(200) {
+            result = result.with_warning("Chloride >200 ppm - may be too sweet/minerally");
         }
 
         Ok(result)
+    }
+
+    fn validate(&self, _input: &CalcInput) -> Result<()> {
+        Ok(())
     }
 }
 

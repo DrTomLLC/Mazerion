@@ -1,3 +1,5 @@
+//! Priming sugar alternatives calculator
+
 use mazerion_core::{
     register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
 };
@@ -16,7 +18,7 @@ impl Calculator for PrimingAlternativesCalculator {
     }
 
     fn name(&self) -> &'static str {
-        "Priming Alternatives"
+        "Priming Sugar Alternatives"
     }
 
     fn category(&self) -> &'static str {
@@ -24,60 +26,53 @@ impl Calculator for PrimingAlternativesCalculator {
     }
 
     fn description(&self) -> &'static str {
-        "Calculate alternative priming sugars (honey, DME, maple syrup)"
+        "Calculate equivalent amounts for different priming sugars"
     }
 
     fn calculate(&self, input: CalcInput) -> Result<CalcResult> {
-        let volume = input.get_param("volume")
-            .ok_or_else(|| Error::MissingInput("volume required".into()))?;
-        let target_co2 = input.get_param("target_co2")
-            .ok_or_else(|| Error::MissingInput("target_co2 required".into()))?;
-        let temperature = input.get_param("temperature")
-            .ok_or_else(|| Error::MissingInput("temperature required".into()))?;
+        let sugar_type = input.get_param("sugar_type").unwrap_or("corn_sugar");
+        let amount = input.get_param("amount").unwrap_or("100");
 
-        let vol: Decimal = volume.parse()
-            .map_err(|_| Error::Parse("Invalid volume".into()))?;
-        let target: Decimal = target_co2.parse()
-            .map_err(|_| Error::Parse("Invalid target_co2".into()))?;
-        let temp: Decimal = temperature.parse()
-            .map_err(|_| Error::Parse("Invalid temperature".into()))?;
+        let amt: Decimal = amount.parse()
+            .map_err(|_| Error::Parse("Invalid amount".into()))?;
 
-        // Calculate residual CO2 at temperature (simplified formula)
-        let residual_co2 = Decimal::new(3, 1) - (temp * Decimal::new(1, 2));
-        let co2_needed = target - residual_co2;
-
-        if co2_needed < Decimal::ZERO {
-            return Err(Error::Validation("Target CO2 already present at this temperature".into()));
+        if amt <= Decimal::ZERO {
+            return Err(Error::Validation("Amount must be positive".into()));
         }
 
-        // Priming sugar factors (grams per liter per volume CO2)
-        // Base: table sugar = 4.0 g/L/vol
-        let table_sugar = vol * co2_needed * Decimal::from(4);
-        let corn_sugar = vol * co2_needed * Decimal::new(44, 1);    // 4.4 g/L/vol (dextrose)
-        let honey = vol * co2_needed * Decimal::new(35, 1);         // 3.5 g/L/vol
-        let dme = vol * co2_needed * Decimal::new(46, 1);           // 4.6 g/L/vol
-        let maple_syrup = vol * co2_needed * Decimal::new(33, 1);   // 3.3 g/L/vol
-        let agave = vol * co2_needed * Decimal::new(36, 1);         // 3.6 g/L/vol
-        let molasses = vol * co2_needed * Decimal::new(37, 1);      // 3.7 g/L/vol
+        // Conversion factors relative to corn sugar (dextrose = 1.0)
+        let from_factor = match sugar_type {
+            "table_sugar" => Decimal::new(91, 2),  // 0.91x (sucrose more fermentable)
+            "dme" => Decimal::new(135, 2),          // 1.35x (less fermentable)
+            "honey" => Decimal::new(125, 2),        // 1.25x
+            _ => Decimal::ONE,                      // corn_sugar default
+        };
 
-        let mut result = CalcResult::new(Measurement::new(table_sugar, Unit::Grams));
+        // Convert input to corn sugar equivalent
+        let corn_sugar_equiv = amt / from_factor;
 
-        result = result
-            .with_meta("table_sugar_g", format!("{:.0} g ({:.2} oz)", table_sugar, table_sugar / Decimal::new(2835, 2)))
-            .with_meta("corn_sugar_g", format!("{:.0} g ({:.2} oz)", corn_sugar, corn_sugar / Decimal::new(2835, 2)))
-            .with_meta("honey_g", format!("{:.0} g ({:.2} oz)", honey, honey / Decimal::new(2835, 2)))
-            .with_meta("dme_g", format!("{:.0} g ({:.2} oz)", dme, dme / Decimal::new(2835, 2)))
-            .with_meta("maple_syrup_g", format!("{:.0} g ({:.2} oz)", maple_syrup, maple_syrup / Decimal::new(2835, 2)))
-            .with_meta("agave_g", format!("{:.0} g ({:.2} oz)", agave, agave / Decimal::new(2835, 2)))
-            .with_meta("molasses_g", format!("{:.0} g ({:.2} oz)", molasses, molasses / Decimal::new(2835, 2)))
-            .with_meta("co2_needed", format!("{:.2} volumes", co2_needed))
-            .with_meta("residual_co2", format!("{:.2} volumes", residual_co2));
+        // Calculate all alternatives
+        let table_sugar = corn_sugar_equiv * Decimal::new(91, 2);
+        let dme = corn_sugar_equiv * Decimal::new(135, 2);
+        let honey = corn_sugar_equiv * Decimal::new(125, 2);
 
-        if target > Decimal::new(45, 1) {
-            result = result.with_warning("High carbonation - risk of bottle bombs, ensure bottles rated for pressure");
+        let mut result = CalcResult::new(Measurement::new(corn_sugar_equiv, Unit::Grams))
+            .with_meta("corn_sugar_g", format!("{:.1}", corn_sugar_equiv))
+            .with_meta("table_sugar_g", format!("{:.1}", table_sugar))
+            .with_meta("dme_g", format!("{:.1}", dme))
+            .with_meta("honey_g", format!("{:.1}", honey))
+            .with_meta("input_type", sugar_type)
+            .with_meta("input_amount", amount);
+
+        if corn_sugar_equiv > Decimal::from(200) {
+            result = result.with_warning("High sugar amount - risk of overcarbonation");
         }
 
         Ok(result)
+    }
+
+    fn validate(&self, _input: &CalcInput) -> Result<()> {
+        Ok(())
     }
 }
 

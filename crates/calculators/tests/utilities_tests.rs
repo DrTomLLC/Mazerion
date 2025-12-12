@@ -7,7 +7,7 @@ use std::str::FromStr;
 
 #[test]
 fn test_cost_calculator_basic() {
-    let calc = CostCalculator::default();
+    let calc = BatchCostCalculator::default();
     let input = CalcInput::new()
         .add_param("volume", "19")              // FIXED: was "batch_size"
         .add_param("honey_cost", "90")          // Total honey cost
@@ -19,7 +19,7 @@ fn test_cost_calculator_basic() {
 
 #[test]
 fn test_cost_calculator_with_extras() {
-    let calc = CostCalculator::default();
+    let calc = BatchCostCalculator::default();
     let input = CalcInput::new()
         .add_param("volume", "19")              // FIXED: was "batch_size"
         .add_param("honey_cost", "90")
@@ -115,7 +115,7 @@ fn test_bench_trials_validation() {
 
 #[test]
 fn test_cost_per_bottle() {
-    let calc = CostCalculator::default();
+    let calc = BatchCostCalculator::default();
     let input = CalcInput::new()
         .add_param("volume", "19")              // FIXED: was "batch_size"
         .add_param("honey_cost", "90")

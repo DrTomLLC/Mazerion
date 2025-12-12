@@ -101,6 +101,7 @@ pub enum BeerCalculator {
     Srm,
     Mash,
     Efficiency,
+    StyleGuide,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
