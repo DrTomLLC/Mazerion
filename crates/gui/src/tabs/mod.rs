@@ -9,6 +9,7 @@ pub mod finishing;
 pub mod mead_styles;
 pub mod utilities;
 pub mod settings;
+pub mod beer_styles;
 
 pub use basic::render as render_basic;
 pub use advanced::render as render_advanced;

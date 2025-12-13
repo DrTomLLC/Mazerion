@@ -104,6 +104,8 @@ pub use capsicumel::CapsicumelCalculator;
 pub mod batch_cost;
 pub mod water_chemistry;
 pub mod priming_alternatives;
+pub mod upscaling;
+pub use upscaling::UpscalingCalculator;
 
 pub use batch_cost::BatchCostCalculator;
 pub use water_chemistry::WaterChemistryCalculator;

@@ -159,49 +159,49 @@ impl AppState {
     fn get_colors_for_theme(theme: Theme) -> CustomColors {
         match theme {
             Theme::HoneyGold => CustomColors {
-                background: colors::LIGHT_CREAM,
-                honey_gold: colors::HONEY_GOLD,
-                forest_green: colors::FOREST_GREEN,
-                light_cream: colors::LIGHT_CREAM,
-                dark_text: colors::DARK_TEXT,
-                sunset_orange: colors::HONEY_GOLD,
-                saddle_brown: colors::SADDLE_BROWN,
+                background: Color32::from_rgb(245, 240, 230),  // Darker cream
+                honey_gold: Color32::from_rgb(184, 134, 11),   // Darker gold
+                forest_green: Color32::from_rgb(34, 139, 34),
+                light_cream: Color32::from_rgb(250, 245, 235), // Slightly darker cream
+                dark_text: Color32::from_rgb(40, 40, 40),      // Darker text
+                sunset_orange: Color32::from_rgb(184, 134, 11),
+                saddle_brown: Color32::from_rgb(115, 58, 15),  // Darker brown
             },
             Theme::ForestGreen => CustomColors {
-                background: Color32::from_rgb(240, 248, 240),
-                honey_gold: Color32::from_rgb(34, 139, 34),
-                forest_green: Color32::from_rgb(0, 100, 0),
-                light_cream: Color32::from_rgb(240, 248, 240),
-                dark_text: Color32::from_rgb(25, 50, 25),
-                sunset_orange: Color32::from_rgb(34, 139, 34),
-                saddle_brown: Color32::from_rgb(0, 100, 0),
+                background: Color32::from_rgb(230, 240, 230),  // Darker green bg
+                honey_gold: Color32::from_rgb(25, 111, 25),    // Darker green
+                forest_green: Color32::from_rgb(0, 80, 0),     // Much darker green
+                light_cream: Color32::from_rgb(235, 245, 235),
+                dark_text: Color32::from_rgb(20, 40, 20),      // Darker text
+                sunset_orange: Color32::from_rgb(25, 111, 25),
+                saddle_brown: Color32::from_rgb(0, 80, 0),
             },
             Theme::OceanBlue => CustomColors {
-                background: Color32::from_rgb(240, 248, 255),
-                honey_gold: Color32::from_rgb(30, 144, 255),
-                forest_green: Color32::from_rgb(0, 105, 148),
-                light_cream: Color32::from_rgb(240, 248, 255),
-                dark_text: Color32::from_rgb(25, 25, 112),
-                sunset_orange: Color32::from_rgb(30, 144, 255),
-                saddle_brown: Color32::from_rgb(0, 105, 148),
+                background: Color32::from_rgb(230, 240, 245),  // Darker blue bg
+                honey_gold: Color32::from_rgb(20, 105, 180),   // Darker blue
+                forest_green: Color32::from_rgb(0, 85, 120),   // Darker teal
+                light_cream: Color32::from_rgb(235, 245, 250),
+                dark_text: Color32::from_rgb(20, 20, 90),      // Darker navy
+                sunset_orange: Color32::from_rgb(20, 105, 180),
+                saddle_brown: Color32::from_rgb(0, 85, 120),
             },
             Theme::SunsetOrange => CustomColors {
-                background: Color32::from_rgb(255, 250, 240),
-                honey_gold: Color32::from_rgb(255, 140, 0),
-                forest_green: Color32::from_rgb(255, 99, 71),
-                light_cream: Color32::from_rgb(255, 250, 240),
-                dark_text: Color32::from_rgb(139, 69, 19),
-                sunset_orange: Color32::from_rgb(255, 69, 0),
-                saddle_brown: Color32::from_rgb(139, 69, 19),
+                background: Color32::from_rgb(245, 240, 230),  // Darker warm bg
+                honey_gold: Color32::from_rgb(205, 92, 0),     // Darker orange
+                forest_green: Color32::from_rgb(205, 50, 30),  // Darker red-orange
+                light_cream: Color32::from_rgb(250, 245, 235),
+                dark_text: Color32::from_rgb(110, 55, 15),     // Darker brown
+                sunset_orange: Color32::from_rgb(205, 35, 0),  // Darker red-orange
+                saddle_brown: Color32::from_rgb(110, 55, 15),
             },
             Theme::LavenderPurple => CustomColors {
-                background: Color32::from_rgb(248, 240, 255),
-                honey_gold: Color32::from_rgb(147, 112, 219),
-                forest_green: Color32::from_rgb(138, 43, 226),
-                light_cream: Color32::from_rgb(248, 240, 255),
-                dark_text: Color32::from_rgb(75, 0, 130),
-                sunset_orange: Color32::from_rgb(147, 112, 219),
-                saddle_brown: Color32::from_rgb(138, 43, 226),
+                background: Color32::from_rgb(240, 230, 245),  // Darker purple bg
+                honey_gold: Color32::from_rgb(115, 75, 175),   // Darker purple
+                forest_green: Color32::from_rgb(110, 35, 180), // Darker violet
+                light_cream: Color32::from_rgb(245, 235, 250),
+                dark_text: Color32::from_rgb(60, 0, 100),      // Darker indigo
+                sunset_orange: Color32::from_rgb(115, 75, 175),
+                saddle_brown: Color32::from_rgb(110, 35, 180),
             },
         }
     }
@@ -210,12 +210,12 @@ impl AppState {
 pub mod colors {
     use eframe::egui::Color32;
 
-    pub const HONEY_GOLD: Color32 = Color32::from_rgb(218, 165, 32);
+    pub const HONEY_GOLD: Color32 = Color32::from_rgb(184, 134, 11);      // Darker gold
     pub const FOREST_GREEN: Color32 = Color32::from_rgb(34, 139, 34);
-    pub const LIGHT_CREAM: Color32 = Color32::from_rgb(255, 253, 240);
-    pub const DARK_TEXT: Color32 = Color32::from_rgb(51, 51, 51);
-    pub const SADDLE_BROWN: Color32 = Color32::from_rgb(139, 69, 19);
-    pub const GOLDENROD: Color32 = Color32::from_rgb(218, 165, 32);
+    pub const LIGHT_CREAM: Color32 = Color32::from_rgb(250, 245, 235);    // Darker cream
+    pub const DARK_TEXT: Color32 = Color32::from_rgb(40, 40, 40);         // Darker
+    pub const SADDLE_BROWN: Color32 = Color32::from_rgb(115, 58, 15);     // Darker brown
+    pub const GOLDENROD: Color32 = Color32::from_rgb(184, 134, 11);
     pub const DARK_RED: Color32 = Color32::from_rgb(139, 0, 0);
-    pub const DARK_ORANGE: Color32 = Color32::from_rgb(255, 140, 0);
+    pub const DARK_ORANGE: Color32 = Color32::from_rgb(205, 92, 0);       // Darker orange
 }

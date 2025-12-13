@@ -1,11 +1,13 @@
 //! Mazerion GUI using egui
+//! SAFETY-CRITICAL: Zero panics, production-ready
+
 use eframe::egui::{self, Color32, RichText, CornerRadius};
 
 pub mod state;
 pub mod tabs;
 
 pub use state::{AppState, TabView, Theme, UnitSystem, BasicCalculator, BeerCalculator};
-pub use crate::tabs::MeadStyle;
+pub use tabs::mead_styles::MeadStyle;
 
 pub struct MazerionApp {
     pub state: AppState,
@@ -30,7 +32,6 @@ pub struct MazerionApp {
     pub target_co2: String,
     pub carb_method: String,
     pub sugar_type: String,
-    pub beer_calc: BeerCalculator,
     pub hop_weight: String,
     pub alpha_acid: String,
     pub boil_time: String,
@@ -86,6 +87,16 @@ pub struct MazerionApp {
     pub conv_from_unit: String,
     pub conv_to_unit: String,
     pub conv_result: Option<String>,
+    pub trial_volume: String,
+    pub trial_addition: String,
+    pub batch_volume: String,
+    pub original_volume: String,
+    pub target_volume: String,
+    pub recipe_honey: String,
+    pub recipe_water: String,
+    pub recipe_fruit: String,
+    pub recipe_nutrients: String,
+    pub recipe_spices: String,
     pub result: Option<String>,
     pub warnings: Vec<String>,
     pub metadata: Vec<(String, String)>,
@@ -111,12 +122,11 @@ impl Default for MazerionApp {
             temp: String::new(),
             volume: String::new(),
             target_abv_brew: String::new(),
-            yn_requirement: "medium".to_string(),
+            yn_requirement: String::new(),
             carb_temp: String::new(),
             target_co2: String::new(),
-            carb_method: "priming".to_string(),
-            sugar_type: "table_sugar".to_string(),
-            beer_calc: BeerCalculator::Ibu,
+            carb_method: "sugar".to_string(),
+            sugar_type: "corn_sugar".to_string(),
             hop_weight: String::new(),
             alpha_acid: String::new(),
             boil_time: String::new(),
@@ -147,7 +157,7 @@ impl Default for MazerionApp {
             fruit_type: "strawberry".to_string(),
             juice_percent: String::new(),
             maple_percent: String::new(),
-            bochet_level: "medium".to_string(),
+            bochet_level: "light".to_string(),
             honey_percent: String::new(),
             malt_percent: String::new(),
             malt_weight: String::new(),
@@ -155,7 +165,7 @@ impl Default for MazerionApp {
             spice_level: "medium".to_string(),
             pepper_type: "jalapeno".to_string(),
             heat_level: "medium".to_string(),
-            utility_calc: crate::tabs::UtilityCalculator::BatchCost,
+            utility_calc: crate::tabs::UtilityCalculator::UnitConverter,
             honey_cost: String::new(),
             fruit_cost: String::new(),
             yeast_cost: String::new(),
@@ -172,6 +182,16 @@ impl Default for MazerionApp {
             conv_from_unit: "liters".to_string(),
             conv_to_unit: "gallons".to_string(),
             conv_result: None,
+            trial_volume: String::new(),
+            trial_addition: String::new(),
+            batch_volume: String::new(),
+            original_volume: String::new(),
+            target_volume: String::new(),
+            recipe_honey: String::new(),
+            recipe_water: String::new(),
+            recipe_fruit: String::new(),
+            recipe_nutrients: String::new(),
+            recipe_spices: String::new(),
             result: None,
             warnings: Vec::new(),
             metadata: Vec::new(),
@@ -191,7 +211,7 @@ impl eframe::App for MazerionApp {
                         .size(32.0)
                         .color(c.honey_gold));
                     ui.label(RichText::new(
-                        format!("📊 44 Calculators | {} | Precision: SG {:?}, pH {:?}, Brix {:?}",
+                        format!("📊 46 Calculators | {} | Precision: SG {:?}, pH {:?}, Brix {:?}",
                                 self.state.unit_system.name(),
                                 self.state.sg_precision,
                                 self.state.ph_precision,
