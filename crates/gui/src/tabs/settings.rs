@@ -1,187 +1,124 @@
-//! Settings tab - Theme, Units, Precision, and Font Colors
+//! Settings tab with theme and unit selection
 
 use crate::MazerionApp;
-use eframe::egui::{self, RichText};
 use crate::state::{Theme, UnitSystem};
+use eframe::egui::{self, RichText, CornerRadius};
 
 pub fn render(app: &mut MazerionApp, ui: &mut egui::Ui) {
-    ui.heading(RichText::new("⚙️ Settings").size(24.0));
-    ui.add_space(15.0);
-
-    // Theme Selection
-    ui.heading(RichText::new("🎨 Theme").size(18.0));
-    ui.horizontal(|ui| {
-        for theme in [Theme::HoneyGold, Theme::ForestGreen, Theme::OceanBlue, Theme::SunsetOrange, Theme::LavenderPurple] {
-            if ui.selectable_label(app.state.theme == theme, theme.name()).clicked() {
-                app.state.theme = theme;
-            }
-        }
-    });
-
-    ui.add_space(20.0);
-    ui.separator();
-    ui.add_space(20.0);
-
-    // Unit System Selection
-    ui.heading(RichText::new("📏 Unit System").size(18.0));
-    ui.horizontal(|ui| {
-        if ui.selectable_label(app.state.unit_system == UnitSystem::Metric, "Metric").clicked() {
-            app.state.unit_system = UnitSystem::Metric;
-        }
-        if ui.selectable_label(app.state.unit_system == UnitSystem::Imperial, "Imperial/US").clicked() {
-            app.state.unit_system = UnitSystem::Imperial;
-        }
-    });
-
-    ui.add_space(20.0);
-    ui.separator();
-    ui.add_space(20.0);
-
-    // Precision Settings
-    ui.heading(RichText::new("🔢 Decimal Precision").size(18.0));
-    ui.label("Number of decimal places for calculations");
-    ui.add_space(10.0);
-
-    ui.horizontal(|ui| {
-        ui.label("Specific Gravity:");
-        ui.add(egui::Slider::new(&mut app.state.sg_precision, 2..=6).text("decimals"));
-    });
-
-    ui.horizontal(|ui| {
-        ui.label("pH:");
-        ui.add(egui::Slider::new(&mut app.state.ph_precision, 1..=4).text("decimals"));
-    });
-
-    ui.horizontal(|ui| {
-        ui.label("Brix:");
-        ui.add(egui::Slider::new(&mut app.state.brix_precision, 1..=4).text("decimals"));
-    });
-
-    ui.add_space(20.0);
-    ui.separator();
-    ui.add_space(20.0);
-
-    // Unit Converter
-    ui.heading(RichText::new("🔄 Unit Converter").size(18.0));
-    ui.label("Quick conversions between metric and imperial units");
-    ui.add_space(10.0);
-
-    ui.horizontal(|ui| {
-        ui.label("Value:");
-        ui.text_edit_singleline(&mut app.conv_value);
-    });
-
-    ui.horizontal(|ui| {
-        ui.label("From:");
-        egui::ComboBox::from_id_salt("conv_from")
-            .selected_text(short_unit(&app.conv_from_unit))
-            .show_ui(ui, |ui| {
-                ui.selectable_value(&mut app.conv_from_unit, "liters".to_string(), "Liters (L)");
-                ui.selectable_value(&mut app.conv_from_unit, "gallons".to_string(), "Gallons (gal)");
-                ui.selectable_value(&mut app.conv_from_unit, "kilograms".to_string(), "Kilograms (kg)");
-                ui.selectable_value(&mut app.conv_from_unit, "pounds".to_string(), "Pounds (lb)");
-                ui.selectable_value(&mut app.conv_from_unit, "grams".to_string(), "Grams (g)");
-                ui.selectable_value(&mut app.conv_from_unit, "ounces".to_string(), "Ounces (oz)");
-                ui.selectable_value(&mut app.conv_from_unit, "celsius".to_string(), "Celsius (°C)");
-                ui.selectable_value(&mut app.conv_from_unit, "fahrenheit".to_string(), "Fahrenheit (°F)");
-            });
-    });
-
-    ui.horizontal(|ui| {
-        ui.label("To:");
-        egui::ComboBox::from_id_salt("conv_to")
-            .selected_text(short_unit(&app.conv_to_unit))
-            .show_ui(ui, |ui| {
-                ui.selectable_value(&mut app.conv_to_unit, "liters".to_string(), "Liters (L)");
-                ui.selectable_value(&mut app.conv_to_unit, "gallons".to_string(), "Gallons (gal)");
-                ui.selectable_value(&mut app.conv_to_unit, "kilograms".to_string(), "Kilograms (kg)");
-                ui.selectable_value(&mut app.conv_to_unit, "pounds".to_string(), "Pounds (lb)");
-                ui.selectable_value(&mut app.conv_to_unit, "grams".to_string(), "Grams (g)");
-                ui.selectable_value(&mut app.conv_to_unit, "ounces".to_string(), "Ounces (oz)");
-                ui.selectable_value(&mut app.conv_to_unit, "celsius".to_string(), "Celsius (°C)");
-                ui.selectable_value(&mut app.conv_to_unit, "fahrenheit".to_string(), "Fahrenheit (°F)");
-            });
-    });
-
-    if ui.button(RichText::new("🔄 Convert").size(14.0)).clicked() {
-        app.conv_result = Some(perform_conversion(&app.conv_value, &app.conv_from_unit, &app.conv_to_unit));
-    }
-
-    if let Some(result) = &app.conv_result {
-        ui.add_space(10.0);
-        ui.label(RichText::new(result).size(16.0).color(crate::state::colors::FOREST_GREEN).strong());
-    }
-
-    ui.add_space(20.0);
-    ui.separator();
-    ui.add_space(20.0);
-
-    // Font Color Customization
-    ui.heading(RichText::new("🎨 Font Colors").size(18.0));
-    ui.label("Customize text colors throughout the application");
-    ui.add_space(10.0);
-
-    egui::Grid::new("color_settings")
-        .num_columns(3)
-        .spacing([15.0, 10.0])
+    egui::Frame::default()
+        .fill(crate::state::colors::LIGHT_CREAM)
+        .stroke(egui::Stroke::new(1.5, crate::state::colors::HONEY_GOLD))
+        .corner_radius(CornerRadius::same(8))
+        .inner_margin(15.0)
         .show(ui, |ui| {
-            // Header
-            ui.label(RichText::new("Color Name").strong());
-            ui.label(RichText::new("Preview").strong());
-            ui.label(RichText::new("Customize").strong());
-            ui.end_row();
+            ui.heading(RichText::new("⚙️ Settings").color(crate::state::colors::SADDLE_BROWN));
+            ui.add_space(10.0);
 
-            // Honey Gold
-            ui.label("Honey Gold");
-            ui.label(RichText::new("Sample Text").color(app.state.custom_colors.honey_gold));
-            ui.color_edit_button_srgba(&mut app.state.custom_colors.honey_gold);
-            ui.end_row();
+            ui.horizontal(|ui| {
+                ui.label("Color Theme:");
+                egui::ComboBox::from_id_salt("theme")
+                    .selected_text(app.state.theme.name())
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(&mut app.state.theme, Theme::HoneyGold, "🍯 Honey & Gold");
+                        ui.selectable_value(&mut app.state.theme, Theme::ForestGreen, "🌲 Forest Green");
+                        ui.selectable_value(&mut app.state.theme, Theme::OceanBlue, "🌊 Ocean Blue");
+                        ui.selectable_value(&mut app.state.theme, Theme::SunsetOrange, "🌅 Sunset Orange");
+                        ui.selectable_value(&mut app.state.theme, Theme::LavenderPurple, "💜 Lavender Purple");
+                    });
+            });
+            app.state.custom_colors = app.state.get_theme_colors();
 
-            // Light Cream (Background)
-            ui.label("Light Cream (Background)");
-            ui.colored_label(app.state.custom_colors.light_cream, "■■■■■");
-            ui.color_edit_button_srgba(&mut app.state.custom_colors.light_cream);
-            ui.end_row();
+            ui.add_space(10.0);
 
-            // Dark Text
-            ui.label("Dark Text");
-            ui.label(RichText::new("Sample Text").color(app.state.custom_colors.dark_text));
-            ui.color_edit_button_srgba(&mut app.state.custom_colors.dark_text);
-            ui.end_row();
+            ui.horizontal(|ui| {
+                ui.label("Unit System:");
+                egui::ComboBox::from_id_salt("units")
+                    .selected_text(app.state.unit_system.name())
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(&mut app.state.unit_system, UnitSystem::Metric, "Metric");
+                        ui.selectable_value(&mut app.state.unit_system, UnitSystem::Imperial, "Imperial/US");
+                    });
+            });
 
-            // Saddle Brown
-            ui.label("Saddle Brown");
-            ui.label(RichText::new("Sample Text").color(app.state.custom_colors.saddle_brown));
-            ui.color_edit_button_srgba(&mut app.state.custom_colors.saddle_brown);
-            ui.end_row();
+            ui.add_space(10.0);
 
-            // Dark Orange
-            ui.label("Dark Orange (Warnings)");
-            ui.label(RichText::new("Sample Text").color(app.state.custom_colors.dark_orange));
-            ui.color_edit_button_srgba(&mut app.state.custom_colors.dark_orange);
-            ui.end_row();
+            ui.horizontal(|ui| {
+                ui.label("SG Precision:");
+                egui::ComboBox::from_id_salt("sg_precision")
+                    .selected_text(format!("{} decimals", app.state.sg_precision))
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(&mut app.state.sg_precision, 3, "3 decimals");
+                        ui.selectable_value(&mut app.state.sg_precision, 4, "4 decimals");
+                        ui.selectable_value(&mut app.state.sg_precision, 5, "5 decimals");
+                    });
+            });
 
-            // Forest Green
-            ui.label("Forest Green");
-            ui.label(RichText::new("Sample Text").color(app.state.custom_colors.forest_green));
-            ui.color_edit_button_srgba(&mut app.state.custom_colors.forest_green);
-            ui.end_row();
+            ui.add_space(10.0);
 
-            // Dark Red
-            ui.label("Dark Red (Errors)");
-            ui.label(RichText::new("Sample Text").color(app.state.custom_colors.dark_red));
-            ui.color_edit_button_srgba(&mut app.state.custom_colors.dark_red);
-            ui.end_row();
+            ui.horizontal(|ui| {
+                ui.label("pH Precision:");
+                egui::ComboBox::from_id_salt("ph_precision")
+                    .selected_text(format!("{} decimals", app.state.ph_precision))
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(&mut app.state.ph_precision, 2, "2 decimals");
+                        ui.selectable_value(&mut app.state.ph_precision, 3, "3 decimals");
+                        ui.selectable_value(&mut app.state.ph_precision, 4, "4 decimals");
+                    });
+            });
+
+            ui.add_space(20.0);
+            ui.separator();
+            ui.add_space(20.0);
+
+            ui.heading(RichText::new("🔧 Unit Converter").color(crate::state::colors::SADDLE_BROWN));
+            ui.add_space(10.0);
+
+            ui.horizontal(|ui| {
+                ui.label("Value:");
+                ui.text_edit_singleline(&mut app.conv_value);
+            });
+
+            ui.horizontal(|ui| {
+                ui.label("From:");
+                egui::ComboBox::from_id_salt("conv_from")
+                    .selected_text(short_unit(&app.conv_from_unit))
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(&mut app.conv_from_unit, "liters".to_string(), "Liters (L)");
+                        ui.selectable_value(&mut app.conv_from_unit, "gallons".to_string(), "Gallons (gal)");
+                        ui.selectable_value(&mut app.conv_from_unit, "kilograms".to_string(), "Kilograms (kg)");
+                        ui.selectable_value(&mut app.conv_from_unit, "pounds".to_string(), "Pounds (lb)");
+                        ui.selectable_value(&mut app.conv_from_unit, "grams".to_string(), "Grams (g)");
+                        ui.selectable_value(&mut app.conv_from_unit, "ounces".to_string(), "Ounces (oz)");
+                        ui.selectable_value(&mut app.conv_from_unit, "celsius".to_string(), "Celsius (°C)");
+                        ui.selectable_value(&mut app.conv_from_unit, "fahrenheit".to_string(), "Fahrenheit (°F)");
+                    });
+            });
+
+            ui.horizontal(|ui| {
+                ui.label("To:");
+                egui::ComboBox::from_id_salt("conv_to")
+                    .selected_text(short_unit(&app.conv_to_unit))
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(&mut app.conv_to_unit, "liters".to_string(), "Liters (L)");
+                        ui.selectable_value(&mut app.conv_to_unit, "gallons".to_string(), "Gallons (gal)");
+                        ui.selectable_value(&mut app.conv_to_unit, "kilograms".to_string(), "Kilograms (kg)");
+                        ui.selectable_value(&mut app.conv_to_unit, "pounds".to_string(), "Pounds (lb)");
+                        ui.selectable_value(&mut app.conv_to_unit, "grams".to_string(), "Grams (g)");
+                        ui.selectable_value(&mut app.conv_to_unit, "ounces".to_string(), "Ounces (oz)");
+                        ui.selectable_value(&mut app.conv_to_unit, "celsius".to_string(), "Celsius (°C)");
+                        ui.selectable_value(&mut app.conv_to_unit, "fahrenheit".to_string(), "Fahrenheit (°F)");
+                    });
+            });
+
+            if crate::calculate_button(ui, "Convert") {
+                app.conv_result = Some(perform_conversion(&app.conv_value, &app.conv_from_unit, &app.conv_to_unit));
+            }
+
+            if let Some(result) = &app.conv_result {
+                ui.add_space(10.0);
+                ui.label(RichText::new(result).size(18.0));
+            }
         });
-
-    ui.add_space(15.0);
-
-    if ui.button(RichText::new("🔄 Reset to Defaults").size(14.0)).clicked() {
-        app.state.custom_colors = crate::state::CustomColors::default();
-    }
-
-    ui.add_space(20.0);
-    ui.label(RichText::new("💡 Tip: Color changes apply immediately throughout the app").weak());
 }
 
 fn short_unit(unit: &str) -> &str {
@@ -198,46 +135,24 @@ fn short_unit(unit: &str) -> &str {
     }
 }
 
-fn perform_conversion(value_str: &str, from: &str, to: &str) -> String {
-    let value: f64 = match value_str.parse() {
+fn perform_conversion(value: &str, from: &str, to: &str) -> String {
+    let val: f64 = match value.parse() {
         Ok(v) => v,
-        Err(_) => return "Invalid number".to_string(),
+        Err(_) => return "❌ Invalid number".to_string(),
     };
 
-    // Convert to base unit first, then to target unit
     let result = match (from, to) {
-        // Volume conversions (base: liters)
-        ("liters", "gallons") => value / 3.78541,
-        ("gallons", "liters") => value * 3.78541,
-        ("liters", "liters") => value,
-        ("gallons", "gallons") => value,
-
-        // Mass conversions (base: grams)
-        ("kilograms", "pounds") => value * 2.20462,
-        ("pounds", "kilograms") => value / 2.20462,
-        ("grams", "ounces") => value / 28.3495,
-        ("ounces", "grams") => value * 28.3495,
-        ("kilograms", "grams") => value * 1000.0,
-        ("grams", "kilograms") => value / 1000.0,
-        ("pounds", "ounces") => value * 16.0,
-        ("ounces", "pounds") => value / 16.0,
-        ("kilograms", "ounces") => value * 35.274,
-        ("ounces", "kilograms") => value / 35.274,
-        ("pounds", "grams") => value * 453.592,
-        ("grams", "pounds") => value / 453.592,
-        ("kilograms", "kilograms") => value,
-        ("pounds", "pounds") => value,
-        ("grams", "grams") => value,
-        ("ounces", "ounces") => value,
-
-        // Temperature conversions
-        ("celsius", "fahrenheit") => (value * 9.0 / 5.0) + 32.0,
-        ("fahrenheit", "celsius") => (value - 32.0) * 5.0 / 9.0,
-        ("celsius", "celsius") => value,
-        ("fahrenheit", "fahrenheit") => value,
-
-        _ => return "Cannot convert between these units".to_string(),
+        ("liters", "gallons") => val * 0.264172,
+        ("gallons", "liters") => val * 3.78541,
+        ("kilograms", "pounds") => val * 2.20462,
+        ("pounds", "kilograms") => val * 0.453592,
+        ("grams", "ounces") => val * 0.035274,
+        ("ounces", "grams") => val * 28.3495,
+        ("celsius", "fahrenheit") => (val * 9.0 / 5.0) + 32.0,
+        ("fahrenheit", "celsius") => (val - 32.0) * 5.0 / 9.0,
+        _ if from == to => val,
+        _ => return "❌ Incompatible units".to_string(),
     };
 
-    format!("{:.3} {} = {:.3} {}", value, short_unit(from), result, short_unit(to))
+    format!("{:.4} {} = {:.4} {}", val, short_unit(from), result, short_unit(to))
 }

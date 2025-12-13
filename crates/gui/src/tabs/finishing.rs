@@ -13,10 +13,10 @@ pub fn render(app: &mut MazerionApp, ui: &mut egui::Ui) {
     ui.horizontal(|ui| {
         for calc in FinishingCalculator::all() {
             if ui.selectable_label(
-                app.state.finishing_calc == calc,
+                app.state.finishing_calc == *calc,
                 calc.name()
             ).clicked() {
-                app.state.finishing_calc = calc;
+                app.state.finishing_calc = *calc;
             }
         }
     });

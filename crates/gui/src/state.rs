@@ -1,31 +1,4 @@
-//! Application state
-
 use eframe::egui::Color32;
-
-#[derive(Debug, Clone, Copy)]
-pub struct CustomColors {
-    pub honey_gold: Color32,
-    pub light_cream: Color32,
-    pub dark_text: Color32,
-    pub saddle_brown: Color32,
-    pub dark_orange: Color32,
-    pub forest_green: Color32,
-    pub dark_red: Color32,
-}
-
-impl Default for CustomColors {
-    fn default() -> Self {
-        Self {
-            honey_gold: Color32::from_rgb(218, 165, 32),
-            light_cream: Color32::from_rgb(255, 253, 240),
-            dark_text: Color32::from_rgb(51, 51, 51),
-            saddle_brown: Color32::from_rgb(139, 69, 19),
-            dark_orange: Color32::from_rgb(255, 140, 0),
-            forest_green: Color32::from_rgb(34, 139, 34),
-            dark_red: Color32::from_rgb(139, 0, 0),
-        }
-    }
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TabView {
@@ -75,6 +48,17 @@ impl UnitSystem {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct CustomColors {
+    pub background: Color32,
+    pub honey_gold: Color32,
+    pub forest_green: Color32,
+    pub light_cream: Color32,
+    pub dark_text: Color32,
+    pub sunset_orange: Color32,
+    pub saddle_brown: Color32,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BasicCalculator {
     Abv,
@@ -113,8 +97,8 @@ pub enum FinishingCalculator {
 }
 
 impl FinishingCalculator {
-    pub fn all() -> Vec<Self> {
-        vec![
+    pub fn all() -> &'static [Self] {
+        &[
             Self::Backsweetening,
             Self::Sulfite,
             Self::AcidAddition,
@@ -140,15 +124,16 @@ pub struct AppState {
     pub beer_calc: BeerCalculator,
     pub finishing_calc: FinishingCalculator,
     pub theme: Theme,
+    pub custom_colors: CustomColors,
     pub unit_system: UnitSystem,
     pub sg_precision: u32,
     pub ph_precision: u32,
     pub brix_precision: u32,
-    pub custom_colors: CustomColors,
 }
 
 impl Default for AppState {
     fn default() -> Self {
+        let theme = Theme::HoneyGold;
         Self {
             current_tab: TabView::Basic,
             basic_calc: BasicCalculator::Abv,
@@ -156,24 +141,68 @@ impl Default for AppState {
             brewing_calc: BrewingCalculator::Nutrition,
             beer_calc: BeerCalculator::Ibu,
             finishing_calc: FinishingCalculator::Backsweetening,
-            theme: Theme::HoneyGold,
+            theme,
+            custom_colors: Self::get_colors_for_theme(theme),
             unit_system: UnitSystem::Metric,
             sg_precision: 4,
             ph_precision: 3,
             brix_precision: 2,
-            custom_colors: CustomColors::default(),
         }
     }
 }
 
 impl AppState {
-    pub fn get_theme_colors(&self) -> (Color32, Color32) {
-        match self.theme {
-            Theme::HoneyGold => (Color32::from_rgb(255, 250, 240), Color32::from_rgb(255, 253, 240)),
-            Theme::ForestGreen => (Color32::from_rgb(240, 255, 240), Color32::from_rgb(245, 255, 245)),
-            Theme::OceanBlue => (Color32::from_rgb(240, 248, 255), Color32::from_rgb(245, 250, 255)),
-            Theme::SunsetOrange => (Color32::from_rgb(255, 245, 238), Color32::from_rgb(255, 248, 243)),
-            Theme::LavenderPurple => (Color32::from_rgb(248, 240, 255), Color32::from_rgb(250, 245, 255)),
+    pub fn get_theme_colors(&self) -> CustomColors {
+        Self::get_colors_for_theme(self.theme)
+    }
+
+    fn get_colors_for_theme(theme: Theme) -> CustomColors {
+        match theme {
+            Theme::HoneyGold => CustomColors {
+                background: colors::LIGHT_CREAM,
+                honey_gold: colors::HONEY_GOLD,
+                forest_green: colors::FOREST_GREEN,
+                light_cream: colors::LIGHT_CREAM,
+                dark_text: colors::DARK_TEXT,
+                sunset_orange: colors::HONEY_GOLD,
+                saddle_brown: colors::SADDLE_BROWN,
+            },
+            Theme::ForestGreen => CustomColors {
+                background: Color32::from_rgb(240, 248, 240),
+                honey_gold: Color32::from_rgb(34, 139, 34),
+                forest_green: Color32::from_rgb(0, 100, 0),
+                light_cream: Color32::from_rgb(240, 248, 240),
+                dark_text: Color32::from_rgb(25, 50, 25),
+                sunset_orange: Color32::from_rgb(34, 139, 34),
+                saddle_brown: Color32::from_rgb(0, 100, 0),
+            },
+            Theme::OceanBlue => CustomColors {
+                background: Color32::from_rgb(240, 248, 255),
+                honey_gold: Color32::from_rgb(30, 144, 255),
+                forest_green: Color32::from_rgb(0, 105, 148),
+                light_cream: Color32::from_rgb(240, 248, 255),
+                dark_text: Color32::from_rgb(25, 25, 112),
+                sunset_orange: Color32::from_rgb(30, 144, 255),
+                saddle_brown: Color32::from_rgb(0, 105, 148),
+            },
+            Theme::SunsetOrange => CustomColors {
+                background: Color32::from_rgb(255, 250, 240),
+                honey_gold: Color32::from_rgb(255, 140, 0),
+                forest_green: Color32::from_rgb(255, 99, 71),
+                light_cream: Color32::from_rgb(255, 250, 240),
+                dark_text: Color32::from_rgb(139, 69, 19),
+                sunset_orange: Color32::from_rgb(255, 69, 0),
+                saddle_brown: Color32::from_rgb(139, 69, 19),
+            },
+            Theme::LavenderPurple => CustomColors {
+                background: Color32::from_rgb(248, 240, 255),
+                honey_gold: Color32::from_rgb(147, 112, 219),
+                forest_green: Color32::from_rgb(138, 43, 226),
+                light_cream: Color32::from_rgb(248, 240, 255),
+                dark_text: Color32::from_rgb(75, 0, 130),
+                sunset_orange: Color32::from_rgb(147, 112, 219),
+                saddle_brown: Color32::from_rgb(138, 43, 226),
+            },
         }
     }
 }
@@ -182,11 +211,11 @@ pub mod colors {
     use eframe::egui::Color32;
 
     pub const HONEY_GOLD: Color32 = Color32::from_rgb(218, 165, 32);
-    pub const GOLDENROD: Color32 = Color32::from_rgb(218, 165, 32);
+    pub const FOREST_GREEN: Color32 = Color32::from_rgb(34, 139, 34);
     pub const LIGHT_CREAM: Color32 = Color32::from_rgb(255, 253, 240);
     pub const DARK_TEXT: Color32 = Color32::from_rgb(51, 51, 51);
     pub const SADDLE_BROWN: Color32 = Color32::from_rgb(139, 69, 19);
-    pub const DARK_ORANGE: Color32 = Color32::from_rgb(255, 140, 0);
-    pub const FOREST_GREEN: Color32 = Color32::from_rgb(34, 139, 34);
+    pub const GOLDENROD: Color32 = Color32::from_rgb(218, 165, 32);
     pub const DARK_RED: Color32 = Color32::from_rgb(139, 0, 0);
+    pub const DARK_ORANGE: Color32 = Color32::from_rgb(255, 140, 0);
 }
