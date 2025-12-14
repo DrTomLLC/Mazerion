@@ -1,0 +1,116 @@
+# Requires secret: MAZERION_PIPELINE_TOKEN
+name: "Stage 3: Test - Unit Tests"
+
+on:
+  push:
+    branches: [test]
+  pull_request:
+    branches: [test]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stage3-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  unit-tests:
+    name: Unit Tests with Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-tarpaulin
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-tarpaulin
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run unit tests
+        run: cargo test --lib --verbose
+
+      - name: Run tests with coverage (tarpaulin)
+        run: |
+          set -euo pipefail
+          cargo tarpaulin --lib --out Xml --output-dir coverage
+
+      - name: Check coverage threshold (70%)
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import xml.etree.ElementTree as ET
+          path = "coverage/cobertura.xml"
+          root = ET.parse(path).getroot()
+          rate = float(root.attrib.get("line-rate", "0.0"))
+          pct = rate * 100.0
+          print(f"Coverage: {pct:.2f}%")
+          if pct < 70.0:
+              raise SystemExit("❌ Coverage below 70% threshold")
+          print("✅ Coverage meets minimum requirement")
+          PY
+
+      - name: Upload coverage reports (optional)
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage/cobertura.xml
+          fail_ci_if_error: false
+
+      - name: Report success
+        if: success()
+        run: echo "✅ Stage 3 (test) - All unit tests passed with adequate coverage"
+
+  auto-promote:
+    name: Auto-promote to integration
+    needs: unit-tests
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/test' && github.event_name == 'push'
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout (for gh context)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Create/Find PR test -> integration and enable auto-merge
+        env:
+          GH_TOKEN: ${{ secrets.MAZERION_PIPELINE_TOKEN }}
+          REPO: ${{ github.repository }}
+          HEAD: test
+          BASE: integration
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          PR_URL="$(gh pr create \
+            --repo "$REPO" \
+            --base "$BASE" \
+            --head "$HEAD" \
+            --title "Auto-promote: ${HEAD} → ${BASE}" \
+            --body "Automatic promotion from Stage 3 (${HEAD}) to Stage 4 (${BASE}). All unit tests passed with 70%+ coverage." \
+            --json url -q .url 2>/dev/null || true)"
+
+          if [ -z "$PR_URL" ]; then
+            PR_URL="$(gh pr list --repo "$REPO" --base "$BASE" --head "$HEAD" --state open --json url -q '.[0].url' || true)"
+          fi
+
+          if [ -z "$PR_URL" ]; then
+            echo "❌ Could not create or locate an open PR for ${HEAD} -> ${BASE}"
+            exit 1
+          fi
+
+          echo "Using PR: $PR_URL"
+          gh pr merge "$PR_URL" --auto --merge --delete-branch=false

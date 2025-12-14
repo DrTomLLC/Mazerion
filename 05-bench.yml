@@ -1,0 +1,92 @@
+# Requires secret: MAZERION_PIPELINE_TOKEN
+name: "Stage 5: Bench - Performance"
+
+on:
+  push:
+    branches: [bench]
+  pull_request:
+    branches: [bench]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stage5-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  benchmarks:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run benchmarks (if present)
+        run: |
+          set -euo pipefail
+          if [ -d "benches" ]; then
+            cargo bench --no-fail-fast
+            echo "✅ Benchmarks executed"
+          else
+            echo "No benches/ directory found; skipping benchmarks (no regressions check possible yet)."
+          fi
+
+      - name: Report success
+        if: success()
+        run: echo "✅ Stage 5 (bench) - Performance validation completed"
+
+  auto-promote:
+    name: Auto-promote to security
+    needs: benchmarks
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/bench' && github.event_name == 'push'
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout (for gh context)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Create/Find PR bench -> security and enable auto-merge
+        env:
+          GH_TOKEN: ${{ secrets.MAZERION_PIPELINE_TOKEN }}
+          REPO: ${{ github.repository }}
+          HEAD: bench
+          BASE: security
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          PR_URL="$(gh pr create \
+            --repo "$REPO" \
+            --base "$BASE" \
+            --head "$HEAD" \
+            --title "Auto-promote: ${HEAD} → ${BASE}" \
+            --body "Automatic promotion from Stage 5 (${HEAD}) to Stage 6 (${BASE}). Performance validation completed." \
+            --json url -q .url 2>/dev/null || true)"
+
+          if [ -z "$PR_URL" ]; then
+            PR_URL="$(gh pr list --repo "$REPO" --base "$BASE" --head "$HEAD" --state open --json url -q '.[0].url' || true)"
+          fi
+
+          if [ -z "$PR_URL" ]; then
+            echo "❌ Could not create or locate an open PR for ${HEAD} -> ${BASE}"
+            exit 1
+          fi
+
+          echo "Using PR: $PR_URL"
+          gh pr merge "$PR_URL" --auto --merge --delete-branch=false

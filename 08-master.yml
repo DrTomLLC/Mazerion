@@ -1,0 +1,193 @@
+# Requires secret: MAZERION_PIPELINE_TOKEN
+name: "Stage 8: Master - Production Release"
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stage8-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  final-validation:
+    name: Final Production Validation (ZERO TOLERANCE)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain (fmt+clippy)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Install security tools
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit,cargo-deny
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: "GATE 1: Formatting (ZERO TOLERANCE)"
+        run: |
+          cargo fmt --all -- --check
+          echo "✅ GATE 1 PASSED"
+
+      - name: "GATE 2: Clippy (ZERO WARNINGS)"
+        run: |
+          cargo clippy --all-targets --all-features -- -D warnings
+          echo "✅ GATE 2 PASSED"
+
+      - name: "GATE 3: Build (ZERO WARNINGS)"
+        run: |
+          cargo build --all-targets --all-features 2>&1 | tee build.log
+          if grep -i "warning:" build.log; then
+            echo "❌ GATE 3 FAILED: Compilation warnings detected"
+            exit 1
+          fi
+          echo "✅ GATE 3 PASSED"
+
+      - name: "GATE 4: All Tests (ZERO FAILURES)"
+        run: |
+          cargo test --all-targets --all-features --verbose
+          echo "✅ GATE 4 PASSED"
+
+      - name: "GATE 5: Documentation Build"
+        run: |
+          cargo doc --no-deps --all-features
+          echo "✅ GATE 5 PASSED"
+
+      - name: "GATE 6: Release Build"
+        run: |
+          cargo build --release --all-features
+          echo "✅ GATE 6 PASSED"
+
+      - name: "GATE 7: Security Audit"
+        run: |
+          cargo audit
+          echo "✅ GATE 7 PASSED"
+
+      - name: "GATE 8: Dependency Check"
+        run: |
+          if [ ! -f "deny.toml" ]; then
+            cat > deny.toml <<'EOF'
+  [advisories]
+  vulnerability = "deny"
+  unmaintained = "warn"
+  unsound = "warn"
+  yanked = "deny"
+  
+  [licenses]
+  unlicensed = "deny"
+  allow = ["MIT", "Apache-2.0", "BSD-3-Clause", "ISC", "0BSD"]
+  copyleft = "warn"
+  
+  [bans]
+  multiple-versions = "warn"
+  wildcards = "allow"
+  
+  [sources]
+  unknown-registry = "deny"
+  unknown-git = "deny"
+  EOF
+  fi
+  cargo deny check
+  echo "✅ GATE 8 PASSED"
+
+- name: "🎉 ALL GATES PASSED - PRODUCTION READY"
+  run: |
+    echo "=================================="
+    echo "🎉 PRODUCTION VALIDATION COMPLETE"
+    echo "=================================="
+    echo "✅ Zero warnings / Zero test failures / Gates passed"
+    echo "Code is PRODUCTION READY for master branch"
+
+create-release:
+  name: Create GitHub Release
+  needs: final-validation
+  runs-on: ubuntu-latest
+  if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+  permissions:
+    contents: write
+  steps:
+    - name: Checkout (needs write token for tag push)
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.MAZERION_PIPELINE_TOKEN }}
+
+    - name: Configure git identity
+      run: |
+        git config user.name "Mazerion Release Bot"
+        git config user.email "actions@github.com"
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Extract version from Cargo.toml
+      id: get_version
+      run: |
+        set -euo pipefail
+        VERSION="$(grep '^version' Cargo.toml | head -1 | cut -d'"' -f2)"
+        echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+        echo "Version: $VERSION"
+
+    - name: Build release artifacts
+      run: |
+        set -euo pipefail
+        cargo build --release --all-features
+        mkdir -p artifacts
+        if [ -f "target/release/mazerion" ]; then
+          cp target/release/mazerion artifacts/
+        fi
+
+    - name: Create release notes
+      run: |
+        cat > RELEASE_NOTES.md << 'EOF'
+# Mazerion Production Release
+
+  This release has passed all quality gates in the pipeline and is considered production-ready.
+  EOF
+
+- name: Create Git tag (if missing) and push
+  env:
+    VERSION: ${{ steps.get_version.outputs.version }}
+  run: |
+    set -euo pipefail
+    TAG="v${VERSION}"
+    if git rev-parse "$TAG" >/dev/null 2>&1; then
+      echo "Tag $TAG already exists"
+    else
+      git tag -a "$TAG" -m "Release $TAG - Production Ready"
+      git push origin "$TAG"
+    fi
+
+- name: Create GitHub Release (idempotent)
+  env:
+    GH_TOKEN: ${{ secrets.MAZERION_PIPELINE_TOKEN }}
+    VERSION: ${{ steps.get_version.outputs.version }}
+  run: |
+    set -euo pipefail
+    TAG="v${VERSION}"
+    gh release view "$TAG" >/dev/null 2>&1 && echo "Release $TAG already exists" && exit 0
+    gh release create "$TAG" \
+      --title "Mazerion $TAG - Production Release" \
+      --notes-file RELEASE_NOTES.md \
+      artifacts/*
+
+- name: Report success
+  run: |
+    echo "🎉 PRODUCTION RELEASE COMPLETE"
+    echo "Version ${{ steps.get_version.outputs.version }} released from master"

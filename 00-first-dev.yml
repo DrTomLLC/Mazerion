@@ -1,0 +1,87 @@
+# Requires secret: MAZERION_PIPELINE_TOKEN (fine-grained PAT with contents+PR write)
+name: "Stage 0: First-Dev - Basic Compilation"
+
+on:
+  push:
+    branches: [first-dev]
+  pull_request:
+    branches: [first-dev]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stage0-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  compile:
+    name: Basic Compilation Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Compile project
+        run: cargo build --all-targets --all-features --verbose
+
+      - name: Report success
+        if: success()
+        run: echo "✅ Stage 0 (first-dev) - Basic compilation successful"
+
+  auto-promote:
+    name: Auto-promote to dev
+    needs: compile
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/first-dev' && github.event_name == 'push'
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout (for gh context)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Create/Find PR first-dev -> dev and enable auto-merge
+        env:
+          GH_TOKEN: ${{ secrets.MAZERION_PIPELINE_TOKEN }}
+          REPO: ${{ github.repository }}
+          HEAD: first-dev
+          BASE: dev
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Promoting ${HEAD} -> ${BASE} in ${REPO}"
+
+          PR_URL="$(gh pr create \
+            --repo "$REPO" \
+            --base "$BASE" \
+            --head "$HEAD" \
+            --title "Auto-promote: ${HEAD} → ${BASE}" \
+            --body "Automatic promotion from Stage 0 (${HEAD}) to Stage 1 (${BASE}). Basic compilation checks passed." \
+            --json url -q .url 2>/dev/null || true)"
+
+          if [ -z "$PR_URL" ]; then
+            PR_URL="$(gh pr list --repo "$REPO" --base "$BASE" --head "$HEAD" --state open --json url -q '.[0].url' || true)"
+          fi
+
+          if [ -z "$PR_URL" ]; then
+            echo "❌ Could not create or locate an open PR for ${HEAD} -> ${BASE}"
+            exit 1
+          fi
+
+          echo "Using PR: $PR_URL"
+          gh pr merge "$PR_URL" --auto --merge --delete-branch=false
