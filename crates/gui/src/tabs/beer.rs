@@ -1,9 +1,11 @@
-//! Beer calculators tab - IBU, SRM, Mash, Efficiency, Style Guide
-//! SAFETY-CRITICAL: Zero panics, production-ready
+//! Beer calculators tab - COMPLETE implementation
+//! All 5 calculators fully functional with unit system support
 
 pub(crate) use crate::state::BeerCalculator;
-use crate::{state::colors, MazerionApp};
+use crate::{state::{colors, UnitSystem}, MazerionApp};
 use eframe::egui::{self, CornerRadius, RichText, Color32, ScrollArea};
+use rust_decimal::Decimal;
+use std::str::FromStr;
 
 pub fn render(app: &mut MazerionApp, ui: &mut egui::Ui) {
     ui.horizontal(|ui| {
@@ -29,9 +31,9 @@ pub fn render(app: &mut MazerionApp, ui: &mut egui::Ui) {
         .show(ui, |ui| {
             match app.state.beer_calc {
                 BeerCalculator::Ibu => render_ibu(app, ui),
-                BeerCalculator::Srm => render_srm(ui),
-                BeerCalculator::Mash => render_mash(ui),
-                BeerCalculator::Efficiency => render_efficiency(ui),
+                BeerCalculator::Srm => render_srm(app, ui),
+                BeerCalculator::Mash => render_mash(app, ui),
+                BeerCalculator::Efficiency => render_efficiency(app, ui),
                 BeerCalculator::StyleGuide => render_style_guide(ui),
             }
         });
@@ -44,6 +46,116 @@ fn get_calc_name(calc: BeerCalculator) -> &'static str {
         BeerCalculator::Mash => "Mash Water Calculator",
         BeerCalculator::Efficiency => "Brewhouse Efficiency",
         BeerCalculator::StyleGuide => "Beer Style Guide",
+    }
+}
+
+fn render_ibu(app: &mut MazerionApp, ui: &mut egui::Ui) {
+    ui.heading(RichText::new("🍺 IBU Calculator (Tinseth)").color(colors::SADDLE_BROWN));
+    ui.label("Calculate International Bitterness Units using Tinseth formula");
+    ui.add_space(10.0);
+
+    let (weight_label, volume_label) = match app.state.unit_system {
+        UnitSystem::Metric => ("Hop Weight (g):", "Batch Volume (L):"),
+        UnitSystem::Imperial => ("Hop Weight (oz):", "Batch Volume (gal):"),
+    };
+
+    crate::input_field(ui, weight_label, &mut app.hop_weight, "Weight of hops");
+    crate::input_field(ui, "Alpha Acid (%):", &mut app.alpha_acid, "Alpha acid percentage (5-15% typical)");
+    crate::input_field(ui, "Boil Time (min):", &mut app.boil_time, "Boil duration in minutes (0-120)");
+    crate::input_field(ui, volume_label, &mut app.beer_volume, "Batch volume");
+    crate::input_field(ui, "Boil Gravity:", &mut app.boil_gravity, "Specific gravity during boil (e.g., 1.050)");
+
+    ui.add_space(5.0);
+    ui.label(RichText::new("💡 Tip: Higher gravity reduces utilization. Longer boils increase bitterness.").size(12.0));
+
+    ui.add_space(10.0);
+
+    if crate::calculate_button(ui, "Calculate IBU") {
+        calc_ibu(app);
+    }
+}
+
+fn render_srm(app: &mut MazerionApp, ui: &mut egui::Ui) {
+    ui.heading(RichText::new("🎨 SRM Color Calculator (Morey)").color(colors::SADDLE_BROWN));
+    ui.label("Calculate beer color in SRM using Morey equation");
+    ui.add_space(10.0);
+
+    let (weight_label, volume_label) = match app.state.unit_system {
+        UnitSystem::Metric => ("Grain Weight (kg):", "Batch Volume (L):"),
+        UnitSystem::Imperial => ("Grain Weight (lb):", "Batch Volume (gal):"),
+    };
+
+    crate::input_field(ui, weight_label, &mut app.grain_weight, "Total grain weight");
+    crate::input_field(ui, "Lovibond:", &mut app.grain_lovibond, "Grain color in Lovibond (2-500)");
+    crate::input_field(ui, volume_label, &mut app.beer_volume, "Batch volume");
+
+    ui.add_space(5.0);
+    ui.label(RichText::new("💡 Common: Pale Malt ~2°L, Crystal ~60°L, Chocolate ~350°L, Black ~500°L").size(12.0));
+
+    ui.add_space(10.0);
+
+    if crate::calculate_button(ui, "Calculate SRM") {
+        calc_srm(app);
+    }
+}
+
+fn render_mash(app: &mut MazerionApp, ui: &mut egui::Ui) {
+    ui.heading(RichText::new("🌡️ Mash Water Calculator").color(colors::SADDLE_BROWN));
+    ui.label("Calculate strike water temperature and volume for single-infusion mash");
+    ui.add_space(10.0);
+
+    let (weight_label, temp_label, ratio_label, ratio_hint) = match app.state.unit_system {
+        UnitSystem::Metric => (
+            "Grain Weight (kg):",
+            "Target Mash Temp (°C):",
+            "Water Ratio (L/kg):",
+            "Water-to-grain ratio (1.25-2.0 L/kg typical)"
+        ),
+        UnitSystem::Imperial => (
+            "Grain Weight (lb):",
+            "Target Mash Temp (°F):",
+            "Water Ratio (qt/lb):",
+            "Water-to-grain ratio (1.0-2.0 qt/lb typical)"
+        ),
+    };
+
+    crate::input_field(ui, weight_label, &mut app.grain_weight, "Total grain weight");
+    crate::input_field(ui, temp_label, &mut app.mash_target_temp, "Desired mash temperature (65-68°C / 149-154°F)");
+    crate::input_field(ui, "Grain Temp:", &mut app.grain_temp, "Initial grain temperature (usually room temp)");
+    crate::input_field(ui, ratio_label, &mut app.mash_ratio, ratio_hint);
+
+    ui.add_space(5.0);
+    ui.label(RichText::new("💡 Typical: 66°C (151°F) for balanced, 68°C (154°F) for maltier beer").size(12.0));
+
+    ui.add_space(10.0);
+
+    if crate::calculate_button(ui, "Calculate Strike Water") {
+        calc_mash(app);
+    }
+}
+
+fn render_efficiency(app: &mut MazerionApp, ui: &mut egui::Ui) {
+    ui.heading(RichText::new("📊 Brewhouse Efficiency").color(colors::SADDLE_BROWN));
+    ui.label("Calculate extraction efficiency from grain and measured gravity");
+    ui.add_space(10.0);
+
+    let (weight_label, volume_label) = match app.state.unit_system {
+        UnitSystem::Metric => ("Grain Weight (kg):", "Final Volume (L):"),
+        UnitSystem::Imperial => ("Grain Weight (lb):", "Final Volume (gal):"),
+    };
+
+    crate::input_field(ui, weight_label, &mut app.grain_weight, "Total grain weight");
+    crate::input_field(ui, "Grain PPG:", &mut app.grain_ppg, "Points per pound per gallon (35-40 typical for base malt)");
+    crate::input_field(ui, "Measured OG:", &mut app.measured_gravity, "Actual original gravity measured (e.g., 1.050)");
+    crate::input_field(ui, volume_label, &mut app.beer_volume, "Final volume into fermenter");
+
+    ui.add_space(5.0);
+    ui.label(RichText::new("💡 Good brewhouse efficiency: 70-80%").size(12.0));
+
+    ui.add_space(10.0);
+
+    if crate::calculate_button(ui, "Calculate Efficiency") {
+        calc_efficiency(app);
     }
 }
 
@@ -138,44 +250,325 @@ fn style_section(ui: &mut egui::Ui, title: &str, styles: &[(&str, &str, &str, &s
     }
 }
 
-fn render_ibu(app: &mut MazerionApp, ui: &mut egui::Ui) {
-    ui.heading(RichText::new("🍺 IBU Calculator (Tinseth)").color(colors::SADDLE_BROWN));
-    ui.label("Calculate International Bitterness Units");
-    ui.add_space(10.0);
+// === CALCULATION FUNCTIONS ===
 
-    crate::input_field(ui, "Hop Weight (oz):", &mut app.hop_weight, "Weight of hops");
-    crate::input_field(ui, "Alpha Acid %:", &mut app.alpha_acid, "Alpha acid percentage");
-    crate::input_field(ui, "Boil Time (min):", &mut app.boil_time, "Minutes in boil");
-    crate::input_field(ui, "Batch Volume (gal):", &mut app.volume, "Final volume");
-    crate::input_field(ui, "Wort Gravity (SG):", &mut app.sg, "Pre-boil gravity");
+fn calc_ibu(app: &mut MazerionApp) {
+    let is_metric = matches!(app.state.unit_system, UnitSystem::Metric);
 
-    ui.add_space(10.0);
+    let hop_weight_val = match Decimal::from_str(&app.hop_weight) {
+        Ok(v) if v > Decimal::ZERO => v,
+        _ => {
+            app.result = Some("❌ Invalid hop weight".to_string());
+            return;
+        }
+    };
 
-    if crate::calculate_button(ui, "Calculate IBU") {
-        app.result = Some("IBU calculator - pending backend".to_string());
+    let alpha_acid_val = match Decimal::from_str(&app.alpha_acid) {
+        Ok(v) if v > Decimal::ZERO => v,
+        _ => {
+            app.result = Some("❌ Invalid alpha acid".to_string());
+            return;
+        }
+    };
+
+    let boil_time_val = match Decimal::from_str(&app.boil_time) {
+        Ok(v) if v >= Decimal::ZERO => v,
+        _ => {
+            app.result = Some("❌ Invalid boil time".to_string());
+            return;
+        }
+    };
+
+    let volume_val = match Decimal::from_str(&app.beer_volume) {
+        Ok(v) if v > Decimal::ZERO => v,
+        _ => {
+            app.result = Some("❌ Invalid volume".to_string());
+            return;
+        }
+    };
+
+    let gravity_val = match Decimal::from_str(&app.boil_gravity) {
+        Ok(v) if v >= Decimal::ONE => v,
+        _ => {
+            app.result = Some("❌ Invalid boil gravity".to_string());
+            return;
+        }
+    };
+
+    // Convert to metric
+    let weight_g = if is_metric {
+        hop_weight_val
+    } else {
+        hop_weight_val * Decimal::new(2835, 2) // oz to g
+    };
+
+    let volume_l = if is_metric {
+        volume_val
+    } else {
+        volume_val * Decimal::new(378541, 5) // gal to L
+    };
+
+    // Tinseth formula calculations
+    let sg_diff = (gravity_val - Decimal::ONE).to_string().parse::<f64>().unwrap_or(0.05);
+    let time_f64 = boil_time_val.to_string().parse::<f64>().unwrap_or(60.0);
+
+    let bigness = 1.65 * 0.000125_f64.powf(sg_diff);
+    let boil_factor = (1.0 - (-0.04 * time_f64).exp()) / 4.15;
+    let utilization = bigness * boil_factor;
+
+    let util_decimal = Decimal::from_f64_retain(utilization).unwrap_or(Decimal::ZERO);
+    let aa_decimal = alpha_acid_val / Decimal::from(100);
+    let ibu = (weight_g * aa_decimal * util_decimal * Decimal::from(1000)) / volume_l;
+
+    app.result = Some(format!("IBU: {:.1}", ibu));
+    app.warnings.clear();
+    app.metadata.clear();
+    app.metadata.push(("Formula".to_string(), "Tinseth".to_string()));
+    app.metadata.push(("Utilization".to_string(), format!("{:.1}%", util_decimal * Decimal::from(100))));
+    app.metadata.push(("Bigness Factor".to_string(), format!("{:.4}", bigness)));
+    app.metadata.push(("Boil Factor".to_string(), format!("{:.4}", boil_factor)));
+
+    if ibu > Decimal::from(100) {
+        app.warnings.push("IBU > 100 is extremely bitter".to_string());
+    }
+    if alpha_acid_val > Decimal::from(20) {
+        app.warnings.push("Alpha acid > 20% is unusually high - verify value".to_string());
     }
 }
 
-fn render_srm(ui: &mut egui::Ui) {
-    ui.heading(RichText::new("🎨 SRM Color Calculator").color(colors::SADDLE_BROWN));
-    ui.label("Calculate beer color in SRM");
-    ui.add_space(10.0);
+fn calc_srm(app: &mut MazerionApp) {
+    let is_metric = matches!(app.state.unit_system, UnitSystem::Metric);
 
-    ui.label("SRM calculator - coming soon");
+    let grain_weight_val = match Decimal::from_str(&app.grain_weight) {
+        Ok(v) if v > Decimal::ZERO => v,
+        _ => {
+            app.result = Some("❌ Invalid grain weight".to_string());
+            return;
+        }
+    };
+
+    let lovibond_val = match Decimal::from_str(&app.grain_lovibond) {
+        Ok(v) if v >= Decimal::ZERO => v,
+        _ => {
+            app.result = Some("❌ Invalid Lovibond".to_string());
+            return;
+        }
+    };
+
+    let volume_val = match Decimal::from_str(&app.beer_volume) {
+        Ok(v) if v > Decimal::ZERO => v,
+        _ => {
+            app.result = Some("❌ Invalid volume".to_string());
+            return;
+        }
+    };
+
+    // Convert to Imperial (lbs and gallons) for MCU calculation
+    let weight_lbs = if is_metric {
+        grain_weight_val * Decimal::new(220462262, 8) // kg to lb
+    } else {
+        grain_weight_val
+    };
+
+    let volume_gal = if is_metric {
+        volume_val * Decimal::new(264172, 6) // L to gal
+    } else {
+        volume_val
+    };
+
+    // MCU = (grain_lbs × lovibond) / volume_gal
+    let mcu = (weight_lbs * lovibond_val) / volume_gal;
+    let mcu_f64 = mcu.to_string().parse::<f64>().unwrap_or(0.0);
+
+    // Morey: SRM = 1.4922 × (MCU^0.6859)
+    let srm_f64 = 1.4922 * mcu_f64.powf(0.6859);
+    let srm = Decimal::from_f64_retain(srm_f64).unwrap_or(mcu);
+
+    let color_desc = match srm_f64 as i32 {
+        0..=3 => "Pale Straw",
+        4..=6 => "Straw to Pale Gold",
+        7..=9 => "Deep Gold to Pale Amber",
+        10..=13 => "Amber",
+        14..=17 => "Deep Amber to Copper",
+        18..=20 => "Copper to Light Brown",
+        21..=24 => "Brown",
+        25..=30 => "Dark Brown",
+        31..=40 => "Very Dark Brown",
+        _ => "Black",
+    };
+
+    app.result = Some(format!("SRM: {:.1}", srm));
+    app.warnings.clear();
+    app.metadata.clear();
+    app.metadata.push(("Formula".to_string(), "Morey".to_string()));
+    app.metadata.push(("MCU".to_string(), format!("{:.1}", mcu)));
+    app.metadata.push(("Color Description".to_string(), color_desc.to_string()));
 }
 
-fn render_mash(ui: &mut egui::Ui) {
-    ui.heading(RichText::new("💧 Mash Water Calculator").color(colors::SADDLE_BROWN));
-    ui.label("Calculate water volumes for mashing");
-    ui.add_space(10.0);
+fn calc_mash(app: &mut MazerionApp) {
+    let is_metric = matches!(app.state.unit_system, UnitSystem::Metric);
 
-    ui.label("Mash calculator - coming soon");
+    let target_temp_val = match Decimal::from_str(&app.mash_target_temp) {
+        Ok(v) => v,
+        _ => {
+            app.result = Some("❌ Invalid target temperature".to_string());
+            return;
+        }
+    };
+
+    let grain_temp_val = match Decimal::from_str(&app.grain_temp) {
+        Ok(v) => v,
+        _ => {
+            app.result = Some("❌ Invalid grain temperature".to_string());
+            return;
+        }
+    };
+
+    let grain_weight_val = match Decimal::from_str(&app.grain_weight) {
+        Ok(v) if v > Decimal::ZERO => v,
+        _ => {
+            app.result = Some("❌ Invalid grain weight".to_string());
+            return;
+        }
+    };
+
+    let ratio_val = match Decimal::from_str(&app.mash_ratio) {
+        Ok(v) if v > Decimal::ZERO => v,
+        _ => {
+            app.result = Some("❌ Invalid water ratio".to_string());
+            return;
+        }
+    };
+
+    // Convert imperial temps to celsius for calculation
+    let (target_c, grain_c) = if is_metric {
+        (target_temp_val, grain_temp_val)
+    } else {
+        let target_c = (target_temp_val - Decimal::from(32)) * Decimal::new(5, 0) / Decimal::new(9, 0);
+        let grain_c = (grain_temp_val - Decimal::from(32)) * Decimal::new(5, 0) / Decimal::new(9, 0);
+        (target_c, grain_c)
+    };
+
+    // Convert ratio to L/kg if needed
+    let ratio_l_kg = if is_metric {
+        ratio_val
+    } else {
+        // qt/lb to L/kg: 1 qt/lb = 2.0864 L/kg
+        ratio_val * Decimal::new(20864, 4)
+    };
+
+    // Strike temp = target + (0.2/ratio) × (target - grain)
+    let temp_diff = target_c - grain_c;
+    let thermal_constant = Decimal::new(2, 1) / ratio_l_kg;
+    let strike_temp_c = target_c + (thermal_constant * temp_diff);
+
+    // Water volume
+    let water_volume_l = grain_weight_val * ratio_l_kg;
+
+    // Convert back to user units for display
+    let (strike_display, water_display) = if is_metric {
+        (
+            format!("{:.1}°C", strike_temp_c),
+            format!("{:.2} L", water_volume_l)
+        )
+    } else {
+        let strike_f = (strike_temp_c * Decimal::new(9, 0) / Decimal::new(5, 0)) + Decimal::from(32);
+        let water_gal = water_volume_l * Decimal::new(264172, 6);
+        (
+            format!("{:.1}°F", strike_f),
+            format!("{:.2} gal", water_gal)
+        )
+    };
+
+    app.result = Some(format!("Strike Water: {}", strike_display));
+    app.warnings.clear();
+    app.metadata.clear();
+    app.metadata.push(("Strike Temperature".to_string(), strike_display));
+    app.metadata.push(("Water Volume".to_string(), water_display));
+    app.metadata.push(("Mash Ratio".to_string(), if is_metric {
+        format!("{:.2} L/kg", ratio_l_kg)
+    } else {
+        format!("{:.2} qt/lb", ratio_val)
+    }));
+
+    if strike_temp_c > Decimal::from(80) {
+        app.warnings.push("Strike temp >80°C (176°F) may extract tannins".to_string());
+    }
+    if strike_temp_c < Decimal::from(50) {
+        app.warnings.push("Strike temp <50°C (122°F) may be too cold".to_string());
+    }
 }
 
-fn render_efficiency(ui: &mut egui::Ui) {
-    ui.heading(RichText::new("📊 Brewhouse Efficiency").color(colors::SADDLE_BROWN));
-    ui.label("Calculate extraction efficiency");
-    ui.add_space(10.0);
+fn calc_efficiency(app: &mut MazerionApp) {
+    let is_metric = matches!(app.state.unit_system, UnitSystem::Metric);
 
-    ui.label("Efficiency calculator - coming soon");
+    let grain_weight_val = match Decimal::from_str(&app.grain_weight) {
+        Ok(v) if v > Decimal::ZERO => v,
+        _ => {
+            app.result = Some("❌ Invalid grain weight".to_string());
+            return;
+        }
+    };
+
+    let ppg_val = match Decimal::from_str(&app.grain_ppg) {
+        Ok(v) if v > Decimal::ZERO => v,
+        _ => {
+            app.result = Some("❌ Invalid PPG".to_string());
+            return;
+        }
+    };
+
+    let gravity_val = match Decimal::from_str(&app.measured_gravity) {
+        Ok(v) if v >= Decimal::ONE => v,
+        _ => {
+            app.result = Some("❌ Invalid measured gravity".to_string());
+            return;
+        }
+    };
+
+    let volume_val = match Decimal::from_str(&app.beer_volume) {
+        Ok(v) if v > Decimal::ZERO => v,
+        _ => {
+            app.result = Some("❌ Invalid volume".to_string());
+            return;
+        }
+    };
+
+    // Convert to Imperial for calculation
+    let weight_lbs = if is_metric {
+        grain_weight_val * Decimal::new(220462262, 8)
+    } else {
+        grain_weight_val
+    };
+
+    let volume_gal = if is_metric {
+        volume_val * Decimal::new(264172, 6)
+    } else {
+        volume_val
+    };
+
+    // Gravity points
+    let measured_points = (gravity_val - Decimal::ONE) * Decimal::from(1000);
+    let total_measured_points = measured_points * volume_gal;
+
+    // Potential points
+    let potential_points = weight_lbs * ppg_val;
+
+    // Efficiency
+    let efficiency = (total_measured_points / potential_points) * Decimal::from(100);
+
+    app.result = Some(format!("Efficiency: {:.1}%", efficiency));
+    app.warnings.clear();
+    app.metadata.clear();
+    app.metadata.push(("Brewhouse Efficiency".to_string(), format!("{:.1}%", efficiency)));
+    app.metadata.push(("Measured Points".to_string(), format!("{:.1}", measured_points)));
+    app.metadata.push(("Total Points".to_string(), format!("{:.1}", total_measured_points)));
+    app.metadata.push(("Potential Points".to_string(), format!("{:.1}", potential_points)));
+
+    if efficiency < Decimal::from(60) {
+        app.warnings.push("Low efficiency (<60%) - check mash process".to_string());
+    }
+    if efficiency > Decimal::from(90) {
+        app.warnings.push("Very high efficiency (>90%) - verify measurements".to_string());
+    }
 }

@@ -91,8 +91,10 @@ pub enum BeerCalculator {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FinishingCalculator {
     Backsweetening,
+    Stabilization,
     Sulfite,
     AcidAddition,
+    Pasteurization,
     SweetnessChart,
 }
 
@@ -100,17 +102,21 @@ impl FinishingCalculator {
     pub fn all() -> &'static [Self] {
         &[
             Self::Backsweetening,
+            Self::Stabilization,
             Self::Sulfite,
             Self::AcidAddition,
             Self::SweetnessChart,
+            Self::Pasteurization,
         ]
     }
 
     pub fn name(&self) -> &'static str {
         match self {
             Self::Backsweetening => "Backsweetening",
+            Self::Stabilization => "Stabilization",
             Self::Sulfite => "Sulfite",
             Self::AcidAddition => "Acid Addition",
+            Self::Pasteurization => "Pasteurization",
             Self::SweetnessChart => "Sweetness Guide",
         }
     }

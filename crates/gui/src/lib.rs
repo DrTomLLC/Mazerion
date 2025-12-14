@@ -8,6 +8,7 @@ pub mod tabs;
 
 pub use state::{AppState, TabView, Theme, UnitSystem, BasicCalculator, BeerCalculator};
 pub use tabs::mead_styles::MeadStyle;
+use crate::state::FinishingCalculator;
 
 pub struct MazerionApp {
     pub state: AppState,
@@ -100,6 +101,8 @@ pub struct MazerionApp {
     pub result: Option<String>,
     pub warnings: Vec<String>,
     pub metadata: Vec<(String, String)>,
+    pub finishing_calc: FinishingCalculator,
+    pub pasteurization_temp: String,
 }
 
 impl Default for MazerionApp {
@@ -195,6 +198,8 @@ impl Default for MazerionApp {
             result: None,
             warnings: Vec::new(),
             metadata: Vec::new(),
+            finishing_calc: FinishingCalculator::Backsweetening,
+            pasteurization_temp: "".to_string(),
         }
     }
 }

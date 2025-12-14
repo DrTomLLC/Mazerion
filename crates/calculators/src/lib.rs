@@ -76,6 +76,8 @@ pub use acid_addition::AcidAdditionCalculator;
 pub use stabilization::StabilizationCalculator;
 pub use tannin::TanninCalculator;
 pub use bottling::BottlingCalculator;
+pub mod pasteurization;
+pub use pasteurization::PasteurizationCalculator;
 
 // MEAD STYLE CALCULATORS
 pub mod great_mead;
