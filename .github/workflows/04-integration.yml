@@ -1,12 +1,19 @@
+# Requires secret: MAZERION_PIPELINE_TOKEN
 name: "Stage 4: Integration - Integration Tests"
 
 on:
   push:
-    branches:
-      - integration
+    branches: [integration]
   pull_request:
-    branches:
-      - integration
+    branches: [integration]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stage4-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   CARGO_TERM_COLOR: always
@@ -23,25 +30,19 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Cache dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
 
       - name: Run integration tests
-        run: cargo test --test '*' --verbose
+        run: cargo test --tests --verbose
 
-      - name: Run all tests together
-        run: cargo test --verbose
+      - name: Run full test suite
+        run: cargo test --all-targets --all-features --verbose
 
-      - name: Verify examples compile
+      - name: Verify examples compile (if present)
         run: |
           if [ -d "examples" ]; then
-            cargo build --examples
+            cargo build --examples --all-features
           else
             echo "No examples directory, skipping"
           fi
@@ -55,27 +56,41 @@ jobs:
     needs: integration-tests
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/integration' && github.event_name == 'push'
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
-      - name: Checkout code
+      - name: Checkout (for gh context)
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 1
 
-      - name: Configure git
-        run: |
-          git config user.name "GitHub Actions Bot"
-          git config user.email "actions@github.com"
-
-      - name: Create promotion PR to bench
+      - name: Create/Find PR integration -> bench and enable auto-merge
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.MAZERION_PIPELINE_TOKEN }}
+          REPO: ${{ github.repository }}
+          HEAD: integration
+          BASE: bench
+        shell: bash
         run: |
-          git fetch origin bench || git push origin integration:bench
-          gh pr create \
-            --base bench \
-            --head integration \
-            --title "Auto-promote: integration → bench" \
-            --body "Automatic promotion from Stage 4 (integration) to Stage 5 (bench). All integration tests passed." \
-            || echo "PR may already exist"
-          gh pr merge integration --auto --merge --delete-branch=false || true
+          set -euo pipefail
+
+          PR_URL="$(gh pr create \
+            --repo "$REPO" \
+            --base "$BASE" \
+            --head "$HEAD" \
+            --title "Auto-promote: ${HEAD} → ${BASE}" \
+            --body "Automatic promotion from Stage 4 (${HEAD}) to Stage 5 (${BASE}). All integration tests passed." \
+            --json url -q .url 2>/dev/null || true)"
+
+          if [ -z "$PR_URL" ]; then
+            PR_URL="$(gh pr list --repo "$REPO" --base "$BASE" --head "$HEAD" --state open --json url -q '.[0].url' || true)"
+          fi
+
+          if [ -z "$PR_URL" ]; then
+            echo "❌ Could not create or locate an open PR for ${HEAD} -> ${BASE}"
+            exit 1
+          fi
+
+          echo "Using PR: $PR_URL"
+          gh pr merge "$PR_URL" --auto --merge --delete-branch=false
