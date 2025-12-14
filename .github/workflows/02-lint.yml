@@ -1,12 +1,19 @@
+# Requires secret: MAZERION_PIPELINE_TOKEN
 name: "Stage 2: Lint - Code Quality"
 
 on:
   push:
-    branches:
-      - lint
+    branches: [lint]
   pull_request:
-    branches:
-      - lint
+    branches: [lint]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stage2-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   CARGO_TERM_COLOR: always
@@ -20,25 +27,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Rust toolchain
+      - name: Install Rust toolchain (clippy)
         uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
 
-      - name: Cache dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
 
       - name: Run Clippy (deny warnings)
         run: cargo clippy --all-targets --all-features -- -D warnings
 
-      - name: Check for compiler warnings
-        run: cargo build --all-targets --all-features 2>&1 | tee build.log && ! grep -i "warning" build.log
+      - name: Check for compiler warnings (workspace)
+        run: |
+          set -euo pipefail
+          cargo build --all-targets --all-features 2>&1 | tee build.log
+          if grep -i "warning:" build.log; then
+            echo "❌ Compilation warnings detected"
+            exit 1
+          fi
+          echo "✅ No compilation warnings detected"
 
       - name: Report success
         if: success()
@@ -49,27 +57,41 @@ jobs:
     needs: clippy
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/lint' && github.event_name == 'push'
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
-      - name: Checkout code
+      - name: Checkout (for gh context)
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 1
 
-      - name: Configure git
-        run: |
-          git config user.name "GitHub Actions Bot"
-          git config user.email "actions@github.com"
-
-      - name: Create promotion PR to test
+      - name: Create/Find PR lint -> test and enable auto-merge
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.MAZERION_PIPELINE_TOKEN }}
+          REPO: ${{ github.repository }}
+          HEAD: lint
+          BASE: test
+        shell: bash
         run: |
-          git fetch origin test || git push origin lint:test
-          gh pr create \
-            --base test \
-            --head lint \
-            --title "Auto-promote: lint → test" \
-            --body "Automatic promotion from Stage 2 (lint) to Stage 3 (test). Clippy checks passed with zero warnings." \
-            || echo "PR may already exist"
-          gh pr merge lint --auto --merge --delete-branch=false || true
+          set -euo pipefail
+
+          PR_URL="$(gh pr create \
+            --repo "$REPO" \
+            --base "$BASE" \
+            --head "$HEAD" \
+            --title "Auto-promote: ${HEAD} → ${BASE}" \
+            --body "Automatic promotion from Stage 2 (${HEAD}) to Stage 3 (${BASE}). Clippy checks passed with zero warnings." \
+            --json url -q .url 2>/dev/null || true)"
+
+          if [ -z "$PR_URL" ]; then
+            PR_URL="$(gh pr list --repo "$REPO" --base "$BASE" --head "$HEAD" --state open --json url -q '.[0].url' || true)"
+          fi
+
+          if [ -z "$PR_URL" ]; then
+            echo "❌ Could not create or locate an open PR for ${HEAD} -> ${BASE}"
+            exit 1
+          fi
+
+          echo "Using PR: $PR_URL"
+          gh pr merge "$PR_URL" --auto --merge --delete-branch=false
