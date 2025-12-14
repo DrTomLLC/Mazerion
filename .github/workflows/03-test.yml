@@ -1,12 +1,19 @@
+# Requires secret: MAZERION_PIPELINE_TOKEN
 name: "Stage 3: Test - Unit Tests"
 
 on:
   push:
-    branches:
-      - test
+    branches: [test]
   pull_request:
-    branches:
-      - test
+    branches: [test]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stage3-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   CARGO_TERM_COLOR: always
@@ -24,35 +31,37 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install cargo-tarpaulin
-        run: cargo install cargo-tarpaulin
-
-      - name: Cache dependencies
-        uses: actions/cache@v4
+        uses: taiki-e/install-action@v2
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          tool: cargo-tarpaulin
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
 
       - name: Run unit tests
         run: cargo test --lib --verbose
 
-      - name: Run tests with coverage
-        run: cargo tarpaulin --lib --out Xml --output-dir coverage
+      - name: Run tests with coverage (tarpaulin)
+        run: |
+          set -euo pipefail
+          cargo tarpaulin --lib --out Xml --output-dir coverage
 
       - name: Check coverage threshold (70%)
         run: |
-          COVERAGE=$(grep -oP 'line-rate="\K[0-9.]+' coverage/cobertura.xml | head -1)
-          COVERAGE_PCT=$(echo "$COVERAGE * 100" | bc)
-          echo "Coverage: ${COVERAGE_PCT}%"
-          if (( $(echo "$COVERAGE_PCT < 70" | bc -l) )); then
-            echo "❌ Coverage ${COVERAGE_PCT}% is below 70% threshold"
-            exit 1
-          fi
-          echo "✅ Coverage ${COVERAGE_PCT}% meets minimum requirement"
+          set -euo pipefail
+          python - <<'PY'
+          import xml.etree.ElementTree as ET
+          path = "coverage/cobertura.xml"
+          root = ET.parse(path).getroot()
+          rate = float(root.attrib.get("line-rate", "0.0"))
+          pct = rate * 100.0
+          print(f"Coverage: {pct:.2f}%")
+          if pct < 70.0:
+              raise SystemExit("❌ Coverage below 70% threshold")
+          print("✅ Coverage meets minimum requirement")
+          PY
 
-      - name: Upload coverage reports
+      - name: Upload coverage reports (optional)
         uses: codecov/codecov-action@v4
         with:
           files: ./coverage/cobertura.xml
@@ -67,27 +76,41 @@ jobs:
     needs: unit-tests
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/test' && github.event_name == 'push'
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
-      - name: Checkout code
+      - name: Checkout (for gh context)
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 1
 
-      - name: Configure git
-        run: |
-          git config user.name "GitHub Actions Bot"
-          git config user.email "actions@github.com"
-
-      - name: Create promotion PR to integration
+      - name: Create/Find PR test -> integration and enable auto-merge
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.MAZERION_PIPELINE_TOKEN }}
+          REPO: ${{ github.repository }}
+          HEAD: test
+          BASE: integration
+        shell: bash
         run: |
-          git fetch origin integration || git push origin test:integration
-          gh pr create \
-            --base integration \
-            --head test \
-            --title "Auto-promote: test → integration" \
-            --body "Automatic promotion from Stage 3 (test) to Stage 4 (integration). All unit tests passed with 70%+ coverage." \
-            || echo "PR may already exist"
-          gh pr merge test --auto --merge --delete-branch=false || true
+          set -euo pipefail
+
+          PR_URL="$(gh pr create \
+            --repo "$REPO" \
+            --base "$BASE" \
+            --head "$HEAD" \
+            --title "Auto-promote: ${HEAD} → ${BASE}" \
+            --body "Automatic promotion from Stage 3 (${HEAD}) to Stage 4 (${BASE}). All unit tests passed with 70%+ coverage." \
+            --json url -q .url 2>/dev/null || true)"
+
+          if [ -z "$PR_URL" ]; then
+            PR_URL="$(gh pr list --repo "$REPO" --base "$BASE" --head "$HEAD" --state open --json url -q '.[0].url' || true)"
+          fi
+
+          if [ -z "$PR_URL" ]; then
+            echo "❌ Could not create or locate an open PR for ${HEAD} -> ${BASE}"
+            exit 1
+          fi
+
+          echo "Using PR: $PR_URL"
+          gh pr merge "$PR_URL" --auto --merge --delete-branch=false
