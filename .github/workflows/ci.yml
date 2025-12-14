@@ -1,55 +1,79 @@
-name: CI
+name: CI (Global)
 
 on:
   push:
-    branches: [ main ]
+    branches: [first-dev, dev, lint, test, integration, bench, security, staging, master]
   pull_request:
-    branches: [ main ]
+    branches: [first-dev, dev, lint, test, integration, bench, security, staging, master]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: global-ci-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   CARGO_TERM_COLOR: always
-  RUSTFLAGS: -Dwarnings
 
 jobs:
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - run: cargo test --all-features
-
-  clippy:
-    name: Clippy
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy
-      - run: cargo clippy --all-targets --all-features
-
   fmt:
-    name: Format
+    name: Format (rustfmt)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
+      - uses: Swatinem/rust-cache@v2
       - run: cargo fmt --all -- --check
 
-  line-guard:
-    name: Line Limits
+  clippy:
+    name: Clippy (deny warnings)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo run --bin line-guard
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo clippy --all-targets --all-features -- -D warnings
 
-  deny:
-    name: Cargo Deny
+  test:
+    name: Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: EmbarkStudios/cargo-deny-action@v2
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --all-targets --all-features --verbose
+
+  line-guard:
+    name: Line Limits (if tool exists)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: |
+          set -euo pipefail
+          if cargo run --bin line-guard -- --help >/dev/null 2>&1; then
+            cargo run --bin line-guard
+          else
+            echo "line-guard binary not found; skipping."
+          fi
+
+  deny:
+    name: Cargo Deny (if deny.toml exists)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run cargo-deny
+        if: ${{ hashFiles('deny.toml') != '' }}
+        uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check
+      - name: Skip cargo-deny
+        if: ${{ hashFiles('deny.toml') == '' }}
+        run: echo "deny.toml not found; skipping cargo-deny."

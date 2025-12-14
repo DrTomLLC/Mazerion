@@ -1,12 +1,19 @@
+# Requires secret: MAZERION_PIPELINE_TOKEN
 name: "Stage 1: Dev - Formatting"
 
 on:
   push:
-    branches:
-      - dev
+    branches: [dev]
   pull_request:
-    branches:
-      - dev
+    branches: [dev]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stage1-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   CARGO_TERM_COLOR: always
@@ -20,10 +27,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Rust toolchain
+      - name: Install Rust toolchain (rustfmt)
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
 
       - name: Check formatting
         run: cargo fmt --all -- --check
@@ -40,27 +50,41 @@ jobs:
     needs: format
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/dev' && github.event_name == 'push'
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
-      - name: Checkout code
+      - name: Checkout (for gh context)
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 1
 
-      - name: Configure git
-        run: |
-          git config user.name "GitHub Actions Bot"
-          git config user.email "actions@github.com"
-
-      - name: Create promotion PR to lint
+      - name: Create/Find PR dev -> lint and enable auto-merge
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.MAZERION_PIPELINE_TOKEN }}
+          REPO: ${{ github.repository }}
+          HEAD: dev
+          BASE: lint
+        shell: bash
         run: |
-          git fetch origin lint || git push origin dev:lint
-          gh pr create \
-            --base lint \
-            --head dev \
-            --title "Auto-promote: dev → lint" \
-            --body "Automatic promotion from Stage 1 (dev) to Stage 2 (lint). Formatting checks passed." \
-            || echo "PR may already exist"
-          gh pr merge dev --auto --merge --delete-branch=false || true
+          set -euo pipefail
+
+          PR_URL="$(gh pr create \
+            --repo "$REPO" \
+            --base "$BASE" \
+            --head "$HEAD" \
+            --title "Auto-promote: ${HEAD} → ${BASE}" \
+            --body "Automatic promotion from Stage 1 (${HEAD}) to Stage 2 (${BASE}). Formatting checks passed." \
+            --json url -q .url 2>/dev/null || true)"
+
+          if [ -z "$PR_URL" ]; then
+            PR_URL="$(gh pr list --repo "$REPO" --base "$BASE" --head "$HEAD" --state open --json url -q '.[0].url' || true)"
+          fi
+
+          if [ -z "$PR_URL" ]; then
+            echo "❌ Could not create or locate an open PR for ${HEAD} -> ${BASE}"
+            exit 1
+          fi
+
+          echo "Using PR: $PR_URL"
+          gh pr merge "$PR_URL" --auto --merge --delete-branch=false

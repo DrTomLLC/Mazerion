@@ -1,12 +1,19 @@
+# Requires secret: MAZERION_PIPELINE_TOKEN
 name: "Stage 7: Staging - Pre-Production"
 
 on:
   push:
-    branches:
-      - staging
+    branches: [staging]
   pull_request:
-    branches:
-      - staging
+    branches: [staging]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stage7-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   CARGO_TERM_COLOR: always
@@ -23,59 +30,43 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Cache dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
 
       - name: Run full test suite
-        run: cargo test --all --verbose
+        run: cargo test --all-targets --all-features --verbose
 
       - name: Build documentation
         run: cargo doc --no-deps --all-features
 
-      - name: Check documentation coverage
-        run: |
-          cargo rustdoc -- -D missing_docs || echo "⚠️ Some public items lack documentation"
+      - name: Check documentation coverage (report-only)
+        run: cargo rustdoc --all-features -- -D missing_docs || echo "⚠️ Some public items lack documentation"
 
-      - name: Build release binary
-        run: cargo build --release
+      - name: Build release artifacts (if any)
+        run: cargo build --release --all-features
 
-      - name: Verify release binary works
+      - name: Verify release binary works (if present)
         run: |
           if [ -f "target/release/mazerion" ]; then
-            ./target/release/mazerion --help || echo "Binary may not have --help flag yet"
-            echo "✅ Release binary built successfully"
+            ./target/release/mazerion --help || echo "Binary may not have --help yet"
+            echo "✅ Release binary executed"
           else
             echo "⚠️ No mazerion binary found - may be a library crate"
           fi
 
-      - name: Build all examples
+      - name: Build all examples (if present)
         run: |
           if [ -d "examples" ]; then
-            cargo build --examples --release
-            echo "✅ All examples built successfully"
+            cargo build --examples --release --all-features
+            echo "✅ Examples built"
           else
             echo "No examples directory"
           fi
 
-      - name: Check package metadata
+      - name: Validate Cargo metadata
         run: |
           cargo metadata --format-version 1 > /dev/null
-          echo "✅ Package metadata is valid"
-
-      - name: Verify Cargo.toml completeness
-        run: |
-          for field in name version authors edition description; do
-            if ! grep -q "^$field" Cargo.toml; then
-              echo "⚠️ Cargo.toml missing $field"
-            fi
-          done
-          echo "✅ Cargo.toml validation complete"
+          echo "✅ Cargo metadata OK"
 
       - name: Report success
         if: success()
@@ -86,27 +77,41 @@ jobs:
     needs: comprehensive-validation
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/staging' && github.event_name == 'push'
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
-      - name: Checkout code
+      - name: Checkout (for gh context)
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 1
 
-      - name: Configure git
-        run: |
-          git config user.name "GitHub Actions Bot"
-          git config user.email "actions@github.com"
-
-      - name: Create promotion PR to master
+      - name: Create/Find PR staging -> master and enable auto-merge
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.MAZERION_PIPELINE_TOKEN }}
+          REPO: ${{ github.repository }}
+          HEAD: staging
+          BASE: master
+        shell: bash
         run: |
-          git fetch origin master || git push origin staging:master
-          gh pr create \
-            --base master \
-            --head staging \
-            --title "Auto-promote: staging → master" \
-            --body "🎯 **PRODUCTION PROMOTION**\n\nAutomatic promotion from Stage 7 (staging) to Stage 8 (master).\n\n**All quality gates passed:**\n- ✅ Compilation\n- ✅ Formatting\n- ✅ Linting (zero warnings)\n- ✅ Unit tests (70%+ coverage)\n- ✅ Integration tests\n- ✅ Performance benchmarks\n- ✅ Security audit\n- ✅ Pre-production validation\n\n**Ready for production release.**" \
-            || echo "PR may already exist"
-          gh pr merge staging --auto --merge --delete-branch=false || true
+          set -euo pipefail
+
+          PR_URL="$(gh pr create \
+            --repo "$REPO" \
+            --base "$BASE" \
+            --head "$HEAD" \
+            --title "Auto-promote: ${HEAD} → ${BASE}" \
+            --body "🎯 PRODUCTION PROMOTION: Stage 7 (${HEAD}) → Stage 8 (${BASE}). All staging gates passed." \
+            --json url -q .url 2>/dev/null || true)"
+
+          if [ -z "$PR_URL" ]; then
+            PR_URL="$(gh pr list --repo "$REPO" --base "$BASE" --head "$HEAD" --state open --json url -q '.[0].url' || true)"
+          fi
+
+          if [ -z "$PR_URL" ]; then
+            echo "❌ Could not create or locate an open PR for ${HEAD} -> ${BASE}"
+            exit 1
+          fi
+
+          echo "Using PR: $PR_URL"
+          gh pr merge "$PR_URL" --auto --merge --delete-branch=false

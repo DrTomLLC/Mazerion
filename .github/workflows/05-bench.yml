@@ -1,12 +1,19 @@
+# Requires secret: MAZERION_PIPELINE_TOKEN
 name: "Stage 5: Bench - Performance"
 
 on:
   push:
-    branches:
-      - bench
+    branches: [bench]
   pull_request:
-    branches:
-      - bench
+    branches: [bench]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stage5-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   CARGO_TERM_COLOR: always
@@ -23,69 +30,63 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Cache dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
 
-      - name: Install cargo-criterion (if benches exist)
+      - name: Run benchmarks (if present)
         run: |
-          if [ -d "benches" ]; then
-            cargo install cargo-criterion || true
-          fi
-
-      - name: Run benchmarks
-        run: |
+          set -euo pipefail
           if [ -d "benches" ]; then
             cargo bench --no-fail-fast
+            echo "✅ Benchmarks executed"
           else
-            echo "No benchmarks directory - creating placeholder"
-            mkdir -p benches
-            echo "// Placeholder benchmark" > benches/placeholder.rs
-            echo "✅ No performance regressions (no benchmarks defined yet)"
+            echo "No benches/ directory found; skipping benchmarks (no regressions check possible yet)."
           fi
-
-      - name: Check for performance regressions
-        run: |
-          if [ -d "target/criterion" ]; then
-            echo "Benchmark results generated - manual review recommended"
-          fi
-          echo "✅ Performance validation passed"
 
       - name: Report success
         if: success()
-        run: echo "✅ Stage 5 (bench) - Performance benchmarks completed"
+        run: echo "✅ Stage 5 (bench) - Performance validation completed"
 
   auto-promote:
     name: Auto-promote to security
     needs: benchmarks
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/bench' && github.event_name == 'push'
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
-      - name: Checkout code
+      - name: Checkout (for gh context)
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 1
 
-      - name: Configure git
-        run: |
-          git config user.name "GitHub Actions Bot"
-          git config user.email "actions@github.com"
-
-      - name: Create promotion PR to security
+      - name: Create/Find PR bench -> security and enable auto-merge
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.MAZERION_PIPELINE_TOKEN }}
+          REPO: ${{ github.repository }}
+          HEAD: bench
+          BASE: security
+        shell: bash
         run: |
-          git fetch origin security || git push origin bench:security
-          gh pr create \
-            --base security \
-            --head bench \
-            --title "Auto-promote: bench → security" \
-            --body "Automatic promotion from Stage 5 (bench) to Stage 6 (security). Performance benchmarks completed." \
-            || echo "PR may already exist"
-          gh pr merge bench --auto --merge --delete-branch=false || true
+          set -euo pipefail
+
+          PR_URL="$(gh pr create \
+            --repo "$REPO" \
+            --base "$BASE" \
+            --head "$HEAD" \
+            --title "Auto-promote: ${HEAD} → ${BASE}" \
+            --body "Automatic promotion from Stage 5 (${HEAD}) to Stage 6 (${BASE}). Performance validation completed." \
+            --json url -q .url 2>/dev/null || true)"
+
+          if [ -z "$PR_URL" ]; then
+            PR_URL="$(gh pr list --repo "$REPO" --base "$BASE" --head "$HEAD" --state open --json url -q '.[0].url' || true)"
+          fi
+
+          if [ -z "$PR_URL" ]; then
+            echo "❌ Could not create or locate an open PR for ${HEAD} -> ${BASE}"
+            exit 1
+          fi
+
+          echo "Using PR: $PR_URL"
+          gh pr merge "$PR_URL" --auto --merge --delete-branch=false
