@@ -1,0 +1,129 @@
+# Requires secret: MAZERION_PIPELINE_TOKEN
+name: "Stage 6: Security - Vulnerability Scan"
+
+on:
+  push:
+    branches: [security]
+  pull_request:
+    branches: [security]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stage6-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install security tools
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit,cargo-deny
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run cargo-audit
+        run: cargo audit
+
+      - name: Ensure deny.toml exists (minimal policy if missing)
+        run: |
+          set -euo pipefail
+          if [ ! -f "deny.toml" ]; then
+            cat > deny.toml <<'EOF'
+  [advisories]
+  vulnerability = "deny"
+  unmaintained = "warn"
+  unsound = "warn"
+  yanked = "deny"
+  
+  [licenses]
+  unlicensed = "deny"
+  allow = ["MIT", "Apache-2.0", "BSD-3-Clause", "ISC", "0BSD"]
+  copyleft = "warn"
+  
+  [bans]
+  multiple-versions = "warn"
+  wildcards = "allow"
+  
+  [sources]
+  unknown-registry = "deny"
+  unknown-git = "deny"
+  EOF
+  fi
+
+- name: Run cargo-deny
+  run: cargo deny check
+
+- name: Check for unsafe code (report only)
+  run: |
+    set -euo pipefail
+    echo "Scanning for unsafe blocks..."
+    UNSAFE_COUNT="$(grep -R --line-number --include='*.rs' 'unsafe' . | grep -vE '^\s*//' | wc -l || true)"
+    echo "Found ${UNSAFE_COUNT} occurrences of 'unsafe' (including declarations/uses)."
+    if [ "${UNSAFE_COUNT}" -gt 0 ]; then
+      echo "⚠️ Unsafe usage detected; manual review recommended."
+    fi
+
+- name: Report success
+  if: success()
+  run: echo "✅ Stage 6 (security) - Security audit passed"
+
+auto-promote:
+  name: Auto-promote to staging
+  needs: security-audit
+  runs-on: ubuntu-latest
+  if: github.ref == 'refs/heads/security' && github.event_name == 'push'
+  permissions:
+    contents: read
+    pull-requests: write
+  steps:
+    - name: Checkout (for gh context)
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+
+    - name: Create/Find PR security -> staging and enable auto-merge
+      env:
+        GH_TOKEN: ${{ secrets.MAZERION_PIPELINE_TOKEN }}
+        REPO: ${{ github.repository }}
+        HEAD: security
+        BASE: staging
+      shell: bash
+      run: |
+        set -euo pipefail
+        
+        PR_URL="$(gh pr create \
+          --repo "$REPO" \
+          --base "$BASE" \
+          --head "$HEAD" \
+          --title "Auto-promote: ${HEAD} → ${BASE}" \
+          --body "Automatic promotion from Stage 6 (${HEAD}) to Stage 7 (${BASE}). Security audit passed." \
+          --json url -q .url 2>/dev/null || true)"
+        
+        if [ -z "$PR_URL" ]; then
+          PR_URL="$(gh pr list --repo "$REPO" --base "$BASE" --head "$HEAD" --state open --json url -q '.[0].url' || true)"
+        fi
+        
+        if [ -z "$PR_URL" ]; then
+          echo "❌ Could not create or locate an open PR for ${HEAD} -> ${BASE}"
+          exit 1
+        fi
+        
+        echo "Using PR: $PR_URL"
+        gh pr merge "$PR_URL" --auto --merge --delete-branch=false

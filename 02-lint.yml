@@ -1,0 +1,97 @@
+# Requires secret: MAZERION_PIPELINE_TOKEN
+name: "Stage 2: Lint - Code Quality"
+
+on:
+  push:
+    branches: [lint]
+  pull_request:
+    branches: [lint]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stage2-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  clippy:
+    name: Clippy Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain (clippy)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run Clippy (deny warnings)
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Check for compiler warnings (workspace)
+        run: |
+          set -euo pipefail
+          cargo build --all-targets --all-features 2>&1 | tee build.log
+          if grep -i "warning:" build.log; then
+            echo "❌ Compilation warnings detected"
+            exit 1
+          fi
+          echo "✅ No compilation warnings detected"
+
+      - name: Report success
+        if: success()
+        run: echo "✅ Stage 2 (lint) - Code quality checks passed"
+
+  auto-promote:
+    name: Auto-promote to test
+    needs: clippy
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/lint' && github.event_name == 'push'
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout (for gh context)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Create/Find PR lint -> test and enable auto-merge
+        env:
+          GH_TOKEN: ${{ secrets.MAZERION_PIPELINE_TOKEN }}
+          REPO: ${{ github.repository }}
+          HEAD: lint
+          BASE: test
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          PR_URL="$(gh pr create \
+            --repo "$REPO" \
+            --base "$BASE" \
+            --head "$HEAD" \
+            --title "Auto-promote: ${HEAD} → ${BASE}" \
+            --body "Automatic promotion from Stage 2 (${HEAD}) to Stage 3 (${BASE}). Clippy checks passed with zero warnings." \
+            --json url -q .url 2>/dev/null || true)"
+
+          if [ -z "$PR_URL" ]; then
+            PR_URL="$(gh pr list --repo "$REPO" --base "$BASE" --head "$HEAD" --state open --json url -q '.[0].url' || true)"
+          fi
+
+          if [ -z "$PR_URL" ]; then
+            echo "❌ Could not create or locate an open PR for ${HEAD} -> ${BASE}"
+            exit 1
+          fi
+
+          echo "Using PR: $PR_URL"
+          gh pr merge "$PR_URL" --auto --merge --delete-branch=false
