@@ -2,7 +2,7 @@
 // Uses CORRECT metric formula with proper unit conversions
 
 use mazerion_core::{
-    register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
+    register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result,
 };
 use rust_decimal::Decimal;
 

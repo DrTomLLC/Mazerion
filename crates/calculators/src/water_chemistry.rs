@@ -1,7 +1,7 @@
 //! Water chemistry calculator for mineral adjustments
 
 use mazerion_core::{
-    register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
+    register_calculator, CalcInput, CalcResult, Calculator, Measurement, Result, Unit,
 };
 use rust_decimal::Decimal;
 

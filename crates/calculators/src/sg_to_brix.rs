@@ -1,7 +1,7 @@
 // Convert specific gravity to degrees Brix using cubic polynomial.
 
 use mazerion_core::{
-    register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
+    register_calculator, CalcInput, CalcResult, Calculator, Measurement, Result, Unit,
     Validator,
 };
 use rust_decimal::Decimal;

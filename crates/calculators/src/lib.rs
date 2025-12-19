@@ -107,8 +107,16 @@ pub mod batch_cost;
 pub mod water_chemistry;
 pub mod priming_alternatives;
 pub mod upscaling;
+mod gallons_to_bottles;
+mod waste;
+mod gallons_to_bottles_with_losses;
+
 pub use upscaling::UpscalingCalculator;
 
 pub use batch_cost::BatchCostCalculator;
 pub use water_chemistry::WaterChemistryCalculator;
 pub use priming_alternatives::PrimingAlternativesCalculator;
+
+
+pub use gallons_to_bottles::GallonsToBottles;
+pub use waste::WasteCalculator;

@@ -2,6 +2,7 @@ use mazerion_core::{
     register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
 };
 use rust_decimal::Decimal;
+use std::str::FromStr;
 
 #[derive(Default)]
 pub struct MetheglinCalculator;
@@ -34,18 +35,18 @@ impl Calculator for MetheglinCalculator {
             .ok_or_else(|| Error::MissingInput("target_abv required".into()))?;
         let spice_level = input.get_param("spice_level").unwrap_or("medium");
 
-        let vol: Decimal = volume.parse()
+        let vol: Decimal = Decimal::from_str(volume)
             .map_err(|_| Error::Parse("Invalid volume".into()))?;
-        let abv: Decimal = target_abv.parse()
+        let abv: Decimal = Decimal::from_str(target_abv)
             .map_err(|_| Error::Parse("Invalid target_abv".into()))?;
 
-        let honey_needed = vol * abv * Decimal::new(135, 0);
+        // FIXED: 33 g per L per % ABV
+        let honey_needed = vol * abv * Decimal::from(33);
 
-        // Spice dosage per liter (varies by spice type)
         let spice_per_liter = match spice_level {
-            "light" => Decimal::new(5, 1),      // 0.5 g/L
-            "medium" => Decimal::new(10, 1),    // 1.0 g/L
-            "heavy" => Decimal::new(20, 1),     // 2.0 g/L
+            "light" => Decimal::new(5, 1),
+            "medium" => Decimal::new(10, 1),
+            "heavy" => Decimal::new(20, 1),
             _ => Decimal::new(10, 1),
         };
 

@@ -1,20 +1,18 @@
 //! Mazerion GUI using egui
-//! SAFETY-CRITICAL: Zero panics, production-ready
-
 use eframe::egui::{self, Color32, RichText, CornerRadius};
 
 pub mod state;
 pub mod tabs;
 
 pub use state::{AppState, TabView, Theme, UnitSystem, BasicCalculator, BeerCalculator};
-pub use tabs::mead_styles::MeadStyle;
-use crate::state::FinishingCalculator;
+pub use crate::tabs::MeadStyle;
 
 pub struct MazerionApp {
     pub state: AppState,
     pub og: String,
     pub fg: String,
     pub brix: String,
+    pub sg_for_brix: String,
     pub current_vol: String,
     pub current_abv: String,
     pub target_abv: String,
@@ -33,6 +31,7 @@ pub struct MazerionApp {
     pub target_co2: String,
     pub carb_method: String,
     pub sugar_type: String,
+    pub beer_calc: BeerCalculator,
     pub hop_weight: String,
     pub alpha_acid: String,
     pub boil_time: String,
@@ -56,6 +55,7 @@ pub struct MazerionApp {
     pub current_ph: String,
     pub target_ph_acid: String,
     pub acid_type: String,
+    pub pasteurization_temp: String,
     pub mead_style: MeadStyle,
     pub mead_volume: String,
     pub mead_target_abv: String,
@@ -72,6 +72,18 @@ pub struct MazerionApp {
     pub pepper_type: String,
     pub heat_level: String,
     pub utility_calc: crate::tabs::UtilityCalculator,
+    pub trial_volume: String,
+    pub trial_addition: String,
+    pub batch_volume_bench: String,
+    pub original_recipe_size: String,
+    pub target_batch_size: String,
+    pub original_amount: String,
+    pub upscale_unit: String,
+    pub bottle_volume: String,
+    pub waste_initial_volume: String,
+    pub waste_num_rackings: String,
+    pub waste_vessel_type: String,
+    pub waste_process_type: String,
     pub honey_cost: String,
     pub fruit_cost: String,
     pub yeast_cost: String,
@@ -88,21 +100,9 @@ pub struct MazerionApp {
     pub conv_from_unit: String,
     pub conv_to_unit: String,
     pub conv_result: Option<String>,
-    pub trial_volume: String,
-    pub trial_addition: String,
-    pub batch_volume: String,
-    pub original_volume: String,
-    pub target_volume: String,
-    pub recipe_honey: String,
-    pub recipe_water: String,
-    pub recipe_fruit: String,
-    pub recipe_nutrients: String,
-    pub recipe_spices: String,
     pub result: Option<String>,
     pub warnings: Vec<String>,
     pub metadata: Vec<(String, String)>,
-    pub finishing_calc: FinishingCalculator,
-    pub pasteurization_temp: String,
 }
 
 impl Default for MazerionApp {
@@ -112,6 +112,7 @@ impl Default for MazerionApp {
             og: String::new(),
             fg: String::new(),
             brix: String::new(),
+            sg_for_brix: String::new(),
             current_vol: String::new(),
             current_abv: String::new(),
             target_abv: String::new(),
@@ -128,8 +129,9 @@ impl Default for MazerionApp {
             yn_requirement: String::new(),
             carb_temp: String::new(),
             target_co2: String::new(),
-            carb_method: "sugar".to_string(),
+            carb_method: "priming_sugar".to_string(),
             sugar_type: "corn_sugar".to_string(),
+            beer_calc: BeerCalculator::Ibu,
             hop_weight: String::new(),
             alpha_acid: String::new(),
             boil_time: String::new(),
@@ -145,7 +147,7 @@ impl Default for MazerionApp {
             sweet_vol: String::new(),
             current_sg: String::new(),
             target_sg: String::new(),
-            sweetener: "honey".to_string(),
+            sweetener: "sugar".to_string(),
             sulfite_vol: String::new(),
             ph: String::new(),
             target_so2: String::new(),
@@ -153,6 +155,7 @@ impl Default for MazerionApp {
             current_ph: String::new(),
             target_ph_acid: String::new(),
             acid_type: "tartaric".to_string(),
+            pasteurization_temp: String::new(),
             mead_style: MeadStyle::Traditional,
             mead_volume: String::new(),
             mead_target_abv: String::new(),
@@ -160,7 +163,7 @@ impl Default for MazerionApp {
             fruit_type: "strawberry".to_string(),
             juice_percent: String::new(),
             maple_percent: String::new(),
-            bochet_level: "light".to_string(),
+            bochet_level: "medium".to_string(),
             honey_percent: String::new(),
             malt_percent: String::new(),
             malt_weight: String::new(),
@@ -168,7 +171,19 @@ impl Default for MazerionApp {
             spice_level: "medium".to_string(),
             pepper_type: "jalapeno".to_string(),
             heat_level: "medium".to_string(),
-            utility_calc: crate::tabs::UtilityCalculator::UnitConverter,
+            utility_calc: crate::tabs::UtilityCalculator::BenchTrials,
+            trial_volume: String::new(),
+            trial_addition: String::new(),
+            batch_volume_bench: String::new(),
+            original_recipe_size: String::new(),
+            target_batch_size: String::new(),
+            original_amount: String::new(),
+            upscale_unit: "g".to_string(),
+            bottle_volume: String::new(),
+            waste_initial_volume: String::new(),
+            waste_num_rackings: "3".to_string(),
+            waste_vessel_type: "carboy".to_string(),
+            waste_process_type: "standard".to_string(),
             honey_cost: String::new(),
             fruit_cost: String::new(),
             yeast_cost: String::new(),
@@ -185,21 +200,9 @@ impl Default for MazerionApp {
             conv_from_unit: "liters".to_string(),
             conv_to_unit: "gallons".to_string(),
             conv_result: None,
-            trial_volume: String::new(),
-            trial_addition: String::new(),
-            batch_volume: String::new(),
-            original_volume: String::new(),
-            target_volume: String::new(),
-            recipe_honey: String::new(),
-            recipe_water: String::new(),
-            recipe_fruit: String::new(),
-            recipe_nutrients: String::new(),
-            recipe_spices: String::new(),
             result: None,
             warnings: Vec::new(),
             metadata: Vec::new(),
-            finishing_calc: FinishingCalculator::Backsweetening,
-            pasteurization_temp: "".to_string(),
         }
     }
 }
@@ -216,7 +219,7 @@ impl eframe::App for MazerionApp {
                         .size(32.0)
                         .color(c.honey_gold));
                     ui.label(RichText::new(
-                        format!("📊 46 Calculators | {} | Precision: SG {:?}, pH {:?}, Brix {:?}",
+                        format!("📊 48 Calculators | {} | Precision: SG {:?}, pH {:?}, Brix {:?}",
                                 self.state.unit_system.name(),
                                 self.state.sg_precision,
                                 self.state.ph_precision,
@@ -241,7 +244,7 @@ impl eframe::App for MazerionApp {
                     if tab_button(ui, "🍺 Beer", self.state.current_tab == TabView::Beer, &c) {
                         self.state.current_tab = TabView::Beer;
                     }
-                    if tab_button(ui, "✨ Finishing", self.state.current_tab == TabView::Finishing, &c) {
+                    if tab_button(ui, "🎨 Finishing", self.state.current_tab == TabView::Finishing, &c) {
                         self.state.current_tab = TabView::Finishing;
                     }
                     if tab_button(ui, "🍯 Mead Styles", self.state.current_tab == TabView::MeadStyles, &c) {
@@ -255,34 +258,36 @@ impl eframe::App for MazerionApp {
                     }
                 });
 
-                ui.add_space(15.0);
+                ui.add_space(10.0);
+                ui.separator();
+                ui.add_space(10.0);
 
                 egui::ScrollArea::vertical().show(ui, |ui| {
                     match self.state.current_tab {
-                        TabView::Basic => tabs::basic::render(self, ui),
-                        TabView::Advanced => tabs::advanced::render(self, ui),
-                        TabView::Brewing => tabs::brewing::render(self, ui),
-                        TabView::Beer => tabs::beer::render(self, ui),
-                        TabView::Finishing => tabs::finishing::render(self, ui),
-                        TabView::MeadStyles => tabs::mead_styles::render(self, ui),
-                        TabView::Utilities => tabs::utilities::render(self, ui),
-                        TabView::Settings => tabs::settings::render(self, ui),
+                        TabView::Basic => tabs::render_basic(self, ui),
+                        TabView::Advanced => tabs::render_advanced(self, ui),
+                        TabView::Brewing => tabs::render_brewing(self, ui),
+                        TabView::Beer => tabs::render_beer(self, ui),
+                        TabView::Finishing => tabs::render_finishing(self, ui),
+                        TabView::MeadStyles => tabs::render_mead_styles(self, ui),
+                        TabView::Utilities => tabs::render_utilities(self, ui),
+                        TabView::Settings => tabs::render_settings(self, ui),
                     }
 
                     if let Some(ref result_text) = self.result {
-                        ui.add_space(20.0);
+                        ui.add_space(15.0);
                         egui::Frame::default()
                             .fill(Color32::WHITE)
                             .stroke(egui::Stroke::new(2.0, c.forest_green))
                             .corner_radius(CornerRadius::same(8))
-                            .inner_margin(15.0)
+                            .inner_margin(12.0)
                             .show(ui, |ui| {
                                 ui.label(RichText::new(result_text)
                                     .size(28.0)
                                     .color(Color32::BLACK));
 
                                 if !self.warnings.is_empty() {
-                                    ui.add_space(10.0);
+                                    ui.add_space(8.0);
                                     for warning in &self.warnings {
                                         ui.label(RichText::new(format!("⚠️ {}", warning))
                                             .color(c.sunset_orange));

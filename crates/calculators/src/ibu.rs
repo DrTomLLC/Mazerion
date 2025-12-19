@@ -2,7 +2,6 @@ use mazerion_core::{
     register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
 };
 use rust_decimal::Decimal;
-use std::str::FromStr;
 
 #[derive(Default)]
 pub struct IbuCalculator;

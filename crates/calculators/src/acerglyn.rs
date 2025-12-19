@@ -2,6 +2,7 @@ use mazerion_core::{
     register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
 };
 use rust_decimal::Decimal;
+use std::str::FromStr;
 
 #[derive(Default)]
 pub struct AcerglynCalculator;
@@ -24,7 +25,7 @@ impl Calculator for AcerglynCalculator {
     }
 
     fn description(&self) -> &'static str {
-        "Calculate ingredients for maple syrup mead (acerglyn)"
+        "Calculate ingredients for maple mead"
     }
 
     fn calculate(&self, input: CalcInput) -> Result<CalcResult> {
@@ -32,33 +33,28 @@ impl Calculator for AcerglynCalculator {
             .ok_or_else(|| Error::MissingInput("volume required".into()))?;
         let target_abv = input.get_param("target_abv")
             .ok_or_else(|| Error::MissingInput("target_abv required".into()))?;
-        let maple_percent = input.get_param("maple_percent").unwrap_or("30");
+        let maple_percent = input.get_param("maple_percent")
+            .ok_or_else(|| Error::MissingInput("maple_percent required".into()))?;
 
-        let vol: Decimal = volume.parse()
+        let vol: Decimal = Decimal::from_str(volume)
             .map_err(|_| Error::Parse("Invalid volume".into()))?;
-        let abv: Decimal = target_abv.parse()
+        let abv: Decimal = Decimal::from_str(target_abv)
             .map_err(|_| Error::Parse("Invalid target_abv".into()))?;
-        let maple_pct: Decimal = maple_percent.parse()
+        let maple_pct: Decimal = Decimal::from_str(maple_percent)
             .map_err(|_| Error::Parse("Invalid maple_percent".into()))?;
 
-        // Maple syrup: ~165 g per liter per % ABV (more sugar than honey)
-        let maple_contribution_abv = abv * maple_pct / Decimal::from(100);
-        let honey_contribution_abv = abv - maple_contribution_abv;
+        // FIXED: 33 g per L per % ABV
+        let total_sugar_g = vol * abv * Decimal::from(33);
+        let maple_sugar_g = total_sugar_g * maple_pct / Decimal::from(100);
+        let honey_sugar_g = total_sugar_g - maple_sugar_g;
 
-        let maple_needed = vol * maple_contribution_abv * Decimal::new(165, 0);
-        let honey_needed = vol * honey_contribution_abv * Decimal::new(135, 0);
+        let maple_syrup_g = maple_sugar_g / Decimal::new(672, 3); // Maple syrup ~67.2% sugar
 
-        let mut result = CalcResult::new(Measurement::new(honey_needed, Unit::Grams));
+        let mut result = CalcResult::new(Measurement::new(honey_sugar_g, Unit::Grams));
 
         result = result
-            .with_meta("maple_syrup_g", format!("{:.0} g ({:.2} kg)", maple_needed, maple_needed / Decimal::from(1000)))
-            .with_meta("honey_g", format!("{:.0} g ({:.2} kg)", honey_needed, honey_needed / Decimal::from(1000)))
-            .with_meta("maple_abv", format!("{:.1}%", maple_contribution_abv))
-            .with_meta("honey_abv", format!("{:.1}%", honey_contribution_abv));
-
-        if maple_pct < Decimal::from(20) {
-            result = result.with_warning("Low maple percentage - may have weak maple character");
-        }
+            .with_meta("honey_g", format!("{:.0} g", honey_sugar_g))
+            .with_meta("maple_syrup_g", format!("{:.0} g", maple_syrup_g));
 
         Ok(result)
     }

@@ -24,7 +24,7 @@ impl Calculator for HydromelCalculator {
     }
 
     fn description(&self) -> &'static str {
-        "Calculate ingredients for session mead (hydromel, 3.5-7.5% ABV)"
+        "Calculate ingredients for session mead (low ABV 3.5-7.5%)"
     }
 
     fn calculate(&self, input: CalcInput) -> Result<CalcResult> {
@@ -38,22 +38,19 @@ impl Calculator for HydromelCalculator {
         let abv: Decimal = target_abv.parse()
             .map_err(|_| Error::Parse("Invalid target_abv".into()))?;
 
-        let honey_per_liter_per_abv = Decimal::new(135, 0);
-        let honey_needed = vol * abv * honey_per_liter_per_abv;
+        // FIXED: 33 g honey per liter per % ABV
+        let honey_needed = vol * abv * Decimal::from(33);
 
         let mut result = CalcResult::new(Measurement::new(honey_needed, Unit::Grams));
 
         result = result
-            .with_meta("volume", format!("{} L", vol))
-            .with_meta("target_abv", format!("{}%", abv))
-            .with_meta("style", "Hydromel (Session Mead)")
             .with_meta("honey_kg", format!("{:.2} kg", honey_needed / Decimal::from(1000)));
 
         if abv < Decimal::new(35, 1) {
-            result = result.with_warning("ABV below typical hydromel range (3.5-7.5%)");
+            result = result.with_warning("Very low ABV - may have fermentation issues");
         }
         if abv > Decimal::new(75, 1) {
-            result = result.with_warning("ABV above hydromel range - consider standard mead");
+            result = result.with_warning("High for hydromel - consider traditional mead");
         }
 
         Ok(result)

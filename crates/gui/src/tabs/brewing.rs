@@ -297,9 +297,45 @@ fn calc_carbonation(app: &mut MazerionApp) {
         }
     };
 
+    let is_metric = matches!(app.state.unit_system, crate::state::UnitSystem::Metric);
+
+    // CRITICAL FIX: Convert temperature to Celsius if in Imperial mode
+    let temp_c = if is_metric {
+        // Already in Celsius
+        app.carb_temp.clone()
+    } else {
+        // User entered Fahrenheit - convert to Celsius
+        match Decimal::from_str(&app.carb_temp) {
+            Ok(temp_f) => {
+                let temp_c = (temp_f - Decimal::from(32)) * Decimal::new(5, 0) / Decimal::new(9, 0);
+                temp_c.to_string()
+            }
+            Err(_) => {
+                app.result = Some("❌ Invalid temperature".to_string());
+                return;
+            }
+        }
+    };
+
+    // Convert volume to liters if in Imperial
+    let volume_l = if is_metric {
+        app.volume.clone()
+    } else {
+        match Decimal::from_str(&app.volume) {
+            Ok(gal) => {
+                let liters = gal * Decimal::new(378541, 5); // gallons to liters
+                liters.to_string()
+            }
+            Err(_) => {
+                app.result = Some("❌ Invalid volume".to_string());
+                return;
+            }
+        }
+    };
+
     let input = CalcInput::new()
-        .add_param("volume", &app.volume)
-        .add_param("temperature", &app.carb_temp)
+        .add_param("volume", &volume_l)         // Always pass in liters
+        .add_param("temperature", &temp_c)      // Always pass in Celsius
         .add_param("target_co2", &app.target_co2)
         .add_param("method", &app.carb_method)
         .add_param("sugar_type", &app.sugar_type);
@@ -309,8 +345,14 @@ fn calc_carbonation(app: &mut MazerionApp) {
             if app.carb_method == "keg" {
                 app.result = Some(format!("Target PSI: {:.1}", res.output.value));
             } else {
-                let weight_unit = if matches!(app.state.unit_system, crate::state::UnitSystem::Metric) { "g" } else { "oz" };
-                app.result = Some(format!("Priming Sugar: {:.1} {}", res.output.value, weight_unit));
+                // Convert priming sugar output based on unit system
+                let (amount, weight_unit) = if is_metric {
+                    (res.output.value, "g")
+                } else {
+                    let oz = res.output.value / Decimal::new(2835, 2); // grams to oz
+                    (oz, "oz")
+                };
+                app.result = Some(format!("Priming Sugar: {:.1} {}", amount, weight_unit));
             }
             app.warnings = res.warnings;
             app.metadata = res.metadata;

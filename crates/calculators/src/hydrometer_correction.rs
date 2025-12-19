@@ -1,5 +1,5 @@
 use mazerion_core::{
-    register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
+    register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result,
 };
 use rust_decimal::Decimal;
 
@@ -19,12 +19,12 @@ impl Calculator for HydrometerCorrectionCalculator {
         "Hydrometer Temperature Correction"
     }
 
-    fn category(&self) -> &'static str {
-        "Basic"
-    }
-
     fn description(&self) -> &'static str {
         "Correct hydrometer readings for temperature (general polynomial formula)"
+    }
+
+    fn category(&self) -> &'static str {
+        "Basic"
     }
 
     fn calculate(&self, input: CalcInput) -> Result<CalcResult> {

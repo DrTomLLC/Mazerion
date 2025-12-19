@@ -1,8 +1,10 @@
-//! Mead style calculators - 10 styles with dynamic labels
-//! SAFETY-CRITICAL: All calculations production-ready with unit conversions
+//! Mead style calculators - ALL 10 STYLES WITH DESCRIPTIONS
 
 use crate::{MazerionApp, state::{colors, UnitSystem}};
 use eframe::egui::{self, RichText, CornerRadius};
+use mazerion_core::CalcInput;
+use rust_decimal::Decimal;
+use std::str::FromStr;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MeadStyle {
@@ -77,84 +79,67 @@ fn get_style_name(style: MeadStyle) -> &'static str {
 
 fn render_traditional(app: &mut MazerionApp, ui: &mut egui::Ui) {
     ui.heading(RichText::new("🍯 Traditional Mead").color(colors::SADDLE_BROWN));
-    ui.label("Pure honey mead - timeless classic");
+    ui.label("Pure honey mead - the timeless classic showcasing honey terroir");
+    ui.label(RichText::new("Also known as: Great Mead, Show Mead").weak());
+    ui.label("ABV Range: Typically 8-14%, can go higher");
     ui.add_space(10.0);
 
-    let volume_label = match app.state.unit_system {
-        UnitSystem::Metric => "Batch Volume (L):",
-        UnitSystem::Imperial => "Batch Volume (gal):",
-    };
-
-    crate::input_field(ui, volume_label, &mut app.mead_volume, "Total must volume");
-    crate::input_field(ui, "Target ABV (%):", &mut app.mead_target_abv, "Desired alcohol level (8-14% typical)");
-
+    let vol = if matches!(app.state.unit_system, UnitSystem::Metric) { "Volume (L):" } else { "Volume (gal):" };
+    crate::input_field(ui, vol, &mut app.mead_volume, "Batch volume");
+    crate::input_field(ui, "ABV (%):", &mut app.mead_target_abv, "8-14% typical");
     ui.add_space(10.0);
-
-    if crate::calculate_button(ui, "Calculate Honey Needed") {
-        calc_traditional(app);
-    }
+    if crate::calculate_button(ui, "Calculate") { calc_traditional(app); }
 }
 
 fn render_hydromel(app: &mut MazerionApp, ui: &mut egui::Ui) {
-    ui.heading(RichText::new("🥂 Hydromel (Session Mead)").color(colors::SADDLE_BROWN));
-    ui.label("Low ABV session mead (3.5-7.5%)");
+    ui.heading(RichText::new("🥂 Hydromel").color(colors::SADDLE_BROWN));
+    ui.label("Low ABV session mead - highly drinkable, light-bodied");
+    ui.label(RichText::new("Perfect for: Summer drinking, outdoor events, day sessions").weak());
+    ui.label("ABV Range: 3.5-7.5% - the session mead");
     ui.add_space(10.0);
 
-    let volume_label = match app.state.unit_system {
-        UnitSystem::Metric => "Batch Volume (L):",
-        UnitSystem::Imperial => "Batch Volume (gal):",
-    };
-
-    crate::input_field(ui, volume_label, &mut app.mead_volume, "Total must volume");
-    crate::input_field(ui, "Target ABV (%):", &mut app.mead_target_abv, "Session range: 3.5-7.5%");
-
+    let vol = if matches!(app.state.unit_system, UnitSystem::Metric) { "Volume (L):" } else { "Volume (gal):" };
+    crate::input_field(ui, vol, &mut app.mead_volume, "Batch volume");
+    crate::input_field(ui, "ABV (%):", &mut app.mead_target_abv, "3.5-7.5%");
     ui.add_space(10.0);
-
-    if crate::calculate_button(ui, "Calculate Honey Needed") {
-        calc_hydromel(app);
-    }
+    if crate::calculate_button(ui, "Calculate") { calc_hydromel(app); }
 }
 
 fn render_sack(app: &mut MazerionApp, ui: &mut egui::Ui) {
-    ui.heading(RichText::new("🏆 Sack Mead (High Gravity)").color(colors::SADDLE_BROWN));
-    ui.label("High ABV dessert mead (14-18%)");
+    ui.heading(RichText::new("🏆 Sack Mead").color(colors::SADDLE_BROWN));
+    ui.label("High ABV dessert mead - rich, sweet, and powerful");
+    ui.label(RichText::new("Perfect for: Dessert pairing, after-dinner sipping, special occasions").weak());
+    ui.label("ABV Range: 14-18% - the dessert mead");
     ui.add_space(10.0);
 
-    let volume_label = match app.state.unit_system {
-        UnitSystem::Metric => "Batch Volume (L):",
-        UnitSystem::Imperial => "Batch Volume (gal):",
-    };
-
-    crate::input_field(ui, volume_label, &mut app.mead_volume, "Total must volume");
-    crate::input_field(ui, "Target ABV (%):", &mut app.mead_target_abv, "High gravity: 14-18%");
-
+    let vol = if matches!(app.state.unit_system, UnitSystem::Metric) { "Volume (L):" } else { "Volume (gal):" };
+    crate::input_field(ui, vol, &mut app.mead_volume, "Batch volume");
+    crate::input_field(ui, "ABV (%):", &mut app.mead_target_abv, "14-18%");
     ui.add_space(10.0);
-
-    if crate::calculate_button(ui, "Calculate Honey Needed") {
-        calc_sack(app);
-    }
+    if crate::calculate_button(ui, "Calculate") { calc_sack(app); }
 }
 
 fn render_melomel(app: &mut MazerionApp, ui: &mut egui::Ui) {
-    ui.heading(RichText::new("🍓 Melomel (Fruit Mead)").color(colors::SADDLE_BROWN));
-    ui.label("Mead with fruit - accounts for fruit sugars");
+    ui.heading(RichText::new("🍓 Melomel").color(colors::SADDLE_BROWN));
+    ui.label("Fruit mead - honey and fruit in perfect harmony");
+    ui.label(RichText::new("Popular fruits: Strawberry, blueberry, raspberry, cherry, blackberry").weak());
+    ui.label("The fruit provides sugar AND flavor - adjust honey accordingly");
     ui.add_space(10.0);
 
-    let (volume_label, weight_label) = match app.state.unit_system {
-        UnitSystem::Metric => ("Batch Volume (L):", "Fruit Weight (kg):"),
-        UnitSystem::Imperial => ("Batch Volume (gal):", "Fruit Weight (lb):"),
-    };
+    let is_metric = matches!(app.state.unit_system, UnitSystem::Metric);
+    let vol = if is_metric { "Volume (L):" } else { "Volume (gal):" };
+    let wt = if is_metric { "Fruit (kg):" } else { "Fruit (lb):" };
 
-    crate::input_field(ui, volume_label, &mut app.mead_volume, "Total must volume");
-    crate::input_field(ui, "Target ABV (%):", &mut app.mead_target_abv, "Desired alcohol level");
-    crate::input_field(ui, weight_label, &mut app.fruit_weight, "Fruit per liter (0.5-2.0 typical)");
+    crate::input_field(ui, vol, &mut app.mead_volume, "Batch volume");
+    crate::input_field(ui, "ABV (%):", &mut app.mead_target_abv, "Target ABV");
+    crate::input_field(ui, wt, &mut app.fruit_weight, "Fruit weight");
 
     ui.horizontal(|ui| {
-        ui.label(RichText::new("Fruit Type:").strong());
-        egui::ComboBox::from_id_salt("fruit_type")
+        ui.label(RichText::new("Fruit:").strong());
+        egui::ComboBox::from_id_salt("fruit")
             .selected_text(&app.fruit_type)
             .show_ui(ui, |ui| {
-                ui.selectable_value(&mut app.fruit_type, "strawberry".to_string(), "Strawberry (8% sugar)");
+                ui.selectable_value(&mut app.fruit_type, "strawberry".to_string(), "Strawberry (6% sugar)");
                 ui.selectable_value(&mut app.fruit_type, "blueberry".to_string(), "Blueberry (10% sugar)");
                 ui.selectable_value(&mut app.fruit_type, "raspberry".to_string(), "Raspberry (5% sugar)");
                 ui.selectable_value(&mut app.fruit_type, "cherry".to_string(), "Cherry (12% sugar)");
@@ -163,135 +148,100 @@ fn render_melomel(app: &mut MazerionApp, ui: &mut egui::Ui) {
     });
 
     ui.add_space(10.0);
-
-    if crate::calculate_button(ui, "Calculate Honey + Fruit") {
-        calc_melomel(app);
-    }
+    if crate::calculate_button(ui, "Calculate") { calc_melomel(app); }
 }
 
 fn render_cyser(app: &mut MazerionApp, ui: &mut egui::Ui) {
-    ui.heading(RichText::new("🍎 Cyser (Apple Mead)").color(colors::SADDLE_BROWN));
-    ui.label("Mead with apple juice - accounts for juice sugars");
+    ui.heading(RichText::new("🍎 Cyser").color(colors::SADDLE_BROWN));
+    ui.label("Apple mead - the best of cider and mead combined");
+    ui.label(RichText::new("Traditional pairing: Thanksgiving turkey, fall foods").weak());
+    ui.label("Apple juice provides ~10% of fermentables - adjust honey accordingly");
     ui.add_space(10.0);
 
-    let volume_label = match app.state.unit_system {
-        UnitSystem::Metric => "Batch Volume (L):",
-        UnitSystem::Imperial => "Batch Volume (gal):",
-    };
-
-    crate::input_field(ui, volume_label, &mut app.mead_volume, "Total must volume");
-    crate::input_field(ui, "Target ABV (%):", &mut app.mead_target_abv, "Desired alcohol level");
-    crate::input_field(ui, "Juice % of Must:", &mut app.juice_percent, "Apple juice percentage (30-70% typical)");
-
+    let vol = if matches!(app.state.unit_system, UnitSystem::Metric) { "Volume (L):" } else { "Volume (gal):" };
+    crate::input_field(ui, vol, &mut app.mead_volume, "Batch volume");
+    crate::input_field(ui, "ABV (%):", &mut app.mead_target_abv, "Target ABV");
+    crate::input_field(ui, "Juice %:", &mut app.juice_percent, "30-50% typical");
     ui.add_space(10.0);
-
-    if crate::calculate_button(ui, "Calculate Honey + Juice") {
-        calc_cyser(app);
-    }
+    if crate::calculate_button(ui, "Calculate") { calc_cyser(app); }
 }
 
 fn render_acerglyn(app: &mut MazerionApp, ui: &mut egui::Ui) {
-    ui.heading(RichText::new("🍁 Acerglyn (Maple Mead)").color(colors::SADDLE_BROWN));
-    ui.label("Mead with maple syrup - rich & complex");
+    ui.heading(RichText::new("🍁 Acerglyn").color(colors::SADDLE_BROWN));
+    ui.label("Maple mead - honey meets Canadian gold");
+    ui.label(RichText::new("Perfect for: Fall/winter, Canadian pride, unique flavor").weak());
+    ui.label("Maple syrup is ~67% sugar - expensive but delicious");
     ui.add_space(10.0);
 
-    let volume_label = match app.state.unit_system {
-        UnitSystem::Metric => "Batch Volume (L):",
-        UnitSystem::Imperial => "Batch Volume (gal):",
-    };
-
-    crate::input_field(ui, volume_label, &mut app.mead_volume, "Total must volume");
-    crate::input_field(ui, "Target ABV (%):", &mut app.mead_target_abv, "Desired alcohol level");
-    crate::input_field(ui, "Maple % of Fermentables:", &mut app.maple_percent, "Maple syrup percentage (20-40% typical)");
-
+    let vol = if matches!(app.state.unit_system, UnitSystem::Metric) { "Volume (L):" } else { "Volume (gal):" };
+    crate::input_field(ui, vol, &mut app.mead_volume, "Batch volume");
+    crate::input_field(ui, "ABV (%):", &mut app.mead_target_abv, "Target ABV");
+    crate::input_field(ui, "Maple %:", &mut app.maple_percent, "20-40% typical");
     ui.add_space(10.0);
-
-    if crate::calculate_button(ui, "Calculate Honey + Maple") {
-        calc_acerglyn(app);
-    }
+    if crate::calculate_button(ui, "Calculate") { calc_acerglyn(app); }
 }
 
 fn render_bochet(app: &mut MazerionApp, ui: &mut egui::Ui) {
-    ui.heading(RichText::new("🔥 Bochet (Caramelized Mead)").color(colors::SADDLE_BROWN));
-    ui.label("Mead with caramelized honey - deep flavors");
+    ui.heading(RichText::new("🔥 Bochet").color(colors::SADDLE_BROWN));
+    ui.label("Caramelized honey mead - ancient technique, modern favorite");
+    ui.label(RichText::new("Honey is caramelized before fermenting - creates toffee/marshmallow notes").weak());
+    ui.label("Sugar loss during caramelization: Light 5%, Medium 10%, Dark 15%");
     ui.add_space(10.0);
 
-    let volume_label = match app.state.unit_system {
-        UnitSystem::Metric => "Batch Volume (L):",
-        UnitSystem::Imperial => "Batch Volume (gal):",
-    };
-
-    crate::input_field(ui, volume_label, &mut app.mead_volume, "Total must volume");
-    crate::input_field(ui, "Target ABV (%):", &mut app.mead_target_abv, "Desired alcohol level");
+    let vol = if matches!(app.state.unit_system, UnitSystem::Metric) { "Volume (L):" } else { "Volume (gal):" };
+    crate::input_field(ui, vol, &mut app.mead_volume, "Batch volume");
+    crate::input_field(ui, "ABV (%):", &mut app.mead_target_abv, "Target ABV");
 
     ui.horizontal(|ui| {
-        ui.label(RichText::new("Caramelization Level:").strong());
-        egui::ComboBox::from_id_salt("bochet_level")
+        ui.label(RichText::new("Caramel Level:").strong());
+        egui::ComboBox::from_id_salt("bochet")
             .selected_text(&app.bochet_level)
             .show_ui(ui, |ui| {
-                ui.selectable_value(&mut app.bochet_level, "light".to_string(), "Light (10% sugar loss)");
-                ui.selectable_value(&mut app.bochet_level, "medium".to_string(), "Medium (15% sugar loss)");
-                ui.selectable_value(&mut app.bochet_level, "dark".to_string(), "Dark (20% sugar loss)");
+                ui.selectable_value(&mut app.bochet_level, "light".to_string(), "Light (5% loss)");
+                ui.selectable_value(&mut app.bochet_level, "medium".to_string(), "Medium (10% loss)");
+                ui.selectable_value(&mut app.bochet_level, "dark".to_string(), "Dark (15% loss)");
             });
     });
 
     ui.add_space(10.0);
-
-    if crate::calculate_button(ui, "Calculate Honey (Pre-Caramelization)") {
-        calc_bochet(app);
-    }
+    if crate::calculate_button(ui, "Calculate") { calc_bochet(app); }
 }
 
 fn render_braggot(app: &mut MazerionApp, ui: &mut egui::Ui) {
-    ui.heading(RichText::new("🍺 Braggot (Honey-Malt Hybrid)").color(colors::SADDLE_BROWN));
-    ui.label("Half mead, half beer - best of both");
+    ui.heading(RichText::new("🍺 Braggot").color(colors::SADDLE_BROWN));
+    ui.label("Honey-beer hybrid - medieval feast beverage");
+    ui.label(RichText::new("Combines malt backbone with honey complexity").weak());
+    ui.label("Honey %: 30-70% of fermentables - balance is key");
     ui.add_space(10.0);
 
-    let (volume_label, weight_label) = match app.state.unit_system {
-        UnitSystem::Metric => ("Batch Volume (L):", "Malt Weight (kg):"),
-        UnitSystem::Imperial => ("Batch Volume (gal):", "Malt Weight (lb):"),
+    let (vol, wt) = if matches!(app.state.unit_system, UnitSystem::Metric) {
+        ("Volume (L):", "Malt (kg):")
+    } else {
+        ("Volume (gal):", "Malt (lb):")
     };
 
-    crate::input_field(ui, volume_label, &mut app.mead_volume, "Total must volume");
-    crate::input_field(ui, "Target ABV (%):", &mut app.mead_target_abv, "Desired alcohol level");
-    crate::input_field(ui, "Honey % of Fermentables:", &mut app.honey_percent, "Honey percentage (40-60% typical)");
-    crate::input_field(ui, weight_label, &mut app.malt_weight, "Malt contribution");
-
+    crate::input_field(ui, vol, &mut app.mead_volume, "Batch volume");
+    crate::input_field(ui, "ABV (%):", &mut app.mead_target_abv, "Target ABV");
+    crate::input_field(ui, "Honey %:", &mut app.honey_percent, "30-70%");
+    crate::input_field(ui, wt, &mut app.malt_weight, "Malt amount");
     ui.add_space(10.0);
-
-    if crate::calculate_button(ui, "Calculate Honey + Malt") {
-        calc_braggot(app);
-    }
+    if crate::calculate_button(ui, "Calculate") { calc_braggot(app); }
 }
 
 fn render_capsicumel(app: &mut MazerionApp, ui: &mut egui::Ui) {
-    ui.heading(RichText::new("🌶️ Capsicumel (Pepper Mead)").color(colors::SADDLE_BROWN));
-    ui.label("Mead with peppers - unique & bold");
+    ui.heading(RichText::new("🌶️ Capsicumel").color(colors::SADDLE_BROWN));
+    ui.label("Pepper mead - adds heat and complexity");
+    ui.label(RichText::new("Popular peppers: Jalapeño, habanero, ghost pepper, bell pepper").weak());
+    ui.label("Dosage: Mild 0.5 g/L, Medium 1.0 g/L, Hot 1.5 g/L");
     ui.add_space(10.0);
 
-    let volume_label = match app.state.unit_system {
-        UnitSystem::Metric => "Batch Volume (L):",
-        UnitSystem::Imperial => "Batch Volume (gal):",
-    };
-
-    crate::input_field(ui, volume_label, &mut app.mead_volume, "Total must volume");
-    crate::input_field(ui, "Target ABV (%):", &mut app.mead_target_abv, "Desired alcohol level");
+    let vol = if matches!(app.state.unit_system, UnitSystem::Metric) { "Volume (L):" } else { "Volume (gal):" };
+    crate::input_field(ui, vol, &mut app.mead_volume, "Batch volume");
+    crate::input_field(ui, "ABV (%):", &mut app.mead_target_abv, "Target ABV");
 
     ui.horizontal(|ui| {
-        ui.label(RichText::new("Pepper Type:").strong());
-        egui::ComboBox::from_id_salt("pepper_type")
-            .selected_text(&app.pepper_type)
-            .show_ui(ui, |ui| {
-                ui.selectable_value(&mut app.pepper_type, "jalapeno".to_string(), "Jalapeño (mild-medium)");
-                ui.selectable_value(&mut app.pepper_type, "habanero".to_string(), "Habanero (hot)");
-                ui.selectable_value(&mut app.pepper_type, "ghost".to_string(), "Ghost Pepper (extreme)");
-                ui.selectable_value(&mut app.pepper_type, "bell".to_string(), "Bell Pepper (no heat)");
-            });
-    });
-
-    ui.horizontal(|ui| {
-        ui.label(RichText::new("Heat Level:").strong());
-        egui::ComboBox::from_id_salt("heat_level")
+        ui.label(RichText::new("Heat:").strong());
+        egui::ComboBox::from_id_salt("heat")
             .selected_text(&app.heat_level)
             .show_ui(ui, |ui| {
                 ui.selectable_value(&mut app.heat_level, "mild".to_string(), "Mild");
@@ -301,92 +251,329 @@ fn render_capsicumel(app: &mut MazerionApp, ui: &mut egui::Ui) {
     });
 
     ui.add_space(10.0);
-
-    if crate::calculate_button(ui, "Calculate Honey Needed") {
-        calc_capsicumel(app);
-    }
+    if crate::calculate_button(ui, "Calculate") { calc_capsicumel(app); }
 }
 
 fn render_metheglin(app: &mut MazerionApp, ui: &mut egui::Ui) {
-    ui.heading(RichText::new("🌿 Metheglin (Spiced Mead)").color(colors::SADDLE_BROWN));
-    ui.label("Mead with herbs & spices - aromatic & complex");
+    ui.heading(RichText::new("🌿 Metheglin").color(colors::SADDLE_BROWN));
+    ui.label("Spiced mead - herbs and spices meet honey");
+    ui.label(RichText::new("Popular spices: Cinnamon, vanilla, ginger, clove, nutmeg").weak());
+    ui.label("Dosage: Light 0.5 g/L, Medium 1.0 g/L, Heavy 2.0 g/L");
     ui.add_space(10.0);
 
-    let volume_label = match app.state.unit_system {
-        UnitSystem::Metric => "Batch Volume (L):",
-        UnitSystem::Imperial => "Batch Volume (gal):",
-    };
-
-    crate::input_field(ui, volume_label, &mut app.mead_volume, "Total must volume");
-    crate::input_field(ui, "Target ABV (%):", &mut app.mead_target_abv, "Desired alcohol level");
+    let vol = if matches!(app.state.unit_system, UnitSystem::Metric) { "Volume (L):" } else { "Volume (gal):" };
+    crate::input_field(ui, vol, &mut app.mead_volume, "Batch volume");
+    crate::input_field(ui, "ABV (%):", &mut app.mead_target_abv, "Target ABV");
 
     ui.horizontal(|ui| {
-        ui.label(RichText::new("Primary Spice:").strong());
-        egui::ComboBox::from_id_salt("spice_type")
-            .selected_text(&app.spice_type)
-            .show_ui(ui, |ui| {
-                ui.selectable_value(&mut app.spice_type, "cinnamon".to_string(), "Cinnamon");
-                ui.selectable_value(&mut app.spice_type, "ginger".to_string(), "Ginger");
-                ui.selectable_value(&mut app.spice_type, "clove".to_string(), "Clove");
-                ui.selectable_value(&mut app.spice_type, "vanilla".to_string(), "Vanilla");
-                ui.selectable_value(&mut app.spice_type, "cardamom".to_string(), "Cardamom");
-            });
-    });
-
-    ui.horizontal(|ui| {
-        ui.label(RichText::new("Spice Intensity:").strong());
-        egui::ComboBox::from_id_salt("spice_level")
+        ui.label(RichText::new("Spice Level:").strong());
+        egui::ComboBox::from_id_salt("spice")
             .selected_text(&app.spice_level)
             .show_ui(ui, |ui| {
-                ui.selectable_value(&mut app.spice_level, "subtle".to_string(), "Subtle");
+                ui.selectable_value(&mut app.spice_level, "light".to_string(), "Light");
                 ui.selectable_value(&mut app.spice_level, "medium".to_string(), "Medium");
-                ui.selectable_value(&mut app.spice_level, "bold".to_string(), "Bold");
+                ui.selectable_value(&mut app.spice_level, "heavy".to_string(), "Heavy");
             });
     });
 
     ui.add_space(10.0);
+    if crate::calculate_button(ui, "Calculate") { calc_metheglin(app); }
+}
 
-    if crate::calculate_button(ui, "Calculate Honey Needed") {
-        calc_metheglin(app);
+// CALCULATION FUNCTIONS - Call backend calculators
+
+fn calc_traditional(app: &mut MazerionApp) {
+    let calc = match mazerion_core::traits::get_calculator("great_mead") {
+        Some(c) => c,
+        None => { app.result = Some("❌ Calculator not found".to_string()); return; }
+    };
+
+    let volume_l = to_liters(&app.mead_volume, &app.state.unit_system);
+    let input = CalcInput::new()
+        .add_param("volume", &volume_l)
+        .add_param("target_abv", &app.mead_target_abv);
+
+    match calc.calculate(input) {
+        Ok(res) => {
+            let honey_g = res.output.value;
+            let honey_kg = honey_g / Decimal::from(1000);
+            let (display, unit) = fmt_weight(honey_kg, &app.state.unit_system);
+            app.result = Some(format!("Honey: {} {}", display, unit));
+            app.warnings = res.warnings;
+            app.metadata = res.metadata;
+        }
+        Err(e) => { app.result = Some(format!("❌ {}", e)); app.warnings.clear(); app.metadata.clear(); }
     }
 }
 
-fn calc_traditional(app: &mut MazerionApp) {
-    app.result = Some("Traditional mead calculation - pending backend".to_string());
-}
-
 fn calc_hydromel(app: &mut MazerionApp) {
-    app.result = Some("Hydromel calculation - pending backend".to_string());
+    let calc = match mazerion_core::traits::get_calculator("hydromel") {
+        Some(c) => c,
+        None => { app.result = Some("❌ Calculator not found".to_string()); return; }
+    };
+
+    let volume_l = to_liters(&app.mead_volume, &app.state.unit_system);
+    let input = CalcInput::new()
+        .add_param("volume", &volume_l)
+        .add_param("target_abv", &app.mead_target_abv);
+
+    match calc.calculate(input) {
+        Ok(res) => {
+            let honey_g = res.output.value;
+            let honey_kg = honey_g / Decimal::from(1000);
+            let (display, unit) = fmt_weight(honey_kg, &app.state.unit_system);
+            app.result = Some(format!("Honey: {} {}", display, unit));
+            app.warnings = res.warnings;
+            app.metadata = res.metadata;
+        }
+        Err(e) => { app.result = Some(format!("❌ {}", e)); app.warnings.clear(); app.metadata.clear(); }
+    }
 }
 
 fn calc_sack(app: &mut MazerionApp) {
-    app.result = Some("Sack mead calculation - pending backend".to_string());
+    let calc = match mazerion_core::traits::get_calculator("sack") {
+        Some(c) => c,
+        None => { app.result = Some("❌ Calculator not found".to_string()); return; }
+    };
+
+    let volume_l = to_liters(&app.mead_volume, &app.state.unit_system);
+    let input = CalcInput::new()
+        .add_param("volume", &volume_l)
+        .add_param("target_abv", &app.mead_target_abv);
+
+    match calc.calculate(input) {
+        Ok(res) => {
+            let honey_g = res.output.value;
+            let honey_kg = honey_g / Decimal::from(1000);
+            let (display, unit) = fmt_weight(honey_kg, &app.state.unit_system);
+            app.result = Some(format!("Honey: {} {}", display, unit));
+            app.warnings = res.warnings;
+            app.metadata = res.metadata;
+        }
+        Err(e) => { app.result = Some(format!("❌ {}", e)); app.warnings.clear(); app.metadata.clear(); }
+    }
 }
 
 fn calc_melomel(app: &mut MazerionApp) {
-    app.result = Some("Melomel calculation - pending backend".to_string());
+    let calc = match mazerion_core::traits::get_calculator("melomel") {
+        Some(c) => c,
+        None => { app.result = Some("❌ Calculator not found".to_string()); return; }
+    };
+
+    let volume_l = to_liters(&app.mead_volume, &app.state.unit_system);
+    let fruit_kg = to_kg(&app.fruit_weight, &app.state.unit_system);
+
+    let input = CalcInput::new()
+        .add_param("volume", &volume_l)
+        .add_param("target_abv", &app.mead_target_abv)
+        .add_param("fruit_weight", &fruit_kg)
+        .add_param("fruit_type", &app.fruit_type);
+
+    match calc.calculate(input) {
+        Ok(res) => {
+            let honey_g = res.output.value;
+            let honey_kg = honey_g / Decimal::from(1000);
+            let fruit_kg_val = Decimal::from_str(&fruit_kg).unwrap_or(Decimal::ZERO);
+
+            let (h_display, h_unit) = fmt_weight(honey_kg, &app.state.unit_system);
+            let (f_display, f_unit) = fmt_weight(fruit_kg_val, &app.state.unit_system);
+
+            app.result = Some(format!("Honey: {} {} | Fruit: {} {}", h_display, h_unit, f_display, f_unit));
+            app.warnings = res.warnings;
+            app.metadata = res.metadata;
+        }
+        Err(e) => { app.result = Some(format!("❌ {}", e)); app.warnings.clear(); app.metadata.clear(); }
+    }
 }
 
 fn calc_cyser(app: &mut MazerionApp) {
-    app.result = Some("Cyser calculation - pending backend".to_string());
+    let calc = match mazerion_core::traits::get_calculator("cyser") {
+        Some(c) => c,
+        None => { app.result = Some("❌ Calculator not found".to_string()); return; }
+    };
+
+    let volume_l = to_liters(&app.mead_volume, &app.state.unit_system);
+    let input = CalcInput::new()
+        .add_param("volume", &volume_l)
+        .add_param("target_abv", &app.mead_target_abv)
+        .add_param("juice_percent", &app.juice_percent);
+
+    match calc.calculate(input) {
+        Ok(res) => {
+            let honey_g = res.output.value;
+            let honey_kg = honey_g / Decimal::from(1000);
+            let (display, unit) = fmt_weight(honey_kg, &app.state.unit_system);
+            app.result = Some(format!("Honey: {} {}", display, unit));
+            app.warnings = res.warnings;
+            app.metadata = res.metadata;
+        }
+        Err(e) => { app.result = Some(format!("❌ {}", e)); app.warnings.clear(); app.metadata.clear(); }
+    }
 }
 
 fn calc_acerglyn(app: &mut MazerionApp) {
-    app.result = Some("Acerglyn calculation - pending backend".to_string());
+    let calc = match mazerion_core::traits::get_calculator("acerglyn") {
+        Some(c) => c,
+        None => { app.result = Some("❌ Calculator not found".to_string()); return; }
+    };
+
+    let volume_l = to_liters(&app.mead_volume, &app.state.unit_system);
+    let input = CalcInput::new()
+        .add_param("volume", &volume_l)
+        .add_param("target_abv", &app.mead_target_abv)
+        .add_param("maple_percent", &app.maple_percent);
+
+    match calc.calculate(input) {
+        Ok(res) => {
+            let honey_g = res.output.value;
+            let honey_kg = honey_g / Decimal::from(1000);
+            let (display, unit) = fmt_weight(honey_kg, &app.state.unit_system);
+            app.result = Some(format!("Honey: {} {}", display, unit));
+            app.warnings = res.warnings;
+            app.metadata = res.metadata;
+        }
+        Err(e) => { app.result = Some(format!("❌ {}", e)); app.warnings.clear(); app.metadata.clear(); }
+    }
 }
 
 fn calc_bochet(app: &mut MazerionApp) {
-    app.result = Some("Bochet calculation - pending backend".to_string());
+    let calc = match mazerion_core::traits::get_calculator("bochet") {
+        Some(c) => c,
+        None => { app.result = Some("❌ Calculator not found".to_string()); return; }
+    };
+
+    let volume_l = to_liters(&app.mead_volume, &app.state.unit_system);
+    let input = CalcInput::new()
+        .add_param("volume", &volume_l)
+        .add_param("target_abv", &app.mead_target_abv)
+        .add_param("bochet_level", &app.bochet_level);
+
+    match calc.calculate(input) {
+        Ok(res) => {
+            let honey_g = res.output.value;
+            let honey_kg = honey_g / Decimal::from(1000);
+            let (display, unit) = fmt_weight(honey_kg, &app.state.unit_system);
+            app.result = Some(format!("Honey (pre-caramel): {} {}", display, unit));
+            app.warnings = res.warnings;
+            app.metadata = res.metadata;
+        }
+        Err(e) => { app.result = Some(format!("❌ {}", e)); app.warnings.clear(); app.metadata.clear(); }
+    }
 }
 
 fn calc_braggot(app: &mut MazerionApp) {
-    app.result = Some("Braggot calculation - pending backend".to_string());
+    let calc = match mazerion_core::traits::get_calculator("braggot") {
+        Some(c) => c,
+        None => { app.result = Some("❌ Calculator not found".to_string()); return; }
+    };
+
+    let volume_l = to_liters(&app.mead_volume, &app.state.unit_system);
+    let malt_kg = to_kg(&app.malt_weight, &app.state.unit_system);
+
+    let input = CalcInput::new()
+        .add_param("volume", &volume_l)
+        .add_param("target_abv", &app.mead_target_abv)
+        .add_param("honey_percent", &app.honey_percent)
+        .add_param("malt_weight", &malt_kg);
+
+    match calc.calculate(input) {
+        Ok(res) => {
+            let honey_g = res.output.value;
+            let honey_kg = honey_g / Decimal::from(1000);
+            let (display, unit) = fmt_weight(honey_kg, &app.state.unit_system);
+            app.result = Some(format!("Honey: {} {}", display, unit));
+            app.warnings = res.warnings;
+            app.metadata = res.metadata;
+        }
+        Err(e) => { app.result = Some(format!("❌ {}", e)); app.warnings.clear(); app.metadata.clear(); }
+    }
 }
 
 fn calc_capsicumel(app: &mut MazerionApp) {
-    app.result = Some("Capsicumel calculation - pending backend".to_string());
+    let calc = match mazerion_core::traits::get_calculator("capsicumel") {
+        Some(c) => c,
+        None => { app.result = Some("❌ Calculator not found".to_string()); return; }
+    };
+
+    let volume_l = to_liters(&app.mead_volume, &app.state.unit_system);
+    let input = CalcInput::new()
+        .add_param("volume", &volume_l)
+        .add_param("target_abv", &app.mead_target_abv);
+
+    match calc.calculate(input) {
+        Ok(res) => {
+            let honey_g = res.output.value;
+            let honey_kg = honey_g / Decimal::from(1000);
+            let (display, unit) = fmt_weight(honey_kg, &app.state.unit_system);
+            app.result = Some(format!("Honey: {} {}", display, unit));
+            app.warnings = res.warnings;
+            app.metadata = res.metadata;
+        }
+        Err(e) => { app.result = Some(format!("❌ {}", e)); app.warnings.clear(); app.metadata.clear(); }
+    }
 }
 
 fn calc_metheglin(app: &mut MazerionApp) {
-    app.result = Some("Metheglin calculation - pending backend".to_string());
+    let calc = match mazerion_core::traits::get_calculator("metheglin") {
+        Some(c) => c,
+        None => { app.result = Some("❌ Calculator not found".to_string()); return; }
+    };
+
+    let volume_l = to_liters(&app.mead_volume, &app.state.unit_system);
+    let input = CalcInput::new()
+        .add_param("volume", &volume_l)
+        .add_param("target_abv", &app.mead_target_abv)
+        .add_param("spice_level", &app.spice_level);
+
+    match calc.calculate(input) {
+        Ok(res) => {
+            let honey_g = res.output.value;
+            let honey_kg = honey_g / Decimal::from(1000);
+            let (display, unit) = fmt_weight(honey_kg, &app.state.unit_system);
+            app.result = Some(format!("Honey: {} {}", display, unit));
+            app.warnings = res.warnings;
+            app.metadata = res.metadata;
+        }
+        Err(e) => { app.result = Some(format!("❌ {}", e)); app.warnings.clear(); app.metadata.clear(); }
+    }
+}
+
+// HELPERS
+
+fn to_liters(val: &str, sys: &UnitSystem) -> String {
+    match Decimal::from_str(val) {
+        Ok(v) => {
+            let l = if matches!(sys, UnitSystem::Imperial) {
+                v * Decimal::new(378541, 5)
+            } else {
+                v
+            };
+            l.to_string()
+        }
+        Err(_) => "0".to_string(),
+    }
+}
+
+fn to_kg(val: &str, sys: &UnitSystem) -> String {
+    match Decimal::from_str(val) {
+        Ok(v) => {
+            let kg = if matches!(sys, UnitSystem::Imperial) {
+                v * Decimal::new(453592, 6)
+            } else {
+                v
+            };
+            kg.to_string()
+        }
+        Err(_) => "0".to_string(),
+    }
+}
+
+fn fmt_weight(kg: Decimal, sys: &UnitSystem) -> (String, &'static str) {
+    match sys {
+        UnitSystem::Metric => (format!("{:.2}", kg), "kg"),
+        UnitSystem::Imperial => {
+            let lb = kg * Decimal::new(220462, 5);
+            (format!("{:.2}", lb), "lb")
+        }
+    }
 }

@@ -42,8 +42,8 @@ impl Calculator for GreatMeadCalculator {
             return Err(Error::OutOfRange("ABV should be 5-20% for traditional mead".into()));
         }
 
-        // Traditional mead: ~135 g honey per liter per % ABV
-        let honey_per_liter_per_abv = Decimal::new(135, 0);
+        // FIXED: 33 g honey per liter per % ABV
+        let honey_per_liter_per_abv = Decimal::from(33);
         let honey_needed = vol * abv * honey_per_liter_per_abv;
 
         let mut result = CalcResult::new(Measurement::new(honey_needed, Unit::Grams));
@@ -53,7 +53,7 @@ impl Calculator for GreatMeadCalculator {
             .with_meta("target_abv", format!("{}%", abv))
             .with_meta("honey_kg", format!("{:.2} kg", honey_needed / Decimal::from(1000)))
             .with_meta("honey_lbs", format!("{:.2} lbs", honey_needed / Decimal::new(45359, 2)))
-            .with_meta("formula", "135 g honey/L/%ABV");
+            .with_meta("formula", "33 g honey/L/%ABV");
 
         if abv < Decimal::from(8) {
             result = result.with_warning("Low ABV for traditional mead - consider hydromel style");

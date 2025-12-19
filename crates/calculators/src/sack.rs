@@ -24,7 +24,7 @@ impl Calculator for SackCalculator {
     }
 
     fn description(&self) -> &'static str {
-        "Calculate ingredients for high-gravity mead (sack, 14-18% ABV)"
+        "Calculate ingredients for high-gravity dessert mead (14-18% ABV)"
     }
 
     fn calculate(&self, input: CalcInput) -> Result<CalcResult> {
@@ -38,22 +38,18 @@ impl Calculator for SackCalculator {
         let abv: Decimal = target_abv.parse()
             .map_err(|_| Error::Parse("Invalid target_abv".into()))?;
 
-        let honey_per_liter_per_abv = Decimal::new(135, 0);
-        let honey_needed = vol * abv * honey_per_liter_per_abv;
+        // FIXED: 33 g honey per liter per % ABV
+        let honey_needed = vol * abv * Decimal::from(33);
 
         let mut result = CalcResult::new(Measurement::new(honey_needed, Unit::Grams));
 
-        result = result
-            .with_meta("volume", format!("{} L", vol))
-            .with_meta("target_abv", format!("{}%", abv))
-            .with_meta("style", "Sack Mead (High Gravity)")
-            .with_meta("honey_kg", format!("{:.2} kg", honey_needed / Decimal::from(1000)));
+        result = result.with_meta("honey_kg", format!("{:.2} kg", honey_needed / Decimal::from(1000)));
 
         if abv < Decimal::from(14) {
-            result = result.with_warning("ABV below sack mead range (14-18%)");
+            result = result.with_warning("Below typical sack mead range (14-18%)");
         }
         if abv > Decimal::from(18) {
-            result = result.with_warning("Very high ABV - ensure yeast can handle (18%+ tolerance needed)");
+            result = result.with_warning("Very high ABV - ensure yeast tolerance");
         }
 
         Ok(result)
