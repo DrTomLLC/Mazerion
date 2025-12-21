@@ -76,7 +76,6 @@ pub use acid_addition::AcidAdditionCalculator;
 pub use stabilization::StabilizationCalculator;
 pub use tannin::TanninCalculator;
 pub use bottling::BottlingCalculator;
-pub mod pasteurization;
 pub use pasteurization::PasteurizationCalculator;
 
 // MEAD STYLE CALCULATORS
@@ -91,6 +90,7 @@ pub mod metheglin;
 pub mod acerglyn;
 pub mod capsicumel;
 
+pub use pyment::PymentCalculator;
 pub use great_mead::GreatMeadCalculator;
 pub use hydromel::HydromelCalculator;
 pub use sack::SackCalculator;
@@ -101,7 +101,10 @@ pub use braggot::BraggotCalculator;
 pub use metheglin::MetheglinCalculator;
 pub use acerglyn::AcerglynCalculator;
 pub use capsicumel::CapsicumelCalculator;
+pub mod pasteurization;
 
+pub use lactomel::LactomelCalculator;
+pub use oxymel::OxymelCalculator;
 // UTILITIES CALCULATORS
 pub mod batch_cost;
 pub mod water_chemistry;
@@ -110,6 +113,9 @@ pub mod upscaling;
 mod gallons_to_bottles;
 mod waste;
 mod gallons_to_bottles_with_losses;
+mod pyment;
+mod lactomel;
+mod oxymel;
 
 pub use upscaling::UpscalingCalculator;
 
