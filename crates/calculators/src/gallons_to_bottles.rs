@@ -1,117 +1,116 @@
-//! Gallons to Bottles calculator - Simple version without losses
-
-use mazerion_core::{
-    register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
-};
+use mazerion_core::{Calculator, CalcInput, CalcResult, Error, Measurement, Unit};
 use rust_decimal::Decimal;
-use std::str::FromStr;
+use rust_decimal::prelude::ToPrimitive;
 
 #[derive(Default)]
-pub struct GallonsToBottles;
+pub struct GallonsToBottlesWithLossesCalculator;
 
-impl GallonsToBottles {
-    pub const ID: &'static str = "gallons_to_bottles";
-}
-
-impl Calculator for GallonsToBottles {
+impl Calculator for GallonsToBottlesWithLossesCalculator {
     fn id(&self) -> &'static str {
-        Self::ID
+        "gallons_to_bottles_with_losses"
     }
 
     fn name(&self) -> &'static str {
-        "Gallons to Bottles"
-    }
-
-    fn description(&self) -> &'static str {
-        "Calculate bottle count from volume"
+        "Gallons to Bottles (with Losses)"
     }
 
     fn category(&self) -> &'static str {
-        "Utilities"
+        "conversions"
     }
 
-    fn calculate(&self, input: CalcInput) -> Result<CalcResult> {
-        let volume_str = input.params.iter()
-            .find(|(k, _)| k == "volume")
-            .map(|(_, v)| v.as_str())
-            .ok_or(Error::MissingInput("volume".into()))?;
+    fn description(&self) -> &'static str {
+        "Calculate final bottle count after accounting for racking losses"
+    }
 
-        let volume_l = Decimal::from_str(volume_str)
-            .map_err(|e| Error::Parse(format!("Invalid volume: {}", e)))?;
+    fn calculate(&self, input: CalcInput) -> Result<CalcResult, Error> {
+        // input.params is Vec<(String, String)> - iterate to find
+        let get_param = |name: &str| -> Result<Decimal, Error> {
+            input.params
+                .iter()
+                .find(|(k, _)| k == name)
+                .map(|(_, v)| v.as_str())
+                .ok_or_else(|| Error::MissingInput(name.to_string()))?
+                .parse::<Decimal>()
+                .map_err(|_| Error::Calculation(format!("Invalid {}", name)))
+        };
 
-        if volume_l <= Decimal::ZERO {
-            return Err(Error::Validation("Volume must be positive".into()));
+        let initial_volume_gal = get_param("initial_volume")?;
+        let loss_rate_percent = get_param("loss_rate_percent")?;
+        let num_rackings = get_param("num_rackings")?;
+
+        // Validate
+        if initial_volume_gal <= Decimal::ZERO {
+            return Err(Error::Calculation("Initial volume must be positive".to_string()));
+        }
+        if loss_rate_percent < Decimal::ZERO || loss_rate_percent >= Decimal::from(100) {
+            return Err(Error::Calculation("Loss rate must be 0-100%".to_string()));
+        }
+        if num_rackings < Decimal::ONE || num_rackings > Decimal::from(20) {
+            return Err(Error::Calculation("Rackings must be 1-20".to_string()));
         }
 
-        let vol_ml = volume_l * Decimal::from(1000);
+        let num_rackings_u32 = num_rackings.to_u32()
+            .ok_or_else(|| Error::Calculation("Invalid rackings".to_string()))?;
 
-        // Bottle sizes in mL
-        let bottle_12oz = Decimal::new(35488, 2);
-        let bottle_375ml = Decimal::from(375);
-        let bottle_500ml = Decimal::from(500);
-        let bottle_750ml = Decimal::from(750);
-        let bottle_1l = Decimal::from(1000);
-        let bottle_1_5l = Decimal::from(1500);
-        let bottle_3l = Decimal::from(3000);
-        let bottle_5l = Decimal::from(5000);
-        let bottle_6l = Decimal::from(6000);
+        // Constants
+        let liters_per_gallon = Decimal::new(3785411784, 9);
+        let liters_per_bottle = Decimal::new(75, 2);
+        let bottles_per_gallon = liters_per_gallon / liters_per_bottle;
 
-        // Calculate bottle counts
-        let bottles_12oz = (vol_ml / bottle_12oz).round_dp(0);
-        let bottles_375ml = (vol_ml / bottle_375ml).round_dp(0);
-        let bottles_500ml = (vol_ml / bottle_500ml).round_dp(0);
-        let bottles_750ml = (vol_ml / bottle_750ml).round_dp(0);
-        let bottles_1l = (vol_ml / bottle_1l).round_dp(0);
-        let bottles_1_5l = (vol_ml / bottle_1_5l).round_dp(0);
-        let bottles_3l = (vol_ml / bottle_3l).round_dp(0);
-        let bottles_5l = (vol_ml / bottle_5l).round_dp(0);
-        let bottles_6l = (vol_ml / bottle_6l).round_dp(0);
+        // CORRECT COMPOUNDING MATH
+        let loss_rate_decimal = loss_rate_percent / Decimal::from(100);
+        let retention_rate = Decimal::ONE - loss_rate_decimal;
 
-        // Calculate cases
-        let cases_12oz = (bottles_12oz / Decimal::from(24)).ceil();
-        let cases_375ml = (bottles_375ml / Decimal::from(12)).ceil();
-        let cases_750ml = (bottles_750ml / Decimal::from(12)).ceil();
-        let cases_1l = (bottles_1l / Decimal::from(12)).ceil();
+        let mut compounded_retention = Decimal::ONE;
+        for _ in 0..num_rackings_u32 {
+            compounded_retention *= retention_rate;
+        }
 
-        // Primary output: volume in liters
-        let output = Measurement::new(volume_l, Unit::Liters);
+        let final_volume_gal = initial_volume_gal * compounded_retention;
+        let total_bottles = final_volume_gal * bottles_per_gallon;
+        let total_loss_gal = initial_volume_gal - final_volume_gal;
+        let total_loss_percent = (total_loss_gal / initial_volume_gal) * Decimal::from(100);
 
-        let result = CalcResult::new(output)
-            .with_meta("bottles_12oz", format!("{} bottles (12 oz / 355 mL)", bottles_12oz))
-            .with_meta("bottles_375ml", format!("{} bottles (375 mL / half-bottle)", bottles_375ml))
-            .with_meta("bottles_500ml", format!("{} bottles (500 mL)", bottles_500ml))
-            .with_meta("bottles_750ml", format!("{} bottles (750 mL / standard wine)", bottles_750ml))
-            .with_meta("bottles_1L", format!("{} bottles (1 L / magnum)", bottles_1l))
-            .with_meta("bottles_1.5L", format!("{} bottles (1.5 L)", bottles_1_5l))
-            .with_meta("bottles_3L", format!("{} bottles (3 L / double magnum)", bottles_3l))
-            .with_meta("bottles_5L", format!("{} bottles (5 L / jeroboam)", bottles_5l))
-            .with_meta("bottles_6L", format!("{} bottles (6 L / imperial)", bottles_6l))
-            .with_meta("cases_12oz", format!("{} cases (24 × 12oz)", cases_12oz))
-            .with_meta("cases_375ml", format!("{} cases (12 × 375mL)", cases_375ml))
-            .with_meta("cases_750ml", format!("{} cases (12 × 750mL)", cases_750ml))
-            .with_meta("cases_1L", format!("{} cases (12 × 1L)", cases_1l))
-            .with_meta("volume_gallons", format!("{:.2} gal", volume_l * Decimal::new(264172, 6)))
-            .with_meta("volume_liters", format!("{:.2} L", volume_l))
-            .with_meta("volume_quarts", format!("{:.2} qt", volume_l * Decimal::new(105669, 5)))
-            .with_meta("volume_fluid_ounces", format!("{:.1} fl oz", volume_l * Decimal::new(338140, 4)));
+        let mut metadata = vec![
+            ("Initial".to_string(), format!("{:.3} gal", initial_volume_gal)),
+            ("Final".to_string(), format!("{:.3} gal", final_volume_gal)),
+            ("Loss".to_string(), format!("{:.3} gal ({:.2}%)", total_loss_gal, total_loss_percent)),
+        ];
 
-        Ok(result)
+        let mut current = initial_volume_gal;
+        for i in 1..=num_rackings_u32 {
+            current *= retention_rate;
+            metadata.push((format!("After racking {}", i), format!("{:.3} gal ({:.2} bottles)", current, current * bottles_per_gallon)));
+        }
+
+        let mut warnings = Vec::new();
+        if loss_rate_percent > Decimal::from(10) {
+            warnings.push(format!("High loss rate: {:.1}%", loss_rate_percent));
+        }
+
+        Ok(CalcResult {
+            output: Measurement {
+                value: total_bottles.round_dp(2),
+                unit: Unit::Liters,
+            },
+            metadata,
+            warnings,
+        })
     }
 }
-
-register_calculator!(GallonsToBottles);
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_5_gallons() {
-        let calc = GallonsToBottles;
+    fn test_compounding() {
+        let calc = GallonsToBottlesWithLossesCalculator;
         let input = CalcInput::new()
-            .add_param("volume", "18.93");
-
+            .add_param("initial_volume", "5")
+            .add_param("loss_rate_percent", "5")
+            .add_param("num_rackings", "3");
         let result = calc.calculate(input).unwrap();
-        assert_eq!(result.output.value, Decimal::new(1893, 2));
+        assert_eq!(result.output.value.round_dp(2), Decimal::new(2164, 2));
     }
 }

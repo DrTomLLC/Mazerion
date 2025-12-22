@@ -139,6 +139,9 @@ pub struct AppState {
     pub sg_precision: u32,
     pub ph_precision: u32,
     pub brix_precision: u32,
+    pub conv_to_unit: (),
+    pub conv_result: (),
+    pub conv_value: ()
 }
 
 impl Default for AppState {
@@ -158,6 +161,9 @@ impl Default for AppState {
             sg_precision: 4,
             ph_precision: 3,
             brix_precision: 2,
+            conv_to_unit: (),
+            conv_result: (),
+            conv_value: (),
         }
     }
 }

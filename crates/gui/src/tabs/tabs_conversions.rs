@@ -251,7 +251,7 @@ fn perform_conversion(state: &mut AppState) {
     state.conv_result = Some(format!(
         "✓ {} {} = {:.4} {}",
         state.conv_value,
-        unit_display(&state.conv_from_unit),
+        unit_display(&state.conv_to_unit),
         result,
         unit_display(&state.conv_to_unit)
     ));

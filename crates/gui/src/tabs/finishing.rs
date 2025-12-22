@@ -228,18 +228,48 @@ fn render_pasteurization(app: &mut MazerionApp, ui: &mut egui::Ui) {
         app.warnings.clear();
         app.metadata.clear();
 
-        let calc = PasteurizationCalculator::default();
-        let mut input = CalcInput::new()
-            .add_param("temperature", &app.pasteurization_temp);
+        // Parse temperature
+        let temp_input = match app.pasteurization_temp.parse::<f64>() {
+            Ok(val) => val,
+            Err(_) => {
+                app.result = Some("Error: Invalid temperature".to_string());
+                return;
+            }
+        };
 
-        // CRITICAL: Pass unit system to calculator
-        input = input.add_param("unit_system", if is_metric { "metric" } else { "imperial" });
+        // Convert F to C if needed
+        let temp_celsius = if is_metric {
+            temp_input
+        } else {
+            (temp_input - 32.0) * 5.0 / 9.0
+        };
+
+        // Also calculate Fahrenheit for display
+        let temp_fahrenheit = if is_metric {
+            temp_input * 9.0 / 5.0 + 32.0
+        } else {
+            temp_input
+        };
+
+        let calc = PasteurizationCalculator::default();
+        let input = CalcInput::new()
+            .add_param("temperature", &temp_celsius.to_string());
 
         match calc.calculate(input) {
             Ok(res) => {
                 app.result = Some(format!("{:.1} minutes", res.output.value));
                 app.warnings = res.warnings;
-                app.metadata = res.metadata;
+
+                // Override incorrect metadata with correct temperature values
+                app.metadata = res.metadata.into_iter().map(|(k, v)| {
+                    if k == "temperature_c" {
+                        ("Temperature (°C)".to_string(), format!("{:.1}°C", temp_celsius))
+                    } else if k == "temperature_f" {
+                        ("Temperature (°F)".to_string(), format!("{:.1}°F", temp_fahrenheit))
+                    } else {
+                        (k, v)
+                    }
+                }).collect();
             }
             Err(e) => {
                 app.result = Some(format!("Error: {}", e));

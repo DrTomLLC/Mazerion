@@ -122,7 +122,4 @@ pub use upscaling::UpscalingCalculator;
 pub use batch_cost::BatchCostCalculator;
 pub use water_chemistry::WaterChemistryCalculator;
 pub use priming_alternatives::PrimingAlternativesCalculator;
-
-
-pub use gallons_to_bottles::GallonsToBottles;
 pub use waste::WasteCalculator;
