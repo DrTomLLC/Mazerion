@@ -1,0 +1,12 @@
+﻿    Checking mazerion-core v0.18.0 (C:\Users\DrTom\RustroverProjects\Mazerion\crates\core)
+    Checking mazerion-voice v0.18.0 (C:\Users\DrTom\RustroverProjects\Mazerion\crates\voice)
+    Checking line-guard v0.18.0 (C:\Users\DrTom\RustroverProjects\Mazerion\tools\line-guard)
+    Checking mazerion-calculators v0.18.0 (C:\Users\DrTom\RustroverProjects\Mazerion\crates\calculators)
+    Checking mazerion-config v0.18.0 (C:\Users\DrTom\RustroverProjects\Mazerion\crates\config)
+    Checking mazerion-api v0.18.0 (C:\Users\DrTom\RustroverProjects\Mazerion\crates\api)
+    Checking mazerion-tui v0.18.0 (C:\Users\DrTom\RustroverProjects\Mazerion\crates\tui)
+    Checking mazerion-gui v0.18.0 (C:\Users\DrTom\RustroverProjects\Mazerion\crates\gui)
+    Checking mazerion-ffi v0.18.0 (C:\Users\DrTom\RustroverProjects\Mazerion\crates\ffi)
+    Checking mazerion v0.18.0 (C:\Users\DrTom\RustroverProjects\Mazerion\crates\cli)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.72s
+

@@ -1,5 +1,5 @@
 use mazerion_core::{
-    register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
+    CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit, register_calculator,
 };
 use rust_decimal::Decimal;
 
@@ -28,19 +28,21 @@ impl Calculator for TanninCalculator {
     }
 
     fn calculate(&self, input: CalcInput) -> Result<CalcResult> {
-        let volume = input.get_param("volume")
+        let volume = input
+            .get_param("volume")
             .ok_or_else(|| Error::MissingInput("volume required".into()))?;
         let tannin_level = input.get_param("tannin_level").unwrap_or("medium");
         let tannin_type = input.get_param("tannin_type").unwrap_or("wine_tannin");
 
-        let vol: Decimal = volume.parse()
+        let vol: Decimal = volume
+            .parse()
             .map_err(|_| Error::Parse("Invalid volume".into()))?;
 
         // Tannin dosage per liter
         let dosage_per_liter = match tannin_level {
-            "low" => Decimal::new(5, 2),       // 0.05 g/L
-            "medium" => Decimal::new(10, 2),   // 0.10 g/L
-            "high" => Decimal::new(15, 2),     // 0.15 g/L
+            "low" => Decimal::new(5, 2),     // 0.05 g/L
+            "medium" => Decimal::new(10, 2), // 0.10 g/L
+            "high" => Decimal::new(15, 2),   // 0.15 g/L
             _ => Decimal::new(10, 2),
         };
 
@@ -58,13 +60,17 @@ impl Calculator for TanninCalculator {
 
         result = result
             .with_meta("tannin_g", format!("{:.2} g", tannin_needed))
-            .with_meta("tannin_tsp", format!("{:.3} tsp", tannin_needed / Decimal::new(5, 0)))
+            .with_meta(
+                "tannin_tsp",
+                format!("{:.3} tsp", tannin_needed / Decimal::new(5, 0)),
+            )
             .with_meta("tannin_type", tannin_description)
             .with_meta("tannin_level", tannin_level)
             .with_meta("dosage", format!("{:.2} g/L", dosage_per_liter));
 
         result = result.with_warning("Add gradually, taste after 24 hours - easy to over-tannin");
-        result = result.with_warning("Tannin adds astringency/dryness - use sparingly in sweet meads");
+        result =
+            result.with_warning("Tannin adds astringency/dryness - use sparingly in sweet meads");
 
         Ok(result)
     }

@@ -1,5 +1,5 @@
 use mazerion_core::{
-    register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
+    CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit, register_calculator,
 };
 use rust_decimal::Decimal;
 use std::str::FromStr;
@@ -29,16 +29,18 @@ impl Calculator for MetheglinCalculator {
     }
 
     fn calculate(&self, input: CalcInput) -> Result<CalcResult> {
-        let volume = input.get_param("volume")
+        let volume = input
+            .get_param("volume")
             .ok_or_else(|| Error::MissingInput("volume required".into()))?;
-        let target_abv = input.get_param("target_abv")
+        let target_abv = input
+            .get_param("target_abv")
             .ok_or_else(|| Error::MissingInput("target_abv required".into()))?;
         let spice_level = input.get_param("spice_level").unwrap_or("medium");
 
-        let vol: Decimal = Decimal::from_str(volume)
-            .map_err(|_| Error::Parse("Invalid volume".into()))?;
-        let abv: Decimal = Decimal::from_str(target_abv)
-            .map_err(|_| Error::Parse("Invalid target_abv".into()))?;
+        let vol: Decimal =
+            Decimal::from_str(volume).map_err(|_| Error::Parse("Invalid volume".into()))?;
+        let abv: Decimal =
+            Decimal::from_str(target_abv).map_err(|_| Error::Parse("Invalid target_abv".into()))?;
 
         // FIXED: 33 g per L per % ABV
         let honey_needed = vol * abv * Decimal::from(33);
@@ -55,12 +57,16 @@ impl Calculator for MetheglinCalculator {
         let mut result = CalcResult::new(Measurement::new(honey_needed, Unit::Grams));
 
         result = result
-            .with_meta("honey_kg", format!("{:.2} kg", honey_needed / Decimal::from(1000)))
+            .with_meta(
+                "honey_kg",
+                format!("{:.2} kg", honey_needed / Decimal::from(1000)),
+            )
             .with_meta("spice_g", format!("{:.1} g", spice_needed))
             .with_meta("spice_level", spice_level)
             .with_meta("dosage", format!("{:.1} g/L", spice_per_liter));
 
-        result = result.with_warning("Dosage varies by spice - start conservative, can always add more");
+        result =
+            result.with_warning("Dosage varies by spice - start conservative, can always add more");
 
         Ok(result)
     }

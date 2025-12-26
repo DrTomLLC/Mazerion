@@ -2,7 +2,7 @@
 //! Morey equation: SRM = 1.4922 × (MCU^0.6859)
 
 use mazerion_core::{
-    register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
+    CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit, register_calculator,
 };
 use rust_decimal::Decimal;
 
@@ -31,18 +31,24 @@ impl Calculator for SrmCalculator {
     }
 
     fn calculate(&self, input: CalcInput) -> Result<CalcResult> {
-        let grain_weight = input.get_param("grain_weight")
+        let grain_weight = input
+            .get_param("grain_weight")
             .ok_or_else(|| Error::MissingInput("grain_weight required".into()))?;
-        let lovibond = input.get_param("lovibond")
+        let lovibond = input
+            .get_param("lovibond")
             .ok_or_else(|| Error::MissingInput("lovibond required".into()))?;
-        let volume = input.get_param("volume")
+        let volume = input
+            .get_param("volume")
             .ok_or_else(|| Error::MissingInput("volume required".into()))?;
 
-        let weight: Decimal = grain_weight.parse()
+        let weight: Decimal = grain_weight
+            .parse()
             .map_err(|_| Error::Parse("Invalid grain weight".into()))?;
-        let color: Decimal = lovibond.parse()
+        let color: Decimal = lovibond
+            .parse()
             .map_err(|_| Error::Parse("Invalid lovibond".into()))?;
-        let vol: Decimal = volume.parse()
+        let vol: Decimal = volume
+            .parse()
             .map_err(|_| Error::Parse("Invalid volume".into()))?;
 
         if weight <= Decimal::ZERO {

@@ -2,7 +2,7 @@
 //! FIXED: Now returns correct grams value
 
 use mazerion_core::{
-    register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
+    CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit, register_calculator,
 };
 use rust_decimal::Decimal;
 
@@ -32,14 +32,18 @@ impl Calculator for SulfiteCalculator {
 
     fn calculate(&self, input: CalcInput) -> Result<CalcResult> {
         let ph_meas = input.get_measurement(Unit::Ph)?;
-        let volume = input.get_param("volume")
+        let volume = input
+            .get_param("volume")
             .ok_or_else(|| Error::MissingInput("volume required".into()))?;
-        let target = input.get_param("target_free_so2")
+        let target = input
+            .get_param("target_free_so2")
             .ok_or_else(|| Error::MissingInput("target_free_so2 required".into()))?;
 
-        let vol: Decimal = volume.parse()
+        let vol: Decimal = volume
+            .parse()
             .map_err(|_| Error::Parse("Invalid volume".into()))?;
-        let targ: Decimal = target.parse()
+        let targ: Decimal = target
+            .parse()
             .map_err(|_| Error::Parse("Invalid target".into()))?;
         let ph = ph_meas.value;
 
@@ -63,15 +67,23 @@ impl Calculator for SulfiteCalculator {
 
         result = result
             .with_meta("kmeta_g", format!("{:.2} g", kmeta_g))
-            .with_meta("kmeta_tsp", format!("{:.2} tsp", kmeta_g / Decimal::from(5)))
+            .with_meta(
+                "kmeta_tsp",
+                format!("{:.2} tsp", kmeta_g / Decimal::from(5)),
+            )
             .with_meta("volume_L", format!("{:.2} L", vol))
             .with_meta("target_so2_ppm", format!("{} ppm", targ))
             .with_meta("ph", format!("{:.2}", ph))
             .with_meta("effectiveness", effectiveness)
-            .with_meta("tip", "Add K-meta 24 hours before sorbate. Dissolve in small amount of water first.");
+            .with_meta(
+                "tip",
+                "Add K-meta 24 hours before sorbate. Dissolve in small amount of water first.",
+            );
 
         if ph > Decimal::new(38, 1) {
-            result = result.with_warning("High pH reduces sulfite effectiveness - consider adjusting pH first");
+            result = result.with_warning(
+                "High pH reduces sulfite effectiveness - consider adjusting pH first",
+            );
         }
 
         if targ > Decimal::from(80) {

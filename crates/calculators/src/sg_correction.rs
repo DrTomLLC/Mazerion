@@ -1,7 +1,7 @@
 // Temperature correction for specific gravity readings.
 
 use mazerion_core::{
-    register_calculator, CalcInput, CalcResult, Calculator, Measurement, Result, Unit,
+    CalcInput, CalcResult, Calculator, Measurement, Result, Unit, register_calculator,
 };
 use rust_decimal::Decimal;
 

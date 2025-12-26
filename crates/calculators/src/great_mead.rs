@@ -1,5 +1,5 @@
 use mazerion_core::{
-    register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
+    CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit, register_calculator,
 };
 use rust_decimal::Decimal;
 
@@ -28,18 +28,24 @@ impl Calculator for GreatMeadCalculator {
     }
 
     fn calculate(&self, input: CalcInput) -> Result<CalcResult> {
-        let volume = input.get_param("volume")
+        let volume = input
+            .get_param("volume")
             .ok_or_else(|| Error::MissingInput("volume required".into()))?;
-        let target_abv = input.get_param("target_abv")
+        let target_abv = input
+            .get_param("target_abv")
             .ok_or_else(|| Error::MissingInput("target_abv required".into()))?;
 
-        let vol: Decimal = volume.parse()
+        let vol: Decimal = volume
+            .parse()
             .map_err(|_| Error::Parse("Invalid volume".into()))?;
-        let abv: Decimal = target_abv.parse()
+        let abv: Decimal = target_abv
+            .parse()
             .map_err(|_| Error::Parse("Invalid target_abv".into()))?;
 
         if abv < Decimal::from(5) || abv > Decimal::from(20) {
-            return Err(Error::OutOfRange("ABV should be 5-20% for traditional mead".into()));
+            return Err(Error::OutOfRange(
+                "ABV should be 5-20% for traditional mead".into(),
+            ));
         }
 
         // FIXED: 33 g honey per liter per % ABV
@@ -51,8 +57,14 @@ impl Calculator for GreatMeadCalculator {
         result = result
             .with_meta("volume", format!("{} L", vol))
             .with_meta("target_abv", format!("{}%", abv))
-            .with_meta("honey_kg", format!("{:.2} kg", honey_needed / Decimal::from(1000)))
-            .with_meta("honey_lbs", format!("{:.2} lbs", honey_needed / Decimal::new(45359, 2)))
+            .with_meta(
+                "honey_kg",
+                format!("{:.2} kg", honey_needed / Decimal::from(1000)),
+            )
+            .with_meta(
+                "honey_lbs",
+                format!("{:.2} lbs", honey_needed / Decimal::new(45359, 2)),
+            )
             .with_meta("formula", "33 g honey/L/%ABV");
 
         if abv < Decimal::from(8) {

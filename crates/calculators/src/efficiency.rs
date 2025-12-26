@@ -2,7 +2,7 @@
 //! Calculates mash, lauter, and total efficiency
 
 use mazerion_core::{
-    register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
+    CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit, register_calculator,
 };
 use rust_decimal::Decimal;
 
@@ -31,22 +31,30 @@ impl Calculator for EfficiencyCalculator {
     }
 
     fn calculate(&self, input: CalcInput) -> Result<CalcResult> {
-        let grain_weight = input.get_param("grain_weight")
+        let grain_weight = input
+            .get_param("grain_weight")
             .ok_or_else(|| Error::MissingInput("grain_weight required".into()))?;
-        let ppg = input.get_param("ppg")
-            .ok_or_else(|| Error::MissingInput("ppg (points per pound per gallon) required".into()))?;
-        let measured_gravity = input.get_param("measured_gravity")
+        let ppg = input.get_param("ppg").ok_or_else(|| {
+            Error::MissingInput("ppg (points per pound per gallon) required".into())
+        })?;
+        let measured_gravity = input
+            .get_param("measured_gravity")
             .ok_or_else(|| Error::MissingInput("measured_gravity required".into()))?;
-        let volume = input.get_param("volume")
+        let volume = input
+            .get_param("volume")
             .ok_or_else(|| Error::MissingInput("volume required".into()))?;
 
-        let weight: Decimal = grain_weight.parse()
+        let weight: Decimal = grain_weight
+            .parse()
             .map_err(|_| Error::Parse("Invalid grain weight".into()))?;
-        let ppg_val: Decimal = ppg.parse()
+        let ppg_val: Decimal = ppg
+            .parse()
             .map_err(|_| Error::Parse("Invalid PPG".into()))?;
-        let gravity: Decimal = measured_gravity.parse()
+        let gravity: Decimal = measured_gravity
+            .parse()
             .map_err(|_| Error::Parse("Invalid gravity".into()))?;
-        let vol: Decimal = volume.parse()
+        let vol: Decimal = volume
+            .parse()
             .map_err(|_| Error::Parse("Invalid volume".into()))?;
 
         if weight <= Decimal::ZERO {

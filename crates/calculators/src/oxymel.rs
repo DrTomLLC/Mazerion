@@ -1,7 +1,7 @@
 //! Oxymel calculator - vinegar/honey beverage
 
 use mazerion_core::{
-    register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
+    CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit, register_calculator,
 };
 use rust_decimal::Decimal;
 
@@ -30,18 +30,24 @@ impl Calculator for OxymelCalculator {
     }
 
     fn calculate(&self, input: CalcInput) -> Result<CalcResult> {
-        let volume = input.get_param("volume")
+        let volume = input
+            .get_param("volume")
             .ok_or_else(|| Error::MissingInput("volume required".into()))?;
-        let vinegar_percent = input.get_param("vinegar_percent")
+        let vinegar_percent = input
+            .get_param("vinegar_percent")
             .ok_or_else(|| Error::MissingInput("vinegar_percent required".into()))?;
-        let honey_percent = input.get_param("honey_percent")
+        let honey_percent = input
+            .get_param("honey_percent")
             .ok_or_else(|| Error::MissingInput("honey_percent required".into()))?;
 
-        let vol: Decimal = volume.parse()
+        let vol: Decimal = volume
+            .parse()
             .map_err(|_| Error::Parse("Invalid volume".into()))?;
-        let vin_pct: Decimal = vinegar_percent.parse()
+        let vin_pct: Decimal = vinegar_percent
+            .parse()
             .map_err(|_| Error::Parse("Invalid vinegar_percent".into()))?;
-        let hon_pct: Decimal = honey_percent.parse()
+        let hon_pct: Decimal = honey_percent
+            .parse()
             .map_err(|_| Error::Parse("Invalid honey_percent".into()))?;
 
         // Traditional oxymel: 1 part honey to 4 parts vinegar (20% honey, 80% vinegar)
@@ -61,7 +67,7 @@ impl Calculator for OxymelCalculator {
         // Validate ratios
         if vin_pct + hon_pct > Decimal::from(100) {
             return Err(Error::Validation(
-                "Vinegar + honey percentages cannot exceed 100%".into()
+                "Vinegar + honey percentages cannot exceed 100%".into(),
             ));
         }
 

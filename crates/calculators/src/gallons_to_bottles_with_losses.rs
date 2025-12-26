@@ -1,4 +1,5 @@
-use mazerion_core::{Calculator, CalcInput, CalcResult, Error, Measurement, Unit};
+use mazerion_core::register_calculator;
+use mazerion_core::{CalcInput, CalcResult, Calculator, Error, Measurement, Unit};
 use rust_decimal::Decimal;
 use rust_decimal::prelude::ToPrimitive;
 
@@ -17,10 +18,13 @@ use rust_decimal::prelude::ToPrimitive;
 ///   - NOT 21.45 bottles (which is what simple addition would give)
 #[derive(Default)]
 pub struct GallonsToBottlesWithLossesCalculator;
+impl GallonsToBottlesWithLossesCalculator {
+    pub const ID: &'static str = "gallons_to_bottles_with_losses";
+}
 
 impl Calculator for GallonsToBottlesWithLossesCalculator {
     fn id(&self) -> &'static str {
-        "gallons_to_bottles_with_losses"
+        Self::ID
     }
 
     fn name(&self) -> &'static str {
@@ -28,7 +32,7 @@ impl Calculator for GallonsToBottlesWithLossesCalculator {
     }
 
     fn category(&self) -> &'static str {
-        "conversions"
+        "Utilities"
     }
 
     fn description(&self) -> &'static str {
@@ -40,7 +44,8 @@ impl Calculator for GallonsToBottlesWithLossesCalculator {
     fn calculate(&self, input: CalcInput) -> Result<CalcResult, Error> {
         // Helper function to extract and parse parameters from input
         let get_param = |name: &str| -> Result<Decimal, Error> {
-            input.params
+            input
+                .params
                 .iter()
                 .find(|(k, _)| k == name)
                 .map(|(_, v)| v.as_str())
@@ -57,37 +62,37 @@ impl Calculator for GallonsToBottlesWithLossesCalculator {
         // Comprehensive input validation
         if initial_volume_gal <= Decimal::ZERO {
             return Err(Error::Calculation(
-                "Initial volume must be greater than zero".to_string()
+                "Initial volume must be greater than zero".to_string(),
             ));
         }
 
         if initial_volume_gal > Decimal::from(1000) {
             return Err(Error::Calculation(
-                "Initial volume seems unreasonably large (max 1000 gallons)".to_string()
+                "Initial volume seems unreasonably large (max 1000 gallons)".to_string(),
             ));
         }
 
         if loss_rate_percent < Decimal::ZERO {
             return Err(Error::Calculation(
-                "Loss rate cannot be negative".to_string()
+                "Loss rate cannot be negative".to_string(),
             ));
         }
 
         if loss_rate_percent >= Decimal::from(100) {
             return Err(Error::Calculation(
-                "Loss rate must be less than 100%".to_string()
+                "Loss rate must be less than 100%".to_string(),
             ));
         }
 
         if num_rackings < Decimal::ONE {
             return Err(Error::Calculation(
-                "Must have at least 1 racking".to_string()
+                "Must have at least 1 racking".to_string(),
             ));
         }
 
         if num_rackings > Decimal::from(20) {
             return Err(Error::Calculation(
-                "Number of rackings seems unreasonably high (max 20)".to_string()
+                "Number of rackings seems unreasonably high (max 20)".to_string(),
             ));
         }
 
@@ -131,30 +136,71 @@ impl Calculator for GallonsToBottlesWithLossesCalculator {
         // Build comprehensive metadata with all calculation details
         let mut metadata = vec![
             // Initial conditions
-            ("Initial Volume (gal)".to_string(), format!("{:.3}", initial_volume_gal)),
-            ("Initial Volume (L)".to_string(), format!("{:.3}", initial_volume_gal * liters_per_gallon)),
-            ("Initial Bottles (theoretical)".to_string(), format!("{:.2}", initial_volume_gal * bottles_per_gallon)),
-
+            (
+                "Initial Volume (gal)".to_string(),
+                format!("{:.3}", initial_volume_gal),
+            ),
+            (
+                "Initial Volume (L)".to_string(),
+                format!("{:.3}", initial_volume_gal * liters_per_gallon),
+            ),
+            (
+                "Initial Bottles (theoretical)".to_string(),
+                format!("{:.2}", initial_volume_gal * bottles_per_gallon),
+            ),
             // Loss parameters
-            ("Loss Rate Per Racking".to_string(), format!("{:.2}%", loss_rate_percent)),
-            ("Number of Rackings".to_string(), format!("{}", num_rackings_u32)),
-            ("Retention Rate Per Racking".to_string(), format!("{:.4}", retention_rate)),
-            ("Compounded Retention".to_string(), format!("{:.6}", compounded_retention)),
-
+            (
+                "Loss Rate Per Racking".to_string(),
+                format!("{:.2}%", loss_rate_percent),
+            ),
+            (
+                "Number of Rackings".to_string(),
+                format!("{}", num_rackings_u32),
+            ),
+            (
+                "Retention Rate Per Racking".to_string(),
+                format!("{:.4}", retention_rate),
+            ),
+            (
+                "Compounded Retention".to_string(),
+                format!("{:.6}", compounded_retention),
+            ),
             // Final results
-            ("Final Volume (gal)".to_string(), format!("{:.3}", final_volume_gal)),
-            ("Final Volume (L)".to_string(), format!("{:.3}", final_volume_l)),
-            ("Final Bottles (actual)".to_string(), format!("{:.2}", total_bottles)),
-
+            (
+                "Final Volume (gal)".to_string(),
+                format!("{:.3}", final_volume_gal),
+            ),
+            (
+                "Final Volume (L)".to_string(),
+                format!("{:.3}", final_volume_l),
+            ),
+            (
+                "Final Bottles (actual)".to_string(),
+                format!("{:.2}", total_bottles),
+            ),
             // Loss calculations
-            ("Total Loss (gal)".to_string(), format!("{:.3}", total_loss_gal)),
+            (
+                "Total Loss (gal)".to_string(),
+                format!("{:.3}", total_loss_gal),
+            ),
             ("Total Loss (L)".to_string(), format!("{:.3}", total_loss_l)),
-            ("Total Loss (%)".to_string(), format!("{:.2}%", total_loss_percent)),
-            ("Total Loss (bottles)".to_string(), format!("{:.2}", total_loss_gal * bottles_per_gallon)),
-
+            (
+                "Total Loss (%)".to_string(),
+                format!("{:.2}%", total_loss_percent),
+            ),
+            (
+                "Total Loss (bottles)".to_string(),
+                format!("{:.2}", total_loss_gal * bottles_per_gallon),
+            ),
             // Conversion reference
-            ("Bottles per Gallon".to_string(), format!("{:.4}", bottles_per_gallon)),
-            ("Bottle Size".to_string(), "750ml (standard wine bottle)".to_string()),
+            (
+                "Bottles per Gallon".to_string(),
+                format!("{:.4}", bottles_per_gallon),
+            ),
+            (
+                "Bottle Size".to_string(),
+                "750ml (standard wine bottle)".to_string(),
+            ),
         ];
 
         // Add detailed racking-by-racking breakdown
@@ -181,7 +227,8 @@ impl Calculator for GallonsToBottlesWithLossesCalculator {
 
         // Add comparison to incorrect additive method
         let wrong_total_loss_percent = loss_rate_percent * Decimal::from(num_rackings_u32);
-        let wrong_final_volume = initial_volume_gal * (Decimal::ONE - (wrong_total_loss_percent / Decimal::from(100)));
+        let wrong_final_volume =
+            initial_volume_gal * (Decimal::ONE - (wrong_total_loss_percent / Decimal::from(100)));
         let wrong_bottles = wrong_final_volume * bottles_per_gallon;
         let difference = total_bottles - wrong_bottles;
 
@@ -190,15 +237,25 @@ impl Calculator for GallonsToBottlesWithLossesCalculator {
         metadata.push(("───────────────".to_string(), "".to_string()));
         metadata.push((
             "Correct (Compounding)".to_string(),
-            format!("{:.2} bottles | {:.2}% total loss", total_bottles, total_loss_percent)
+            format!(
+                "{:.2} bottles | {:.2}% total loss",
+                total_bottles, total_loss_percent
+            ),
         ));
         metadata.push((
             "Wrong (Additive)".to_string(),
-            format!("{:.2} bottles | {:.2}% total loss", wrong_bottles, wrong_total_loss_percent)
+            format!(
+                "{:.2} bottles | {:.2}% total loss",
+                wrong_bottles, wrong_total_loss_percent
+            ),
         ));
         metadata.push((
             "Difference".to_string(),
-            format!("{:.2} bottles ({:.2}% error)", difference, (difference / total_bottles * Decimal::from(100)).abs())
+            format!(
+                "{:.2} bottles ({:.2}% error)",
+                difference,
+                (difference / total_bottles * Decimal::from(100)).abs()
+            ),
         ));
 
         // Generate comprehensive warnings
@@ -227,7 +284,8 @@ impl Calculator for GallonsToBottlesWithLossesCalculator {
             warnings.push(format!(
                 "⚠️ Total loss of {:.1}% is very high. You're losing {:.2} bottles! \
                  Consider reducing the number of rackings or improving technique.",
-                total_loss_percent, total_loss_gal * bottles_per_gallon
+                total_loss_percent,
+                total_loss_gal * bottles_per_gallon
             ));
         }
 
@@ -244,14 +302,16 @@ impl Calculator for GallonsToBottlesWithLossesCalculator {
         if num_rackings_u32 == 1 && loss_rate_percent > Decimal::from(8) {
             warnings.push(
                 "⚠️ Single racking with >8% loss suggests heavy sediment or poor technique. \
-                 Consider cold-crashing before racking to compact sediment.".to_string()
+                 Consider cold-crashing before racking to compact sediment."
+                    .to_string(),
             );
         }
 
         // Informational notes
         if num_rackings_u32 >= 3 && loss_rate_percent <= Decimal::from(5) {
             warnings.push(
-                "✓ Good racking technique! Keeping losses ≤5% per racking is excellent practice.".to_string()
+                "✓ Good racking technique! Keeping losses ≤5% per racking is excellent practice."
+                    .to_string(),
             );
         }
 
@@ -260,14 +320,15 @@ impl Calculator for GallonsToBottlesWithLossesCalculator {
             "ℹ️ This calculation assumes standard 750ml wine bottles. \
              For 375ml (half bottles): multiply by 2. \
              For 1.5L (magnums): divide by 2. \
-             For 187ml (splits): multiply by 4.".to_string()
+             For 187ml (splits): multiply by 4."
+                .to_string(),
         );
 
         // Return complete result
         Ok(CalcResult {
             output: Measurement {
                 value: total_bottles.round_dp(2),
-                unit: Unit::Liters, // TEMPORARY - bottles as "liters" until Count added // Bottle count - ADD unit.rs to crates/core/src/ first!
+                unit: Unit::Grams, // Using Grams for bottle count
             },
             metadata,
             warnings,
@@ -397,3 +458,4 @@ mod tests {
         assert!(has_comparison);
     }
 }
+register_calculator!(GallonsToBottlesWithLossesCalculator);

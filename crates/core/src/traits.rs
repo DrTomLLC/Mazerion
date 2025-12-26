@@ -22,7 +22,9 @@ pub trait Calculator: Send + Sync {
     /// Validate inputs before calculation.
     fn validate(&self, input: &CalcInput) -> Result<()> {
         if input.measurements.is_empty() && input.params.is_empty() {
-            return Err(Error::MissingInput("No measurements or parameters provided".into()));
+            return Err(Error::MissingInput(
+                "No measurements or parameters provided".into(),
+            ));
         }
         Ok(())
     }
@@ -97,9 +99,7 @@ pub fn calculator_count() -> usize {
 macro_rules! register_calculator {
     ($calc:ty) => {
         #[::linkme::distributed_slice($crate::traits::CALCULATORS)]
-        static ENTRY: $crate::traits::CalculatorEntry = $crate::traits::CalculatorEntry::new(
-            <$calc>::ID,
-            || Box::new(<$calc>::default()),
-        );
+        static ENTRY: $crate::traits::CalculatorEntry =
+            $crate::traits::CalculatorEntry::new(<$calc>::ID, || Box::new(<$calc>::default()));
     };
 }

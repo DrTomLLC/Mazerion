@@ -1,0 +1,9 @@
+﻿   Compiling mazerion-calculators v0.18.0 (C:\Users\DrTom\RustroverProjects\Mazerion\crates\calculators)
+   Compiling line-guard v0.18.0 (C:\Users\DrTom\RustroverProjects\Mazerion\tools\line-guard)
+   Compiling mazerion-api v0.18.0 (C:\Users\DrTom\RustroverProjects\Mazerion\crates\api)
+   Compiling mazerion-gui v0.18.0 (C:\Users\DrTom\RustroverProjects\Mazerion\crates\gui)
+   Compiling mazerion-tui v0.18.0 (C:\Users\DrTom\RustroverProjects\Mazerion\crates\tui)
+   Compiling mazerion-ffi v0.18.0 (C:\Users\DrTom\RustroverProjects\Mazerion\crates\ffi)
+   Compiling mazerion v0.18.0 (C:\Users\DrTom\RustroverProjects\Mazerion\crates\cli)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.72s
+

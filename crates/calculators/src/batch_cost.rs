@@ -1,7 +1,7 @@
 //! Batch cost calculator for ingredient costing
 
 use mazerion_core::{
-    register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
+    CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit, register_calculator,
 };
 use rust_decimal::Decimal;
 
@@ -42,7 +42,8 @@ impl Calculator for BatchCostCalculator {
         let yeast_cost: Decimal = yeast.parse().unwrap_or(Decimal::ZERO);
         let nutrients_cost: Decimal = nutrients.parse().unwrap_or(Decimal::ZERO);
         let other_cost: Decimal = other.parse().unwrap_or(Decimal::ZERO);
-        let bottle_count: Decimal = bottles.parse()
+        let bottle_count: Decimal = bottles
+            .parse()
             .map_err(|_| Error::Parse("Invalid bottle count".into()))?;
 
         if bottle_count <= Decimal::ZERO {

@@ -1,5 +1,5 @@
 use mazerion_core::{
-    register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
+    CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit, register_calculator,
 };
 use rust_decimal::Decimal;
 
@@ -28,16 +28,18 @@ impl Calculator for YeastPitchCalculator {
     }
 
     fn calculate(&self, input: CalcInput) -> Result<CalcResult> {
-        let volume = input.get_param("volume")
+        let volume = input
+            .get_param("volume")
             .ok_or_else(|| Error::MissingInput("volume required".into()))?;
-        let og = input.get_param("og")
+        let og = input
+            .get_param("og")
             .ok_or_else(|| Error::MissingInput("og required".into()))?;
         let yeast_type = input.get_param("yeast_type").unwrap_or("ale");
 
-        let vol: Decimal = volume.parse()
+        let vol: Decimal = volume
+            .parse()
             .map_err(|_| Error::Parse("Invalid volume".into()))?;
-        let gravity: Decimal = og.parse()
-            .map_err(|_| Error::Parse("Invalid og".into()))?;
+        let gravity: Decimal = og.parse().map_err(|_| Error::Parse("Invalid og".into()))?;
 
         // Convert volume to mL
         let vol_ml = vol * Decimal::from(1000);
@@ -47,9 +49,9 @@ impl Calculator for YeastPitchCalculator {
 
         // Pitch rate (million cells per mL per degree Plato)
         let pitch_rate = match yeast_type {
-            "ale" => Decimal::new(75, 2),      // 0.75 million cells/mL/°P
-            "lager" => Decimal::new(15, 1),    // 1.5 million cells/mL/°P
-            "mead" => Decimal::new(5, 1),      // 0.5 million cells/mL/°P (lower)
+            "ale" => Decimal::new(75, 2),   // 0.75 million cells/mL/°P
+            "lager" => Decimal::new(15, 1), // 1.5 million cells/mL/°P
+            "mead" => Decimal::new(5, 1),   // 0.5 million cells/mL/°P (lower)
             _ => Decimal::new(75, 2),
         };
 
@@ -63,9 +65,18 @@ impl Calculator for YeastPitchCalculator {
 
         result = result
             .with_meta("yeast_type", yeast_type)
-            .with_meta("cells_billion", format!("{:.0} billion cells", cells_needed))
-            .with_meta("packets_5g", format!("{:.1} packets (5g ea)", packets_needed))
-            .with_meta("grams_dry", format!("{:.1} g", packets_needed * Decimal::from(5)))
+            .with_meta(
+                "cells_billion",
+                format!("{:.0} billion cells", cells_needed),
+            )
+            .with_meta(
+                "packets_5g",
+                format!("{:.1} packets (5g ea)", packets_needed),
+            )
+            .with_meta(
+                "grams_dry",
+                format!("{:.1} g", packets_needed * Decimal::from(5)),
+            )
             .with_meta("pitch_rate", format!("{:.2} M cells/mL/°P", pitch_rate))
             .with_meta("plato", format!("{:.1}°P", plato));
 

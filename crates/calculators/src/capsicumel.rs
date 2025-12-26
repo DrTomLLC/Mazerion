@@ -1,5 +1,5 @@
 use mazerion_core::{
-    register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
+    CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit, register_calculator,
 };
 use rust_decimal::Decimal;
 use std::str::FromStr;
@@ -29,15 +29,17 @@ impl Calculator for CapsicumelCalculator {
     }
 
     fn calculate(&self, input: CalcInput) -> Result<CalcResult> {
-        let volume = input.get_param("volume")
+        let volume = input
+            .get_param("volume")
             .ok_or_else(|| Error::MissingInput("volume required".into()))?;
-        let target_abv = input.get_param("target_abv")
+        let target_abv = input
+            .get_param("target_abv")
             .ok_or_else(|| Error::MissingInput("target_abv required".into()))?;
 
-        let vol: Decimal = Decimal::from_str(volume)
-            .map_err(|_| Error::Parse("Invalid volume".into()))?;
-        let abv: Decimal = Decimal::from_str(target_abv)
-            .map_err(|_| Error::Parse("Invalid target_abv".into()))?;
+        let vol: Decimal =
+            Decimal::from_str(volume).map_err(|_| Error::Parse("Invalid volume".into()))?;
+        let abv: Decimal =
+            Decimal::from_str(target_abv).map_err(|_| Error::Parse("Invalid target_abv".into()))?;
 
         // FIXED: 33 g per L per % ABV
         let honey_needed = vol * abv * Decimal::from(33);

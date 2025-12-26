@@ -1,20 +1,17 @@
-use crate::state::UnitSystem;
+//! Utility Calculators
+
 use crate::MazerionApp;
+use crate::state::UnitSystem;
 use eframe::egui;
 use rust_decimal::Decimal;
 use std::str::FromStr;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum UtilityCalculator {
     BenchTrials,
+    #[default]
     RecipeUpscaling,
     BottlesWithLosses,
-}
-
-impl Default for UtilityCalculator {
-    fn default() -> Self {
-        Self::RecipeUpscaling
-    }
 }
 
 pub fn render(app: &mut MazerionApp, ui: &mut egui::Ui) {
@@ -30,9 +27,21 @@ pub fn render(app: &mut MazerionApp, ui: &mut egui::Ui) {
                 UtilityCalculator::BottlesWithLosses => "🍾 Bottles (with Losses)",
             })
             .show_ui(ui, |ui| {
-                ui.selectable_value(&mut app.utility_calc, UtilityCalculator::BenchTrials, "🧪 Bench Trials");
-                ui.selectable_value(&mut app.utility_calc, UtilityCalculator::RecipeUpscaling, "📈 Recipe Upscaling");
-                ui.selectable_value(&mut app.utility_calc, UtilityCalculator::BottlesWithLosses, "🍾 Bottles (with Losses)");
+                ui.selectable_value(
+                    &mut app.utility_calc,
+                    UtilityCalculator::BenchTrials,
+                    "🧪 Bench Trials",
+                );
+                ui.selectable_value(
+                    &mut app.utility_calc,
+                    UtilityCalculator::RecipeUpscaling,
+                    "📈 Recipe Upscaling",
+                );
+                ui.selectable_value(
+                    &mut app.utility_calc,
+                    UtilityCalculator::BottlesWithLosses,
+                    "🍾 Bottles (with Losses)",
+                );
             });
     });
 
@@ -52,9 +61,24 @@ fn render_recipe_upscaling(app: &mut MazerionApp, ui: &mut egui::Ui) {
     let is_metric = app.state.unit_system == UnitSystem::Metric;
     let vol_unit = if is_metric { "L" } else { "gal" };
 
-    crate::input_field(ui, &format!("Original Size ({}):", vol_unit), &mut app.original_recipe_size, "Original batch size");
-    crate::input_field(ui, &format!("Target Size ({}):", vol_unit), &mut app.target_batch_size, "Desired batch size");
-    crate::input_field(ui, "Original Amount:", &mut app.original_amount, "Amount of ingredient in original recipe");
+    crate::input_field(
+        ui,
+        &format!("Original Size ({}):", vol_unit),
+        &mut app.original_recipe_size,
+        "Original batch size",
+    );
+    crate::input_field(
+        ui,
+        &format!("Target Size ({}):", vol_unit),
+        &mut app.target_batch_size,
+        "Desired batch size",
+    );
+    crate::input_field(
+        ui,
+        "Original Amount:",
+        &mut app.original_amount,
+        "Amount of ingredient in original recipe",
+    );
 
     ui.horizontal(|ui| {
         ui.label("Unit:");
@@ -100,7 +124,10 @@ fn render_recipe_upscaling(app: &mut MazerionApp, ui: &mut egui::Ui) {
             }
         };
 
-        if original_size <= Decimal::ZERO || target_size <= Decimal::ZERO || original_amount < Decimal::ZERO {
+        if original_size <= Decimal::ZERO
+            || target_size <= Decimal::ZERO
+            || original_amount < Decimal::ZERO
+        {
             app.result = Some("Error: Values must be positive".to_string());
             return;
         }
@@ -110,9 +137,24 @@ fn render_recipe_upscaling(app: &mut MazerionApp, ui: &mut egui::Ui) {
 
         app.result = Some(format!("{:.2} {}", scaled_amount, app.upscale_unit));
 
-        app.metadata.push(("Scaling Factor".to_string(), format!("{}x", scaling_factor.round_dp(2))));
-        app.metadata.push(("Original".to_string(), format!("{:.2} {} in {} {}", original_amount, app.upscale_unit, original_size, vol_unit)));
-        app.metadata.push(("Scaled".to_string(), format!("{:.2} {} in {} {}", scaled_amount, app.upscale_unit, target_size, vol_unit)));
+        app.metadata.push((
+            "Scaling Factor".to_string(),
+            format!("{}x", scaling_factor.round_dp(2)),
+        ));
+        app.metadata.push((
+            "Original".to_string(),
+            format!(
+                "{:.2} {} in {} {}",
+                original_amount, app.upscale_unit, original_size, vol_unit
+            ),
+        ));
+        app.metadata.push((
+            "Scaled".to_string(),
+            format!(
+                "{:.2} {} in {} {}",
+                scaled_amount, app.upscale_unit, target_size, vol_unit
+            ),
+        ));
     }
 }
 
@@ -123,9 +165,24 @@ fn render_bench_trials(app: &mut MazerionApp, ui: &mut egui::Ui) {
     let is_metric = app.state.unit_system == UnitSystem::Metric;
     let vol_unit = if is_metric { "L" } else { "gal" };
 
-    crate::input_field(ui, &format!("Trial Volume ({}):", vol_unit), &mut app.trial_volume, "Small test batch volume");
-    crate::input_field(ui, "Addition Amount:", &mut app.trial_addition, "Amount added in trial");
-    crate::input_field(ui, &format!("Target Batch ({}):", vol_unit), &mut app.batch_volume_bench, "Full batch size");
+    crate::input_field(
+        ui,
+        &format!("Trial Volume ({}):", vol_unit),
+        &mut app.trial_volume,
+        "Small test batch volume",
+    );
+    crate::input_field(
+        ui,
+        "Addition Amount:",
+        &mut app.trial_addition,
+        "Amount added in trial",
+    );
+    crate::input_field(
+        ui,
+        &format!("Target Batch ({}):", vol_unit),
+        &mut app.batch_volume_bench,
+        "Full batch size",
+    );
 
     ui.add_space(10.0);
 
@@ -165,8 +222,14 @@ fn render_bench_trials(app: &mut MazerionApp, ui: &mut egui::Ui) {
         let scaled_addition = addition * (batch_vol / trial_vol);
 
         app.result = Some(format!("{:.2} g", scaled_addition));
-        app.metadata.push(("Trial".to_string(), format!("{:.2} g in {} {}", addition, trial_vol, vol_unit)));
-        app.metadata.push(("Full Batch".to_string(), format!("{:.2} g in {} {}", scaled_addition, batch_vol, vol_unit)));
+        app.metadata.push((
+            "Trial".to_string(),
+            format!("{:.2} g in {} {}", addition, trial_vol, vol_unit),
+        ));
+        app.metadata.push((
+            "Full Batch".to_string(),
+            format!("{:.2} g in {} {}", scaled_addition, batch_vol, vol_unit),
+        ));
     }
 }
 
@@ -177,7 +240,12 @@ fn render_bottles_with_losses(app: &mut MazerionApp, ui: &mut egui::Ui) {
     let is_metric = app.state.unit_system == UnitSystem::Metric;
     let vol_unit = if is_metric { "L" } else { "gal" };
 
-    crate::input_field(ui, &format!("Initial Volume ({}):", vol_unit), &mut app.waste_initial_volume, "Starting volume");
+    crate::input_field(
+        ui,
+        &format!("Initial Volume ({}):", vol_unit),
+        &mut app.waste_initial_volume,
+        "Starting volume",
+    );
 
     ui.horizontal(|ui| {
         ui.label("Vessel:");
@@ -189,13 +257,30 @@ fn render_bottles_with_losses(app: &mut MazerionApp, ui: &mut egui::Ui) {
                 _ => "Carboy",
             })
             .show_ui(ui, |ui| {
-                ui.selectable_value(&mut app.waste_vessel_type, "carboy".to_string(), "Carboy (standard)");
-                ui.selectable_value(&mut app.waste_vessel_type, "bucket".to_string(), "Bucket (wider)");
-                ui.selectable_value(&mut app.waste_vessel_type, "keg".to_string(), "Keg (minimal)");
+                ui.selectable_value(
+                    &mut app.waste_vessel_type,
+                    "carboy".to_string(),
+                    "Carboy (standard)",
+                );
+                ui.selectable_value(
+                    &mut app.waste_vessel_type,
+                    "bucket".to_string(),
+                    "Bucket (wider)",
+                );
+                ui.selectable_value(
+                    &mut app.waste_vessel_type,
+                    "keg".to_string(),
+                    "Keg (minimal)",
+                );
             });
     });
 
-    crate::input_field(ui, "Rackings:", &mut app.waste_num_rackings, "Number of times racked");
+    crate::input_field(
+        ui,
+        "Number of Rackings:",
+        &mut app.waste_num_rackings,
+        "Number of times racked",
+    );
 
     ui.horizontal(|ui| {
         ui.label("Process:");
@@ -207,9 +292,21 @@ fn render_bottles_with_losses(app: &mut MazerionApp, ui: &mut egui::Ui) {
                 _ => "Standard",
             })
             .show_ui(ui, |ui| {
-                ui.selectable_value(&mut app.waste_process_type, "standard".to_string(), "Standard (normal)");
-                ui.selectable_value(&mut app.waste_process_type, "careful".to_string(), "Careful (minimal loss)");
-                ui.selectable_value(&mut app.waste_process_type, "fruit".to_string(), "With Fruit (high loss)");
+                ui.selectable_value(
+                    &mut app.waste_process_type,
+                    "standard".to_string(),
+                    "Standard (normal)",
+                );
+                ui.selectable_value(
+                    &mut app.waste_process_type,
+                    "careful".to_string(),
+                    "Careful (minimal loss)",
+                );
+                ui.selectable_value(
+                    &mut app.waste_process_type,
+                    "fruit".to_string(),
+                    "With Fruit (high loss)",
+                );
             });
     });
 
@@ -240,29 +337,29 @@ fn render_bottles_with_losses(app: &mut MazerionApp, ui: &mut egui::Ui) {
             return;
         }
 
-        // Loss rates based on vessel and process - using safe Decimal::new instead of from_str
-        let base_loss = match (app.waste_vessel_type.as_str(), app.waste_process_type.as_str()) {
-            ("carboy", "careful") => Decimal::new(3, 2),    // 0.03
-            ("carboy", "standard") => Decimal::new(5, 2),   // 0.05
-            ("carboy", "fruit") => Decimal::new(10, 2),     // 0.10
-            ("bucket", "careful") => Decimal::new(4, 2),    // 0.04
-            ("bucket", "standard") => Decimal::new(6, 2),   // 0.06
-            ("bucket", "fruit") => Decimal::new(12, 2),     // 0.12
-            ("keg", "careful") => Decimal::new(1, 2),       // 0.01
-            ("keg", "standard") => Decimal::new(2, 2),      // 0.02
-            ("keg", "fruit") => Decimal::new(5, 2),         // 0.05
-            _ => Decimal::new(5, 2),                        // 0.05 default
+        let base_loss = match (
+            app.waste_vessel_type.as_str(),
+            app.waste_process_type.as_str(),
+        ) {
+            ("carboy", "careful") => Decimal::new(3, 2),
+            ("carboy", "standard") => Decimal::new(5, 2),
+            ("carboy", "fruit") => Decimal::new(10, 2),
+            ("bucket", "careful") => Decimal::new(4, 2),
+            ("bucket", "standard") => Decimal::new(6, 2),
+            ("bucket", "fruit") => Decimal::new(12, 2),
+            ("keg", "careful") => Decimal::new(1, 2),
+            ("keg", "standard") => Decimal::new(2, 2),
+            ("keg", "fruit") => Decimal::new(5, 2),
+            _ => Decimal::new(5, 2),
         };
 
-        // Compound losses
         let mut remaining_volume = initial_vol;
         for _ in 0..num_rackings {
-            remaining_volume *= (Decimal::ONE - base_loss);
+            remaining_volume *= Decimal::ONE - base_loss;
         }
 
-        // Convert to bottles (750ml = 0.75L)
-        let liters_per_gallon = Decimal::new(3785411784, 9);  // 3.785411784
-        let liters_per_bottle = Decimal::new(75, 2);          // 0.75
+        let liters_per_gallon = Decimal::new(3785411784, 9);
+        let liters_per_bottle = Decimal::new(75, 2);
 
         let volume_liters = if is_metric {
             remaining_volume
@@ -273,7 +370,7 @@ fn render_bottles_with_losses(app: &mut MazerionApp, ui: &mut egui::Ui) {
         let bottles = volume_liters / liters_per_bottle;
         let total_loss = (initial_vol - remaining_volume) / initial_vol * Decimal::from(100);
 
-        app.result = Some(format!("{:.1} bottles", bottles));
+        app.result = Some(format!("{:.0} bottles (750ml)", bottles));
 
         let vol_label = if is_metric {
             format!("{:.2} L", remaining_volume)
@@ -281,8 +378,29 @@ fn render_bottles_with_losses(app: &mut MazerionApp, ui: &mut egui::Ui) {
             format!("{:.2} gal", remaining_volume)
         };
 
+        app.metadata.push((
+            "Initial Volume".to_string(),
+            format!("{:.2} {}", initial_vol, vol_unit),
+        ));
         app.metadata.push(("Final Volume".to_string(), vol_label));
-        app.metadata.push(("Total Loss".to_string(), format!("{:.1}%", total_loss)));
-        app.metadata.push(("Loss per Racking".to_string(), format!("{:.1}%", base_loss * Decimal::from(100))));
+        app.metadata.push((
+            "Total Loss".to_string(),
+            format!(
+                "{:.2} gal ({:.1}%)",
+                initial_vol - remaining_volume,
+                total_loss
+            ),
+        ));
+        app.metadata.push((
+            "Loss Per Racking".to_string(),
+            format!("~{:.1}%", base_loss * Decimal::from(100)),
+        ));
+
+        if total_loss > Decimal::from(25) {
+            app.warnings.push(
+                "⚠️ High total loss - consider reducing rackings or using conical fermenter"
+                    .to_string(),
+            );
+        }
     }
 }

@@ -145,8 +145,8 @@ fn test_tannin_calculator() {
 fn test_bottling_calculator() {
     let calc = BottlingCalculator::default();
     let input = CalcInput::new()
-        .add_param("volume", "19")         // Total batch volume in liters
-        .add_param("bottle_size", "750");  // Standard 750 mL wine bottle
+        .add_param("volume", "19") // Total batch volume in liters
+        .add_param("bottle_size", "750"); // Standard 750 mL wine bottle
 
     let result = calc.calculate(input).unwrap();
 
@@ -166,7 +166,7 @@ fn test_acid_invalid_ph_range() {
     let input = CalcInput::new()
         .add_measurement(current_ph)
         .add_param("volume", "19")
-        .add_param("target_ph", "3.8");  // Higher than current - INVALID
+        .add_param("target_ph", "3.8"); // Higher than current - INVALID
 
     let result = calc.calculate(input);
     // Should either error or give negative result (invalid)

@@ -1,13 +1,11 @@
-pub mod basic;
 pub mod advanced;
-pub mod brewing;
+pub mod basic;
 pub mod beer;
+pub mod brewing;
 pub mod finishing;
-pub mod mead_styles;
-pub mod utilities;
+pub mod meads;
 pub mod settings;
-pub mod conversions;
-// mod tabs_conversions;
-
-pub use mead_styles::MeadStyle;
-pub use utilities::UtilityCalculator;
+pub mod utilities;
+pub mod mead_encyclopedia;
+mod mead_styles;
+mod tabs_conversions;

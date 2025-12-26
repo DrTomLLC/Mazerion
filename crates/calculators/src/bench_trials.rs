@@ -1,5 +1,5 @@
 use mazerion_core::{
-    register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
+    CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit, register_calculator,
 };
 use rust_decimal::Decimal;
 
@@ -28,18 +28,24 @@ impl Calculator for BenchTrialsCalculator {
     }
 
     fn calculate(&self, input: CalcInput) -> Result<CalcResult> {
-        let trial_volume = input.get_param("trial_volume")
+        let trial_volume = input
+            .get_param("trial_volume")
             .ok_or_else(|| Error::MissingInput("trial_volume required".into()))?;
-        let trial_addition = input.get_param("trial_addition")
+        let trial_addition = input
+            .get_param("trial_addition")
             .ok_or_else(|| Error::MissingInput("trial_addition required".into()))?;
-        let batch_volume = input.get_param("batch_volume")
+        let batch_volume = input
+            .get_param("batch_volume")
             .ok_or_else(|| Error::MissingInput("batch_volume required".into()))?;
 
-        let trial_vol: Decimal = trial_volume.parse()
+        let trial_vol: Decimal = trial_volume
+            .parse()
             .map_err(|_| Error::Parse("Invalid trial_volume".into()))?;
-        let trial_add: Decimal = trial_addition.parse()
+        let trial_add: Decimal = trial_addition
+            .parse()
             .map_err(|_| Error::Parse("Invalid trial_addition".into()))?;
-        let batch_vol: Decimal = batch_volume.parse()
+        let batch_vol: Decimal = batch_volume
+            .parse()
             .map_err(|_| Error::Parse("Invalid batch_volume".into()))?;
 
         if trial_vol <= Decimal::ZERO || batch_vol <= Decimal::ZERO {
@@ -62,15 +68,24 @@ impl Calculator for BenchTrialsCalculator {
             .with_meta("trial_addition_g", format!("{:.2} g", trial_add))
             .with_meta("dosage_rate", format!("{:.3} g/mL", dosage_rate))
             .with_meta("batch_volume_L", format!("{} L", batch_vol))
-            .with_meta("batch_addition_g", format!("{:.1} g ({:.2} kg)", batch_addition, batch_addition / Decimal::from(1000)))
+            .with_meta(
+                "batch_addition_g",
+                format!(
+                    "{:.1} g ({:.2} kg)",
+                    batch_addition,
+                    batch_addition / Decimal::from(1000)
+                ),
+            )
             .with_meta("scale_factor", format!("{}x", scale_factor));
 
         if scale_factor > Decimal::from(100) {
-            result = result.with_warning("Large scale factor - consider intermediate trials to verify dosage");
+            result = result
+                .with_warning("Large scale factor - consider intermediate trials to verify dosage");
         }
 
         if trial_vol < Decimal::from(50) {
-            result = result.with_warning("Very small trial volume - measurement errors will be amplified");
+            result = result
+                .with_warning("Very small trial volume - measurement errors will be amplified");
         }
 
         Ok(result)

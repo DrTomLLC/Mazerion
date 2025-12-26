@@ -1,7 +1,7 @@
 //! Priming sugar alternatives calculator
 
 use mazerion_core::{
-    register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
+    CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit, register_calculator,
 };
 use rust_decimal::Decimal;
 
@@ -33,7 +33,8 @@ impl Calculator for PrimingAlternativesCalculator {
         let sugar_type = input.get_param("sugar_type").unwrap_or("corn_sugar");
         let amount = input.get_param("amount").unwrap_or("100");
 
-        let amt: Decimal = amount.parse()
+        let amt: Decimal = amount
+            .parse()
             .map_err(|_| Error::Parse("Invalid amount".into()))?;
 
         if amt <= Decimal::ZERO {
@@ -42,10 +43,10 @@ impl Calculator for PrimingAlternativesCalculator {
 
         // Conversion factors relative to corn sugar (dextrose = 1.0)
         let from_factor = match sugar_type {
-            "table_sugar" => Decimal::new(91, 2),  // 0.91x (sucrose more fermentable)
-            "dme" => Decimal::new(135, 2),          // 1.35x (less fermentable)
-            "honey" => Decimal::new(125, 2),        // 1.25x
-            _ => Decimal::ONE,                      // corn_sugar default
+            "table_sugar" => Decimal::new(91, 2), // 0.91x (sucrose more fermentable)
+            "dme" => Decimal::new(135, 2),        // 1.35x (less fermentable)
+            "honey" => Decimal::new(125, 2),      // 1.25x
+            _ => Decimal::ONE,                    // corn_sugar default
         };
 
         // Convert input to corn sugar equivalent

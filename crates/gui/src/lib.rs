@@ -1,6 +1,6 @@
 //! Mazerion GUI - Main application
 
-use eframe::egui::{self, RichText, Color32, CornerRadius};
+use eframe::egui::{self, Color32, CornerRadius, RichText};
 
 mod state;
 mod tabs;
@@ -103,7 +103,7 @@ pub struct MazerionApp {
     pub stabilization_vol: String,
 
     // Mead Styles
-    pub mead_style: tabs::mead_styles::MeadStyle,
+    pub mead_style: String,
     pub mead_volume: String,
     pub mead_target_abv: String,
     pub fruit_type: String,
@@ -120,7 +120,6 @@ pub struct MazerionApp {
     pub upscale_original_vol: String,
     pub upscale_target_vol: String,
     pub upscale_ingredient: String,
-    pub utility_calc: tabs::utilities::UtilityCalculator,
     pub trial_volume: String,
     pub trial_addition: String,
     pub batch_volume_bench: String,
@@ -132,6 +131,7 @@ pub struct MazerionApp {
     pub waste_vessel_type: String,
     pub waste_num_rackings: String,
     pub waste_process_type: String,
+    pub utility_calc: tabs::utilities::UtilityCalculator,
 }
 
 impl Default for MazerionApp {
@@ -151,22 +151,22 @@ impl Default for MazerionApp {
             sugar_weight: "150".to_string(),
             target_co2: "2.5".to_string(),
             temperature: "20".to_string(),
-            brix_reading: "24".to_string(),
+            brix_reading: String::new(),
             brix: String::new(),
             sg_for_brix: String::new(),
             current_vol: String::new(),
             current_abv: String::new(),
 
-            vol1: "10".to_string(),
-            sg1: "1.120".to_string(),
-            vol2: "10".to_string(),
-            sg2: "1.000".to_string(),
-            refrac_brix: "12".to_string(),
-            refrac_og: "1.100".to_string(),
-            alcohol_sg: "1.010".to_string(),
-            measured_abv: "12".to_string(),
-            temp_sg: "1.050".to_string(),
-            temp_reading: "30".to_string(),
+            vol1: String::new(),
+            sg1: String::new(),
+            vol2: String::new(),
+            sg2: String::new(),
+            refrac_brix: String::new(),
+            refrac_og: String::new(),
+            alcohol_sg: String::new(),
+            measured_abv: String::new(),
+            temp_sg: String::new(),
+            temp_reading: String::new(),
             abv1: String::new(),
             abv2: String::new(),
             orig_brix: String::new(),
@@ -175,35 +175,35 @@ impl Default for MazerionApp {
             temp: String::new(),
 
             volume: "19".to_string(),
-            abv: "14".to_string(),
-            schedule: "standard".to_string(),
-            honey_weight: "3.5".to_string(),
-            fruit_weight: "2".to_string(),
+            abv: String::new(),
+            schedule: "tosna_2".to_string(),
+            honey_weight: String::new(),
+            fruit_weight: String::new(),
             ingredient_type: "honey".to_string(),
-            calcium: "50".to_string(),
-            magnesium: "10".to_string(),
-            sulfate: "50".to_string(),
-            chloride: "50".to_string(),
-            bicarbonate: "50".to_string(),
-            sodium: "10".to_string(),
-            batch_size: "19".to_string(),
+            calcium: String::new(),
+            magnesium: String::new(),
+            sulfate: String::new(),
+            chloride: String::new(),
+            bicarbonate: String::new(),
+            sodium: String::new(),
+            batch_size: String::new(),
             target_abv_brew: String::new(),
-            yn_requirement: "medium".to_string(),
+            yn_requirement: String::new(),
             carb_temp: String::new(),
-            carb_method: "priming".to_string(),
-            sugar_type: "table_sugar".to_string(),
+            carb_method: "bottle".to_string(),
+            sugar_type: "dextrose".to_string(),
 
-            hop_weight: "30".to_string(),
-            hop_aa: "10".to_string(),
-            boil_time: "60".to_string(),
-            boil_gravity: "1.050".to_string(),
-            grain_weight: "500".to_string(),
-            grain_color: "10".to_string(),
-            mash_water: "15".to_string(),
-            grain_temp: "20".to_string(),
-            target_temp: "65".to_string(),
-            total_points: "400".to_string(),
-            actual_points: "320".to_string(),
+            hop_weight: String::new(),
+            hop_aa: String::new(),
+            boil_time: String::new(),
+            boil_gravity: String::new(),
+            grain_weight: String::new(),
+            grain_color: String::new(),
+            mash_water: String::new(),
+            grain_temp: String::new(),
+            target_temp: String::new(),
+            total_points: String::new(),
+            actual_points: String::new(),
             alpha_acid: String::new(),
             beer_volume: String::new(),
             grain_lovibond: String::new(),
@@ -212,37 +212,36 @@ impl Default for MazerionApp {
             grain_ppg: String::new(),
             measured_gravity: String::new(),
 
-            sweet_vol: "19".to_string(),
-            current_sg: "1.000".to_string(),
-            target_sg: "1.015".to_string(),
+            sweet_vol: String::new(),
+            current_sg: String::new(),
+            target_sg: String::new(),
             sweetener: "honey".to_string(),
-            sulfite_vol: "19".to_string(),
-            ph: "3.5".to_string(),
-            target_so2: "50".to_string(),
-            acid_vol: "19".to_string(),
-            current_ph: "3.8".to_string(),
-            target_ph_acid: "3.4".to_string(),
+            sulfite_vol: String::new(),
+            ph: String::new(),
+            target_so2: String::new(),
+            acid_vol: String::new(),
+            current_ph: String::new(),
+            target_ph_acid: String::new(),
             acid_type: "tartaric".to_string(),
-            pasteurization_temp: "65".to_string(),
-            stabilization_vol: "19".to_string(),
+            pasteurization_temp: String::new(),
+            stabilization_vol: String::new(),
 
-            mead_style: tabs::mead_styles::MeadStyle::Traditional,
+            mead_style: "traditional".to_string(),
             mead_volume: String::new(),
             mead_target_abv: String::new(),
-            fruit_type: "strawberry".to_string(),
+            fruit_type: String::new(),
             juice_percent: String::new(),
             maple_percent: String::new(),
-            bochet_level: "medium".to_string(),
+            bochet_level: String::new(),
             honey_percent: String::new(),
             malt_weight: String::new(),
-            spice_level: "cinnamon".to_string(),
+            spice_level: String::new(),
 
-            bench_volume: "0.1".to_string(),
-            bench_addition: "5".to_string(),
-            upscale_original_vol: "1".to_string(),
-            upscale_target_vol: "19".to_string(),
-            upscale_ingredient: "100".to_string(),
-            utility_calc: tabs::utilities::UtilityCalculator::BenchTrials,
+            bench_volume: String::new(),
+            bench_addition: String::new(),
+            upscale_original_vol: String::new(),
+            upscale_target_vol: String::new(),
+            upscale_ingredient: String::new(),
             trial_volume: String::new(),
             trial_addition: String::new(),
             batch_volume_bench: String::new(),
@@ -254,21 +253,24 @@ impl Default for MazerionApp {
             waste_vessel_type: "carboy".to_string(),
             waste_num_rackings: String::new(),
             waste_process_type: "standard".to_string(),
+            utility_calc: tabs::utilities::UtilityCalculator::RecipeUpscaling,
         }
     }
 }
 
 impl eframe::App for MazerionApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        let c = self.state.custom_colors.clone();
+        let c = self.state.custom_colors;
         egui::CentralPanel::default()
             .frame(egui::Frame::default().fill(c.light_cream))
             .show(ctx, |ui| {
                 ui.add_space(10.0);
 
-                ui.heading(RichText::new("🍯 Mazerion - Brewing Calculator Suite")
-                    .size(28.0)
-                    .color(c.honey_gold));
+                ui.heading(
+                    RichText::new("🍯 Mazerion - Brewing Calculator Suite")
+                        .size(28.0)
+                        .color(c.honey_gold),
+                );
 
                 ui.add_space(15.0);
 
@@ -276,25 +278,50 @@ impl eframe::App for MazerionApp {
                     if tab_button(ui, "📊 Basic", self.state.current_tab == TabView::Basic, &c) {
                         self.state.current_tab = TabView::Basic;
                     }
-                    if tab_button(ui, "🔬 Advanced", self.state.current_tab == TabView::Advanced, &c) {
+                    if tab_button(
+                        ui,
+                        "🔬 Advanced",
+                        self.state.current_tab == TabView::Advanced,
+                        &c,
+                    ) {
                         self.state.current_tab = TabView::Advanced;
                     }
-                    if tab_button(ui, "🍺 Brewing", self.state.current_tab == TabView::Brewing, &c) {
+                    if tab_button(
+                        ui,
+                        "🍺 Brewing",
+                        self.state.current_tab == TabView::Brewing,
+                        &c,
+                    ) {
                         self.state.current_tab = TabView::Brewing;
                     }
                     if tab_button(ui, "🍻 Beer", self.state.current_tab == TabView::Beer, &c) {
                         self.state.current_tab = TabView::Beer;
                     }
-                    if tab_button(ui, "✨ Finishing", self.state.current_tab == TabView::Finishing, &c) {
+                    if tab_button(
+                        ui,
+                        "✨ Finishing",
+                        self.state.current_tab == TabView::Finishing,
+                        &c,
+                    ) {
                         self.state.current_tab = TabView::Finishing;
                     }
-                    if tab_button(ui, "🍯 Mead Styles", self.state.current_tab == TabView::MeadStyles, &c) {
-                        self.state.current_tab = TabView::MeadStyles;
+                    if tab_button(ui, "🍯 Meads", self.state.current_tab == TabView::Meads, &c) {
+                        self.state.current_tab = TabView::Meads;
                     }
-                    if tab_button(ui, "🔧 Utilities", self.state.current_tab == TabView::Utilities, &c) {
+                    if tab_button(
+                        ui,
+                        "🔧 Utilities",
+                        self.state.current_tab == TabView::Utilities,
+                        &c,
+                    ) {
                         self.state.current_tab = TabView::Utilities;
                     }
-                    if tab_button(ui, "⚙️ Settings", self.state.current_tab == TabView::Settings, &c) {
+                    if tab_button(
+                        ui,
+                        "⚙️ Settings",
+                        self.state.current_tab == TabView::Settings,
+                        &c,
+                    ) {
                         self.state.current_tab = TabView::Settings;
                     }
                 });
@@ -308,7 +335,7 @@ impl eframe::App for MazerionApp {
                         TabView::Brewing => tabs::brewing::render(self, ui),
                         TabView::Beer => tabs::beer::render(self, ui),
                         TabView::Finishing => tabs::finishing::render(self, ui),
-                        TabView::MeadStyles => tabs::mead_styles::render(self, ui),
+                        TabView::Meads => tabs::meads::render(self, ui),
                         TabView::Utilities => tabs::utilities::render(self, ui),
                         TabView::Settings => tabs::settings::render(self, ui),
                     }
@@ -321,24 +348,28 @@ impl eframe::App for MazerionApp {
                             .corner_radius(CornerRadius::same(8))
                             .inner_margin(15.0)
                             .show(ui, |ui| {
-                                ui.label(RichText::new(result_text)
-                                    .size(28.0)
-                                    .color(Color32::BLACK));
+                                ui.label(
+                                    RichText::new(result_text).size(28.0).color(Color32::BLACK),
+                                );
 
                                 if !self.warnings.is_empty() {
                                     ui.add_space(10.0);
                                     for warning in &self.warnings {
-                                        ui.label(RichText::new(format!("⚠️ {}", warning))
-                                            .color(c.sunset_orange));
+                                        ui.label(
+                                            RichText::new(format!("⚠️ {}", warning))
+                                                .color(c.sunset_orange),
+                                        );
                                     }
                                 }
 
                                 if !self.metadata.is_empty() {
                                     ui.add_space(10.0);
                                     for (key, value) in &self.metadata {
-                                        ui.label(RichText::new(format!("{}: {}", key, value))
-                                            .size(14.0)
-                                            .color(c.dark_text));
+                                        ui.label(
+                                            RichText::new(format!("{}: {}", key, value))
+                                                .size(14.0)
+                                                .color(c.dark_text),
+                                        );
                                     }
                                 }
                             });
@@ -350,7 +381,11 @@ impl eframe::App for MazerionApp {
 
 fn tab_button(ui: &mut egui::Ui, text: &str, selected: bool, c: &state::CustomColors) -> bool {
     let button = egui::Button::new(RichText::new(text).size(14.0))
-        .fill(if selected { c.honey_gold } else { c.light_cream })
+        .fill(if selected {
+            c.honey_gold
+        } else {
+            c.light_cream
+        })
         .stroke(egui::Stroke::new(1.0, c.dark_text));
     ui.add(button).clicked()
 }
@@ -369,7 +404,7 @@ pub fn calculate_button(ui: &mut egui::Ui, text: &str) -> bool {
 pub fn run() -> Result<(), eframe::Error> {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_inner_size([1000.0, 800.0])
+            .with_inner_size([1200.0, 800.0])
             .with_min_inner_size([800.0, 600.0]),
         ..Default::default()
     };

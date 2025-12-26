@@ -2,10 +2,10 @@
 //! ABV, Brix↔SG bidirectional, Dilution with Fl Oz
 
 use crate::{MazerionApp, state::BasicCalculator};
-use eframe::egui::{self, RichText, CornerRadius};
+use eframe::egui::{self, CornerRadius, RichText};
 use mazerion_core::CalcInput;
-use std::str::FromStr;
 use rust_decimal::Decimal;
+use std::str::FromStr;
 
 pub fn render(app: &mut MazerionApp, ui: &mut egui::Ui) {
     let c = app.state.custom_colors;
@@ -15,9 +15,21 @@ pub fn render(app: &mut MazerionApp, ui: &mut egui::Ui) {
         egui::ComboBox::from_id_salt("basic_calc")
             .selected_text(get_calc_name(app.state.basic_calc))
             .show_ui(ui, |ui| {
-                ui.selectable_value(&mut app.state.basic_calc, BasicCalculator::Abv, "ABV Calculator");
-                ui.selectable_value(&mut app.state.basic_calc, BasicCalculator::BrixSgConverter, "Brix ↔ SG Converter");
-                ui.selectable_value(&mut app.state.basic_calc, BasicCalculator::Dilution, "Dilution Calculator");
+                ui.selectable_value(
+                    &mut app.state.basic_calc,
+                    BasicCalculator::Abv,
+                    "ABV Calculator",
+                );
+                ui.selectable_value(
+                    &mut app.state.basic_calc,
+                    BasicCalculator::BrixSgConverter,
+                    "Brix ↔ SG Converter",
+                );
+                ui.selectable_value(
+                    &mut app.state.basic_calc,
+                    BasicCalculator::Dilution,
+                    "Dilution Calculator",
+                );
             });
     });
 
@@ -28,12 +40,10 @@ pub fn render(app: &mut MazerionApp, ui: &mut egui::Ui) {
         .stroke(egui::Stroke::new(1.5, c.honey_gold))
         .corner_radius(CornerRadius::same(8))
         .inner_margin(15.0)
-        .show(ui, |ui| {
-            match app.state.basic_calc {
-                BasicCalculator::Abv => render_abv(app, ui, c),
-                BasicCalculator::BrixSgConverter => render_brix_converter(app, ui, c),
-                BasicCalculator::Dilution => render_dilution(app, ui, c),
-            }
+        .show(ui, |ui| match app.state.basic_calc {
+            BasicCalculator::Abv => render_abv(app, ui, c),
+            BasicCalculator::BrixSgConverter => render_brix_converter(app, ui, c),
+            BasicCalculator::Dilution => render_dilution(app, ui, c),
         });
 }
 
@@ -50,8 +60,18 @@ fn render_abv(app: &mut MazerionApp, ui: &mut egui::Ui, c: crate::state::CustomC
     ui.label("Calculate alcohol by volume from gravity readings");
     ui.add_space(10.0);
 
-    crate::input_field(ui, "Original Gravity (OG):", &mut app.og, "Starting specific gravity (e.g., 1.090)");
-    crate::input_field(ui, "Final Gravity (FG):", &mut app.fg, "Ending specific gravity (e.g., 1.010)");
+    crate::input_field(
+        ui,
+        "Original Gravity (OG):",
+        &mut app.og,
+        "Starting specific gravity (e.g., 1.090)",
+    );
+    crate::input_field(
+        ui,
+        "Final Gravity (FG):",
+        &mut app.fg,
+        "Ending specific gravity (e.g., 1.010)",
+    );
 
     ui.add_space(10.0);
 
@@ -67,16 +87,30 @@ fn render_brix_converter(app: &mut MazerionApp, ui: &mut egui::Ui, c: crate::sta
 
     // Brix to SG
     ui.label(RichText::new("Brix → SG:").strong());
-    crate::input_field(ui, "Brix (°Bx):", &mut app.brix, "Degrees Brix to convert to SG");
+    crate::input_field(
+        ui,
+        "Brix (°Bx):",
+        &mut app.brix,
+        "Degrees Brix to convert to SG",
+    );
 
     ui.add_space(10.0);
 
     // SG to Brix
     ui.label(RichText::new("SG → Brix:").strong());
-    crate::input_field(ui, "Specific Gravity:", &mut app.sg_for_brix, "SG to convert to Brix (e.g., 1.083)");
+    crate::input_field(
+        ui,
+        "Specific Gravity:",
+        &mut app.sg_for_brix,
+        "SG to convert to Brix (e.g., 1.083)",
+    );
 
     ui.add_space(5.0);
-    ui.label(RichText::new("💡 Tip: Fill in either Brix OR SG, leave the other empty").size(12.0).weak());
+    ui.label(
+        RichText::new("💡 Tip: Fill in either Brix OR SG, leave the other empty")
+            .size(12.0)
+            .weak(),
+    );
 
     ui.add_space(10.0);
 
@@ -90,10 +124,29 @@ fn render_dilution(app: &mut MazerionApp, ui: &mut egui::Ui, c: crate::state::Cu
     ui.label("Calculate water needed to reduce ABV");
     ui.add_space(10.0);
 
-    let vol_unit = if matches!(app.state.unit_system, crate::state::UnitSystem::Metric) { "L" } else { "gal" };
-    crate::input_field(ui, &format!("Current Volume ({}):", vol_unit), &mut app.current_vol, "Current volume");
-    crate::input_field(ui, "Current ABV (%):", &mut app.current_abv, "Current alcohol percentage");
-    crate::input_field(ui, "Target ABV (%):", &mut app.target_abv, "Desired alcohol percentage");
+    let vol_unit = if matches!(app.state.unit_system, crate::state::UnitSystem::Metric) {
+        "L"
+    } else {
+        "gal"
+    };
+    crate::input_field(
+        ui,
+        &format!("Current Volume ({}):", vol_unit),
+        &mut app.current_vol,
+        "Current volume",
+    );
+    crate::input_field(
+        ui,
+        "Current ABV (%):",
+        &mut app.current_abv,
+        "Current alcohol percentage",
+    );
+    crate::input_field(
+        ui,
+        "Target ABV (%):",
+        &mut app.target_abv,
+        "Desired alcohol percentage",
+    );
 
     ui.add_space(10.0);
 

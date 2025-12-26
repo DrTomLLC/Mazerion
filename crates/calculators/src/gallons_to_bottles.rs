@@ -1,31 +1,36 @@
-use mazerion_core::{Calculator, CalcInput, CalcResult, Error, Measurement, Unit};
+use mazerion_core::{
+    CalcInput, CalcResult, Calculator, Error, Measurement, Unit, register_calculator,
+};
 use rust_decimal::Decimal;
 use rust_decimal::prelude::ToPrimitive;
 
 #[derive(Default)]
-pub struct GallonsToBottlesWithLossesCalculator;
-
-impl Calculator for GallonsToBottlesWithLossesCalculator {
+pub struct GallonsToBottlesCalculator;
+impl GallonsToBottlesCalculator {
+    pub const ID: &'static str = "gallons_to_bottles";
+}
+impl Calculator for GallonsToBottlesCalculator {
     fn id(&self) -> &'static str {
-        "gallons_to_bottles_with_losses"
+        Self::ID
     }
 
     fn name(&self) -> &'static str {
         "Gallons to Bottles (with Losses)"
     }
 
-    fn category(&self) -> &'static str {
-        "conversions"
+    fn description(&self) -> &'static str {
+        "Convert volume in gallons to bottle count (750ml bottles)"
     }
 
-    fn description(&self) -> &'static str {
-        "Calculate final bottle count after accounting for racking losses"
+    fn category(&self) -> &'static str {
+        "Utilities"
     }
 
     fn calculate(&self, input: CalcInput) -> Result<CalcResult, Error> {
         // input.params is Vec<(String, String)> - iterate to find
         let get_param = |name: &str| -> Result<Decimal, Error> {
-            input.params
+            input
+                .params
                 .iter()
                 .find(|(k, _)| k == name)
                 .map(|(_, v)| v.as_str())
@@ -40,7 +45,9 @@ impl Calculator for GallonsToBottlesWithLossesCalculator {
 
         // Validate
         if initial_volume_gal <= Decimal::ZERO {
-            return Err(Error::Calculation("Initial volume must be positive".to_string()));
+            return Err(Error::Calculation(
+                "Initial volume must be positive".to_string(),
+            ));
         }
         if loss_rate_percent < Decimal::ZERO || loss_rate_percent >= Decimal::from(100) {
             return Err(Error::Calculation("Loss rate must be 0-100%".to_string()));
@@ -49,7 +56,8 @@ impl Calculator for GallonsToBottlesWithLossesCalculator {
             return Err(Error::Calculation("Rackings must be 1-20".to_string()));
         }
 
-        let num_rackings_u32 = num_rackings.to_u32()
+        let num_rackings_u32 = num_rackings
+            .to_u32()
             .ok_or_else(|| Error::Calculation("Invalid rackings".to_string()))?;
 
         // Constants
@@ -72,15 +80,28 @@ impl Calculator for GallonsToBottlesWithLossesCalculator {
         let total_loss_percent = (total_loss_gal / initial_volume_gal) * Decimal::from(100);
 
         let mut metadata = vec![
-            ("Initial".to_string(), format!("{:.3} gal", initial_volume_gal)),
+            (
+                "Initial".to_string(),
+                format!("{:.3} gal", initial_volume_gal),
+            ),
             ("Final".to_string(), format!("{:.3} gal", final_volume_gal)),
-            ("Loss".to_string(), format!("{:.3} gal ({:.2}%)", total_loss_gal, total_loss_percent)),
+            (
+                "Loss".to_string(),
+                format!("{:.3} gal ({:.2}%)", total_loss_gal, total_loss_percent),
+            ),
         ];
 
         let mut current = initial_volume_gal;
         for i in 1..=num_rackings_u32 {
             current *= retention_rate;
-            metadata.push((format!("After racking {}", i), format!("{:.3} gal ({:.2} bottles)", current, current * bottles_per_gallon)));
+            metadata.push((
+                format!("After racking {}", i),
+                format!(
+                    "{:.3} gal ({:.2} bottles)",
+                    current,
+                    current * bottles_per_gallon
+                ),
+            ));
         }
 
         let mut warnings = Vec::new();
@@ -91,7 +112,7 @@ impl Calculator for GallonsToBottlesWithLossesCalculator {
         Ok(CalcResult {
             output: Measurement {
                 value: total_bottles.round_dp(2),
-                unit: Unit::Liters,
+                unit: Unit::Grams,
             },
             metadata,
             warnings,
@@ -105,7 +126,7 @@ mod tests {
 
     #[test]
     fn test_compounding() {
-        let calc = GallonsToBottlesWithLossesCalculator;
+        let calc = GallonsToBottlesCalculator;
         let input = CalcInput::new()
             .add_param("initial_volume", "5")
             .add_param("loss_rate_percent", "5")
@@ -114,3 +135,4 @@ mod tests {
         assert_eq!(result.output.value.round_dp(2), Decimal::new(2164, 2));
     }
 }
+register_calculator!(GallonsToBottlesCalculator);

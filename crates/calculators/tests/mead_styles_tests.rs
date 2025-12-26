@@ -93,7 +93,12 @@ fn test_braggot() {
         .add_param("malt_weight", "3.0");
 
     let result = calc.calculate(input).unwrap();
-    assert!(result.metadata.iter().any(|(k, _)| k == "honey_kg" || k == "honey_g"));
+    assert!(
+        result
+            .metadata
+            .iter()
+            .any(|(k, _)| k == "honey_kg" || k == "honey_g")
+    );
 }
 
 #[test]

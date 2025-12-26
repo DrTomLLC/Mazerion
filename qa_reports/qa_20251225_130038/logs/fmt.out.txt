@@ -1,0 +1,92 @@
+﻿Diff in \\?\C:\Users\DrTom\RustroverProjects\Mazerion\crates\calculators\src\gallons_to_bottles.rs:1:
+[31m-use mazerion_core::{Calculator, CalcInput, CalcResult, Error, Measurement, Unit, register_calculator};
+[0m[32m+use mazerion_core::{
+[0m[32m+    CalcInput, CalcResult, Calculator, Error, Measurement, Unit, register_calculator,
+[0m[32m+};
+[0m use rust_decimal::Decimal;
+ use rust_decimal::prelude::ToPrimitive;
+ 
+Diff in \\?\C:\Users\DrTom\RustroverProjects\Mazerion\crates\calculators\src\gallons_to_bottles.rs:27:
+     fn calculate(&self, input: CalcInput) -> Result<CalcResult, Error> {
+         // input.params is Vec<(String, String)> - iterate to find
+         let get_param = |name: &str| -> Result<Decimal, Error> {
+[31m-            input.params
+[0m[32m+            input
+[0m[32m+                .params
+[0m                 .iter()
+                 .find(|(k, _)| k == name)
+                 .map(|(_, v)| v.as_str())
+Diff in \\?\C:\Users\DrTom\RustroverProjects\Mazerion\crates\calculators\src\gallons_to_bottles.rs:42:
+ 
+         // Validate
+         if initial_volume_gal <= Decimal::ZERO {
+[31m-            return Err(Error::Calculation("Initial volume must be positive".to_string()));
+[0m[32m+            return Err(Error::Calculation(
+[0m[32m+                "Initial volume must be positive".to_string(),
+[0m[32m+            ));
+[0m         }
+         if loss_rate_percent < Decimal::ZERO || loss_rate_percent >= Decimal::from(100) {
+             return Err(Error::Calculation("Loss rate must be 0-100%".to_string()));
+Diff in \\?\C:\Users\DrTom\RustroverProjects\Mazerion\crates\calculators\src\gallons_to_bottles.rs:51:
+             return Err(Error::Calculation("Rackings must be 1-20".to_string()));
+         }
+ 
+[31m-        let num_rackings_u32 = num_rackings.to_u32()
+[0m[32m+        let num_rackings_u32 = num_rackings
+[0m[32m+            .to_u32()
+[0m             .ok_or_else(|| Error::Calculation("Invalid rackings".to_string()))?;
+ 
+         // Constants
+Diff in \\?\C:\Users\DrTom\RustroverProjects\Mazerion\crates\calculators\src\gallons_to_bottles.rs:74:
+         let total_loss_percent = (total_loss_gal / initial_volume_gal) * Decimal::from(100);
+ 
+         let mut metadata = vec![
+[31m-            ("Initial".to_string(), format!("{:.3} gal", initial_volume_gal)),
+[0m[32m+            (
+[0m[32m+                "Initial".to_string(),
+[0m[32m+                format!("{:.3} gal", initial_volume_gal),
+[0m[32m+            ),
+[0m             ("Final".to_string(), format!("{:.3} gal", final_volume_gal)),
+[31m-            ("Loss".to_string(), format!("{:.3} gal ({:.2}%)", total_loss_gal, total_loss_percent)),
+[0m[32m+            (
+[0m[32m+                "Loss".to_string(),
+[0m[32m+                format!("{:.3} gal ({:.2}%)", total_loss_gal, total_loss_percent),
+[0m[32m+            ),
+[0m         ];
+ 
+         let mut current = initial_volume_gal;
+Diff in \\?\C:\Users\DrTom\RustroverProjects\Mazerion\crates\calculators\src\gallons_to_bottles.rs:83:
+         for i in 1..=num_rackings_u32 {
+             current *= retention_rate;
+[31m-            metadata.push((format!("After racking {}", i), format!("{:.3} gal ({:.2} bottles)", current, current * bottles_per_gallon)));
+[0m[32m+            metadata.push((
+[0m[32m+                format!("After racking {}", i),
+[0m[32m+                format!(
+[0m[32m+                    "{:.3} gal ({:.2} bottles)",
+[0m[32m+                    current,
+[0m[32m+                    current * bottles_per_gallon
+[0m[32m+                ),
+[0m[32m+            ));
+[0m         }
+ 
+         let mut warnings = Vec::new();
+Diff in \\?\C:\Users\DrTom\RustroverProjects\Mazerion\crates\calculators\src\gallons_to_bottles_with_losses.rs:328:
+         Ok(CalcResult {
+             output: Measurement {
+                 value: total_bottles.round_dp(2),
+[31m-                unit: Unit::Grams,  // Using Grams for bottle count
+[0m[32m+                unit: Unit::Grams, // Using Grams for bottle count
+[0m             },
+             metadata,
+             warnings,
+Diff in \\?\C:\Users\DrTom\RustroverProjects\Mazerion\crates\gui\src\tabs\meads.rs:2:
+ use crate::state::CustomColors;
+ use eframe::egui::{self, RichText};
+ 
+[31m-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]#[allow(dead_code)]
+[0m[32m+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+[0m[32m+#[allow(dead_code)]
+[0m pub enum MeadCalculator {
+     Traditional,
+     Melomel,
+

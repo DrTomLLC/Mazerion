@@ -2,7 +2,6 @@
 mod tests {
     use crate::{CalcInput, Measurement, Unit, Validator};
     use rust_decimal::Decimal;
-    use std::str::FromStr;
 
     #[test]
     fn test_sg_validation() {

@@ -1,5 +1,5 @@
 use mazerion_core::{
-    register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
+    CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit, register_calculator,
 };
 use rust_decimal::Decimal;
 
@@ -28,11 +28,13 @@ impl Calculator for StabilizationCalculator {
     }
 
     fn calculate(&self, input: CalcInput) -> Result<CalcResult> {
-        let volume = input.get_param("volume")
+        let volume = input
+            .get_param("volume")
             .ok_or_else(|| Error::MissingInput("volume required".into()))?;
         let ph_meas = input.get_measurement(Unit::Ph);
 
-        let vol: Decimal = volume.parse()
+        let vol: Decimal = volume
+            .parse()
             .map_err(|_| Error::Parse("Invalid volume".into()))?;
 
         // K-meta (potassium metabisulfite): 0.5 g/L standard dose
@@ -45,19 +47,27 @@ impl Calculator for StabilizationCalculator {
 
         result = result
             .with_meta("kmeta_g", format!("{:.1} g", kmeta))
-            .with_meta("kmeta_tsp", format!("{:.2} tsp", kmeta / Decimal::new(5, 0)))
+            .with_meta(
+                "kmeta_tsp",
+                format!("{:.2} tsp", kmeta / Decimal::new(5, 0)),
+            )
             .with_meta("sorbate_g", format!("{:.1} g", sorbate))
-            .with_meta("sorbate_tsp", format!("{:.2} tsp", sorbate / Decimal::new(5, 0)))
+            .with_meta(
+                "sorbate_tsp",
+                format!("{:.2} tsp", sorbate / Decimal::new(5, 0)),
+            )
             .with_meta("volume_L", format!("{} L", vol));
 
         // pH-dependent warning
-        if let Ok(ph) = ph_meas {
-            if ph.value > Decimal::new(36, 1) {
-                result = result.with_warning("pH > 3.6 - sorbate less effective, may produce geranium off-flavor");
-            }
+        if let Ok(ph) = ph_meas
+            && ph.value > Decimal::new(36, 1)
+        {
+            result = result
+                .with_warning("pH > 3.6 - sorbate less effective, may produce geranium off-flavor");
         }
 
-        result = result.with_warning("CRITICAL: Add K-meta 24 hours before sorbate to kill remaining yeast");
+        result = result
+            .with_warning("CRITICAL: Add K-meta 24 hours before sorbate to kill remaining yeast");
         result = result.with_warning("Stabilization prevents re-fermentation for backsweetening");
 
         Ok(result)

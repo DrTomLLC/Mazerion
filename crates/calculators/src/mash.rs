@@ -2,7 +2,7 @@
 //! Uses standard brewing equations
 
 use mazerion_core::{
-    register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
+    CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit, register_calculator,
 };
 use rust_decimal::Decimal;
 
@@ -31,22 +31,30 @@ impl Calculator for MashCalculator {
     }
 
     fn calculate(&self, input: CalcInput) -> Result<CalcResult> {
-        let target_temp = input.get_param("target_temp")
+        let target_temp = input
+            .get_param("target_temp")
             .ok_or_else(|| Error::MissingInput("target_temp required".into()))?;
-        let grain_temp = input.get_param("grain_temp")
+        let grain_temp = input
+            .get_param("grain_temp")
             .ok_or_else(|| Error::MissingInput("grain_temp required".into()))?;
-        let grain_weight = input.get_param("grain_weight")
+        let grain_weight = input
+            .get_param("grain_weight")
             .ok_or_else(|| Error::MissingInput("grain_weight required".into()))?;
-        let ratio = input.get_param("ratio")
+        let ratio = input
+            .get_param("ratio")
             .ok_or_else(|| Error::MissingInput("ratio required".into()))?;
 
-        let target: Decimal = target_temp.parse()
+        let target: Decimal = target_temp
+            .parse()
             .map_err(|_| Error::Parse("Invalid target temp".into()))?;
-        let grain_t: Decimal = grain_temp.parse()
+        let grain_t: Decimal = grain_temp
+            .parse()
             .map_err(|_| Error::Parse("Invalid grain temp".into()))?;
-        let weight: Decimal = grain_weight.parse()
+        let weight: Decimal = grain_weight
+            .parse()
             .map_err(|_| Error::Parse("Invalid grain weight".into()))?;
-        let ratio_val: Decimal = ratio.parse()
+        let ratio_val: Decimal = ratio
+            .parse()
             .map_err(|_| Error::Parse("Invalid ratio".into()))?;
 
         if weight <= Decimal::ZERO {
@@ -66,10 +74,22 @@ impl Calculator for MashCalculator {
         let strike_temp = target + (thermal_constant * temp_diff);
 
         let mut result = CalcResult::new(Measurement::new(strike_temp, Unit::Celsius))
-            .with_meta("strike_temperature", format!("{:.1}°C / {:.1}°F",
-                                                     strike_temp, strike_temp * Decimal::new(9, 0) / Decimal::new(5, 0) + Decimal::from(32)))
-            .with_meta("water_volume", format!("{:.2} L / {:.2} gal",
-                                               water_volume, water_volume * Decimal::new(264172, 6)))
+            .with_meta(
+                "strike_temperature",
+                format!(
+                    "{:.1}°C / {:.1}°F",
+                    strike_temp,
+                    strike_temp * Decimal::new(9, 0) / Decimal::new(5, 0) + Decimal::from(32)
+                ),
+            )
+            .with_meta(
+                "water_volume",
+                format!(
+                    "{:.2} L / {:.2} gal",
+                    water_volume,
+                    water_volume * Decimal::new(264172, 6)
+                ),
+            )
             .with_meta("mash_ratio", format!("{:.2} L/kg", ratio_val))
             .with_meta("target_mash_temp", format!("{:.1}°C", target))
             .with_meta("grain_temperature", format!("{:.1}°C", grain_t));

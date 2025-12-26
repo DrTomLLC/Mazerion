@@ -31,8 +31,7 @@ fn test_abv_high_gravity() {
 fn test_brix_to_sg() {
     let calc = BrixToSgCalculator::default();
     let brix_measurement = Measurement::brix(Decimal::from_str("20.0").unwrap()).unwrap();
-    let input = CalcInput::new()
-        .add_measurement(brix_measurement);
+    let input = CalcInput::new().add_measurement(brix_measurement);
 
     let result = calc.calculate(input).unwrap();
     let expected = Decimal::from_str("1.083").unwrap();
@@ -43,8 +42,7 @@ fn test_brix_to_sg() {
 fn test_sg_to_brix() {
     let calc = SgToBrixCalculator::default();
     let sg_measurement = Measurement::sg(Decimal::from_str("1.083").unwrap()).unwrap();
-    let input = CalcInput::new()
-        .add_measurement(sg_measurement);
+    let input = CalcInput::new().add_measurement(sg_measurement);
 
     let result = calc.calculate(input).unwrap();
     let expected = Decimal::from_str("20.0").unwrap();
@@ -91,8 +89,7 @@ fn test_hydrometer_correction() {
 #[test]
 fn test_abv_missing_params() {
     let calc = AbvCalculator::default();
-    let input = CalcInput::new()
-        .add_param("og", "1.090");
+    let input = CalcInput::new().add_param("og", "1.090");
 
     let result = calc.calculate(input);
     assert!(result.is_err());

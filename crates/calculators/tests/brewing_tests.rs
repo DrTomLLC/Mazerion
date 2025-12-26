@@ -85,7 +85,12 @@ fn test_yeast_pitch_rate() {
 
     let result = calc.calculate(input).unwrap();
     assert!(result.output.value > Decimal::ZERO);
-    assert!(result.metadata.iter().any(|(key, _)| key == "cells_billion"));
+    assert!(
+        result
+            .metadata
+            .iter()
+            .any(|(key, _)| key == "cells_billion")
+    );
 }
 
 #[test]

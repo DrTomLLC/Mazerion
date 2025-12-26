@@ -1,5 +1,5 @@
 use mazerion_core::{
-    register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
+    CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit, register_calculator,
 };
 use rust_decimal::Decimal;
 
@@ -37,64 +37,47 @@ impl Calculator for AlcoholToleranceCalculator {
             "ec-1118" | "ec1118" => (
                 Decimal::from(18),
                 "15-30°C",
-                "Champagne yeast, very clean, high tolerance"
+                "Champagne yeast, very clean, high tolerance",
             ),
             "k1-v1116" | "k1v1116" => (
                 Decimal::from(18),
                 "15-30°C",
-                "Strong fermenter, good for meads"
+                "Strong fermenter, good for meads",
             ),
             "71b-1122" | "71b1122" => (
                 Decimal::from(14),
                 "15-30°C",
-                "Fruity, softens acid, good for melomels"
+                "Fruity, softens acid, good for melomels",
             ),
             "d47" => (
                 Decimal::from(15),
                 "15-20°C",
-                "Tropical fruit notes, temperature sensitive"
+                "Tropical fruit notes, temperature sensitive",
             ),
-            "us-05" | "us05" => (
-                Decimal::from(12),
-                "15-24°C",
-                "Clean American ale, neutral"
-            ),
-            "s-04" | "s04" => (
-                Decimal::from(11),
-                "15-24°C",
-                "English ale, slightly fruity"
-            ),
-            "wy3068" | "wyeast3068" => (
-                Decimal::from(10),
-                "18-24°C",
-                "Hefeweizen, banana and clove"
-            ),
-            "safale_be-134" => (
-                Decimal::from(11),
-                "18-28°C",
-                "Belgian Saison, peppery"
-            ),
+            "us-05" | "us05" => (Decimal::from(12), "15-24°C", "Clean American ale, neutral"),
+            "s-04" | "s04" => (Decimal::from(11), "15-24°C", "English ale, slightly fruity"),
+            "wy3068" | "wyeast3068" => {
+                (Decimal::from(10), "18-24°C", "Hefeweizen, banana and clove")
+            }
+            "safale_be-134" => (Decimal::from(11), "18-28°C", "Belgian Saison, peppery"),
             "qa23" => (
                 Decimal::from(16),
                 "15-30°C",
-                "Portuguese wine yeast, neutral"
+                "Portuguese wine yeast, neutral",
             ),
             "dv10" => (
                 Decimal::from(16),
                 "10-35°C",
-                "Wide temperature range, champagne-like"
+                "Wide temperature range, champagne-like",
             ),
-            _ => (
-                Decimal::from(12),
-                "18-24°C",
-                "Generic strain (estimate)"
-            ),
+            _ => (Decimal::from(12), "18-24°C", "Generic strain (estimate)"),
         };
 
         let mut result = CalcResult::new(Measurement::new(tolerance, Unit::Abv));
 
         if tolerance < Decimal::from(12) {
-            result = result.with_warning("Low tolerance strain - not suitable for high-gravity brews");
+            result =
+                result.with_warning("Low tolerance strain - not suitable for high-gravity brews");
         }
 
         result = result
@@ -105,7 +88,9 @@ impl Calculator for AlcoholToleranceCalculator {
 
         // If OG provided, calculate estimated FG
         if let Some(og_str) = input.get_param("og") {
-            let og: Decimal = og_str.parse().map_err(|_| Error::Parse("Invalid OG".into()))?;
+            let og: Decimal = og_str
+                .parse()
+                .map_err(|_| Error::Parse("Invalid OG".into()))?;
 
             // Formula: ABV = (OG - FG) × 131.25
             // Rearranging: FG = OG - (ABV / 131.25)
@@ -114,10 +99,19 @@ impl Calculator for AlcoholToleranceCalculator {
             result = result
                 .with_meta("original_gravity", format!("{:.3}", og))
                 .with_meta("estimated_fg", format!("{:.3}", estimated_fg))
-                .with_meta("calculation", format!("FG = {:.3} - ({} / 131.25) = {:.3}", og, tolerance, estimated_fg));
+                .with_meta(
+                    "calculation",
+                    format!(
+                        "FG = {:.3} - ({} / 131.25) = {:.3}",
+                        og, tolerance, estimated_fg
+                    ),
+                );
         }
 
-        result = result.with_meta("tip", "Actual tolerance varies with nutrition and fermentation conditions");
+        result = result.with_meta(
+            "tip",
+            "Actual tolerance varies with nutrition and fermentation conditions",
+        );
 
         Ok(result)
     }

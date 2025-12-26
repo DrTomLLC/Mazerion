@@ -1,5 +1,5 @@
 use mazerion_core::{
-    register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
+    CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit, register_calculator,
 };
 use rust_decimal::Decimal;
 
@@ -64,7 +64,8 @@ impl Calculator for VolumeAdjustmentCalculator {
         let mut result = CalcResult::new(Measurement::new(water_to_add, Unit::Liters));
 
         if water_to_add > vol {
-            result = result.with_warning("Adding more water than original volume - double-check target");
+            result =
+                result.with_warning("Adding more water than original volume - double-check target");
         }
 
         result = result

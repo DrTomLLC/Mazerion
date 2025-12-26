@@ -1,0 +1,182 @@
+﻿[
+    {
+        "name":  "cargo --version",
+        "command":  "cargo",
+        "exit_code":  0,
+        "status":  "PASS",
+        "seconds":  0.22873919999999998,
+        "stdout_file":  "C:\\Users\\DrTom\\RustroverProjects\\Mazerion\\qa_reports\\qa_20251224_190213\\logs\\cargo_version.out.txt",
+        "stderr_file":  "C:\\Users\\DrTom\\RustroverProjects\\Mazerion\\qa_reports\\qa_20251224_190213\\logs\\cargo_version.err.txt",
+        "timestamp":  "2025-12-24T19:02:13.8563534-05:00"
+    },
+    {
+        "name":  "rustc --version",
+        "command":  "rustc",
+        "exit_code":  0,
+        "status":  "PASS",
+        "seconds":  0.1302221,
+        "stdout_file":  "C:\\Users\\DrTom\\RustroverProjects\\Mazerion\\qa_reports\\qa_20251224_190213\\logs\\rustc_version.out.txt",
+        "stderr_file":  "C:\\Users\\DrTom\\RustroverProjects\\Mazerion\\qa_reports\\qa_20251224_190213\\logs\\rustc_version.err.txt",
+        "timestamp":  "2025-12-24T19:02:14.0015086-05:00"
+    },
+    {
+        "name":  "rustup show",
+        "command":  "rustup",
+        "exit_code":  0,
+        "status":  "PASS",
+        "seconds":  0.0964213,
+        "stdout_file":  "C:\\Users\\DrTom\\RustroverProjects\\Mazerion\\qa_reports\\qa_20251224_190213\\logs\\rustup_show.out.txt",
+        "stderr_file":  "C:\\Users\\DrTom\\RustroverProjects\\Mazerion\\qa_reports\\qa_20251224_190213\\logs\\rustup_show.err.txt",
+        "timestamp":  "2025-12-24T19:02:14.0991428-05:00"
+    },
+    {
+        "name":  "cargo metadata",
+        "command":  "cargo",
+        "exit_code":  101,
+        "status":  "FAIL",
+        "seconds":  0.1272,
+        "stdout_file":  "C:\\Users\\DrTom\\RustroverProjects\\Mazerion\\qa_reports\\qa_20251224_190213\\outputs\\cargo_metadata.json",
+        "stderr_file":  "C:\\Users\\DrTom\\RustroverProjects\\Mazerion\\qa_reports\\qa_20251224_190213\\logs\\cargo_metadata.err.txt",
+        "timestamp":  "2025-12-24T19:02:14.2650279-05:00"
+    },
+    {
+        "name":  "cargo fmt --check",
+        "command":  "cargo",
+        "exit_code":  101,
+        "status":  "FAIL",
+        "seconds":  0.0870768,
+        "stdout_file":  "C:\\Users\\DrTom\\RustroverProjects\\Mazerion\\qa_reports\\qa_20251224_190213\\logs\\fmt.out.txt",
+        "stderr_file":  "C:\\Users\\DrTom\\RustroverProjects\\Mazerion\\qa_reports\\qa_20251224_190213\\logs\\fmt.err.txt",
+        "timestamp":  "2025-12-24T19:02:14.3572358-05:00"
+    },
+    {
+        "name":  "cargo check",
+        "command":  "cargo",
+        "exit_code":  101,
+        "status":  "FAIL",
+        "seconds":  0.0842701,
+        "stdout_file":  "C:\\Users\\DrTom\\RustroverProjects\\Mazerion\\qa_reports\\qa_20251224_190213\\logs\\check.out.txt",
+        "stderr_file":  "C:\\Users\\DrTom\\RustroverProjects\\Mazerion\\qa_reports\\qa_20251224_190213\\logs\\check.err.txt",
+        "timestamp":  "2025-12-24T19:02:14.4512302-05:00"
+    },
+    {
+        "name":  "cargo clippy -D warnings",
+        "command":  "cargo",
+        "exit_code":  101,
+        "status":  "FAIL",
+        "seconds":  0.09010739999999999,
+        "stdout_file":  "C:\\Users\\DrTom\\RustroverProjects\\Mazerion\\qa_reports\\qa_20251224_190213\\logs\\clippy.out.txt",
+        "stderr_file":  "C:\\Users\\DrTom\\RustroverProjects\\Mazerion\\qa_reports\\qa_20251224_190213\\logs\\clippy.err.txt",
+        "timestamp":  "2025-12-24T19:02:14.5568605-05:00"
+    },
+    {
+        "name":  "cargo build (debug)",
+        "command":  "cargo",
+        "exit_code":  101,
+        "status":  "FAIL",
+        "seconds":  0.08639899999999999,
+        "stdout_file":  "C:\\Users\\DrTom\\RustroverProjects\\Mazerion\\qa_reports\\qa_20251224_190213\\logs\\build_debug.out.txt",
+        "stderr_file":  "C:\\Users\\DrTom\\RustroverProjects\\Mazerion\\qa_reports\\qa_20251224_190213\\logs\\build_debug.err.txt",
+        "timestamp":  "2025-12-24T19:02:14.6525082-05:00"
+    },
+    {
+        "name":  "cargo test (debug, --no-fail-fast)",
+        "command":  "cargo",
+        "exit_code":  101,
+        "status":  "FAIL",
+        "seconds":  0.083083499999999991,
+        "stdout_file":  "C:\\Users\\DrTom\\RustroverProjects\\Mazerion\\qa_reports\\qa_20251224_190213\\logs\\test_debug.out.txt",
+        "stderr_file":  "C:\\Users\\DrTom\\RustroverProjects\\Mazerion\\qa_reports\\qa_20251224_190213\\logs\\test_debug.err.txt",
+        "timestamp":  "2025-12-24T19:02:14.7522312-05:00"
+    },
+    {
+        "name":  "cargo test (release, --no-fail-fast)",
+        "command":  "cargo",
+        "exit_code":  101,
+        "status":  "FAIL",
+        "seconds":  0.080775699999999992,
+        "stdout_file":  "C:\\Users\\DrTom\\RustroverProjects\\Mazerion\\qa_reports\\qa_20251224_190213\\logs\\test_release.out.txt",
+        "stderr_file":  "C:\\Users\\DrTom\\RustroverProjects\\Mazerion\\qa_reports\\qa_20251224_190213\\logs\\test_release.err.txt",
+        "timestamp":  "2025-12-24T19:02:14.8288632-05:00"
+    },
+    {
+        "name":  "cargo nextest run",
+        "command":  "cargo",
+        "exit_code":  101,
+        "status":  "FAIL",
+        "seconds":  0.0867551,
+        "stdout_file":  "C:\\Users\\DrTom\\RustroverProjects\\Mazerion\\qa_reports\\qa_20251224_190213\\logs\\nextest.out.txt",
+        "stderr_file":  "C:\\Users\\DrTom\\RustroverProjects\\Mazerion\\qa_reports\\qa_20251224_190213\\logs\\nextest.err.txt",
+        "timestamp":  "2025-12-24T19:02:18.7058627-05:00"
+    },
+    {
+        "name":  "cargo llvm-cov (lcov)",
+        "command":  "cargo",
+        "exit_code":  101,
+        "status":  "FAIL",
+        "seconds":  0.0841862,
+        "stdout_file":  "C:\\Users\\DrTom\\RustroverProjects\\Mazerion\\qa_reports\\qa_20251224_190213\\logs\\llvm_cov_lcov.out.txt",
+        "stderr_file":  "C:\\Users\\DrTom\\RustroverProjects\\Mazerion\\qa_reports\\qa_20251224_190213\\logs\\llvm_cov_lcov.err.txt",
+        "timestamp":  "2025-12-24T19:02:20.1136071-05:00"
+    },
+    {
+        "name":  "cargo audit",
+        "command":  "cargo",
+        "exit_code":  101,
+        "status":  "FAIL",
+        "seconds":  0.084091199999999991,
+        "stdout_file":  "C:\\Users\\DrTom\\RustroverProjects\\Mazerion\\qa_reports\\qa_20251224_190213\\logs\\audit.out.txt",
+        "stderr_file":  "C:\\Users\\DrTom\\RustroverProjects\\Mazerion\\qa_reports\\qa_20251224_190213\\logs\\audit.err.txt",
+        "timestamp":  "2025-12-24T19:02:22.9727901-05:00"
+    },
+    {
+        "name":  "cargo deny check",
+        "command":  "cargo",
+        "exit_code":  101,
+        "status":  "FAIL",
+        "seconds":  0.0845445,
+        "stdout_file":  "C:\\Users\\DrTom\\RustroverProjects\\Mazerion\\qa_reports\\qa_20251224_190213\\logs\\deny.out.txt",
+        "stderr_file":  "C:\\Users\\DrTom\\RustroverProjects\\Mazerion\\qa_reports\\qa_20251224_190213\\logs\\deny.err.txt",
+        "timestamp":  "2025-12-24T19:02:24.4831136-05:00"
+    },
+    {
+        "name":  "cargo machete",
+        "command":  "cargo",
+        "exit_code":  101,
+        "status":  "FAIL",
+        "seconds":  0.0872501,
+        "stdout_file":  "C:\\Users\\DrTom\\RustroverProjects\\Mazerion\\qa_reports\\qa_20251224_190213\\logs\\machete.out.txt",
+        "stderr_file":  "C:\\Users\\DrTom\\RustroverProjects\\Mazerion\\qa_reports\\qa_20251224_190213\\logs\\machete.err.txt",
+        "timestamp":  "2025-12-24T19:02:25.8556224-05:00"
+    },
+    {
+        "name":  "cargo geiger",
+        "command":  "cargo",
+        "exit_code":  101,
+        "status":  "FAIL",
+        "seconds":  0.0835728,
+        "stdout_file":  "C:\\Users\\DrTom\\RustroverProjects\\Mazerion\\qa_reports\\qa_20251224_190213\\outputs\\geiger.txt",
+        "stderr_file":  "C:\\Users\\DrTom\\RustroverProjects\\Mazerion\\qa_reports\\qa_20251224_190213\\logs\\geiger.err.txt",
+        "timestamp":  "2025-12-24T19:02:29.5817494-05:00"
+    },
+    {
+        "name":  "PROP HAMMER",
+        "command":  "not detected in Cargo.lock",
+        "exit_code":  0,
+        "status":  "SKIP",
+        "seconds":  0,
+        "stdout_file":  "",
+        "stderr_file":  "",
+        "timestamp":  "2025-12-24T19:02:29.5975517-05:00"
+    },
+    {
+        "name":  "LOOM PASS (release)",
+        "command":  "cargo",
+        "exit_code":  101,
+        "status":  "FAIL",
+        "seconds":  0.0827941,
+        "stdout_file":  "C:\\Users\\DrTom\\RustroverProjects\\Mazerion\\qa_reports\\qa_20251224_190213\\logs\\loom_release.out.txt",
+        "stderr_file":  "C:\\Users\\DrTom\\RustroverProjects\\Mazerion\\qa_reports\\qa_20251224_190213\\logs\\loom_release.err.txt",
+        "timestamp":  "2025-12-24T19:02:29.6990490-05:00"
+    }
+]

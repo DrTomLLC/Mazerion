@@ -1,10 +1,13 @@
 //! Advanced calculators tab
 
-use crate::{MazerionApp, state::{AdvancedCalculator, colors}};
-use eframe::egui::{self, RichText, CornerRadius};
+use crate::{
+    MazerionApp,
+    state::{AdvancedCalculator, colors},
+};
+use eframe::egui::{self, CornerRadius, RichText};
 use mazerion_core::{CalcInput, Measurement};
-use std::str::FromStr;
 use rust_decimal::Decimal;
+use std::str::FromStr;
 
 pub fn render(app: &mut MazerionApp, ui: &mut egui::Ui) {
     ui.horizontal(|ui| {
@@ -12,9 +15,21 @@ pub fn render(app: &mut MazerionApp, ui: &mut egui::Ui) {
         egui::ComboBox::from_id_salt("advanced_calc")
             .selected_text(get_calc_name(app.state.advanced_calc))
             .show_ui(ui, |ui| {
-                ui.selectable_value(&mut app.state.advanced_calc, AdvancedCalculator::Blending, "Blending Calculator");
-                ui.selectable_value(&mut app.state.advanced_calc, AdvancedCalculator::Refractometer, "Refractometer Correction");
-                ui.selectable_value(&mut app.state.advanced_calc, AdvancedCalculator::SgCorrection, "SG Temperature Correction");
+                ui.selectable_value(
+                    &mut app.state.advanced_calc,
+                    AdvancedCalculator::Blending,
+                    "Blending Calculator",
+                );
+                ui.selectable_value(
+                    &mut app.state.advanced_calc,
+                    AdvancedCalculator::Refractometer,
+                    "Refractometer Correction",
+                );
+                ui.selectable_value(
+                    &mut app.state.advanced_calc,
+                    AdvancedCalculator::SgCorrection,
+                    "SG Temperature Correction",
+                );
             });
     });
 
@@ -25,12 +40,10 @@ pub fn render(app: &mut MazerionApp, ui: &mut egui::Ui) {
         .stroke(egui::Stroke::new(1.5, colors::HONEY_GOLD))
         .corner_radius(CornerRadius::same(8))
         .inner_margin(15.0)
-        .show(ui, |ui| {
-            match app.state.advanced_calc {
-                AdvancedCalculator::Blending => render_blending(app, ui),
-                AdvancedCalculator::Refractometer => render_refractometer(app, ui),
-                AdvancedCalculator::SgCorrection => render_sg_correction(app, ui),
-            }
+        .show(ui, |ui| match app.state.advanced_calc {
+            AdvancedCalculator::Blending => render_blending(app, ui),
+            AdvancedCalculator::Refractometer => render_refractometer(app, ui),
+            AdvancedCalculator::SgCorrection => render_sg_correction(app, ui),
         });
 }
 
@@ -47,15 +60,29 @@ fn render_blending(app: &mut MazerionApp, ui: &mut egui::Ui) {
     ui.label("Calculate final properties when mixing two batches");
     ui.add_space(10.0);
 
-    let vol_unit = if matches!(app.state.unit_system, crate::state::UnitSystem::Metric) { "L" } else { "gal" };
+    let vol_unit = if matches!(app.state.unit_system, crate::state::UnitSystem::Metric) {
+        "L"
+    } else {
+        "gal"
+    };
 
     ui.label(RichText::new("Batch 1:").strong().color(colors::GOLDENROD));
-    crate::input_field(ui, &format!("Volume ({}):", vol_unit), &mut app.vol1, "Volume of first batch");
+    crate::input_field(
+        ui,
+        &format!("Volume ({}):", vol_unit),
+        &mut app.vol1,
+        "Volume of first batch",
+    );
     crate::input_field(ui, "ABV (%):", &mut app.abv1, "ABV of first batch");
 
     ui.add_space(8.0);
     ui.label(RichText::new("Batch 2:").strong().color(colors::GOLDENROD));
-    crate::input_field(ui, &format!("Volume ({}):", vol_unit), &mut app.vol2, "Volume of second batch");
+    crate::input_field(
+        ui,
+        &format!("Volume ({}):", vol_unit),
+        &mut app.vol2,
+        "Volume of second batch",
+    );
     crate::input_field(ui, "ABV (%):", &mut app.abv2, "ABV of second batch");
 
     ui.add_space(10.0);
@@ -70,8 +97,18 @@ fn render_refractometer(app: &mut MazerionApp, ui: &mut egui::Ui) {
     ui.label("Correct refractometer readings for alcohol presence (Terrill cubic)");
     ui.add_space(10.0);
 
-    crate::input_field(ui, "Original Brix (°Bx):", &mut app.orig_brix, "Original reading before fermentation");
-    crate::input_field(ui, "Current Brix (°Bx):", &mut app.curr_brix, "Current reading during/after fermentation");
+    crate::input_field(
+        ui,
+        "Original Brix (°Bx):",
+        &mut app.orig_brix,
+        "Original reading before fermentation",
+    );
+    crate::input_field(
+        ui,
+        "Current Brix (°Bx):",
+        &mut app.curr_brix,
+        "Current reading during/after fermentation",
+    );
 
     ui.add_space(10.0);
 
@@ -85,10 +122,19 @@ fn render_sg_correction(app: &mut MazerionApp, ui: &mut egui::Ui) {
     ui.label("Correct gravity readings for temperature (calibrated at 20°C)");
     ui.add_space(10.0);
 
-    let temp_unit = if matches!(app.state.unit_system, crate::state::UnitSystem::Metric) { "°C" } else { "°F" };
+    let temp_unit = if matches!(app.state.unit_system, crate::state::UnitSystem::Metric) {
+        "°C"
+    } else {
+        "°F"
+    };
 
     crate::input_field(ui, "Measured SG:", &mut app.sg, "Specific gravity reading");
-    crate::input_field(ui, &format!("Temperature ({}):", temp_unit), &mut app.temp, "Temperature at measurement");
+    crate::input_field(
+        ui,
+        &format!("Temperature ({}):", temp_unit),
+        &mut app.temp,
+        "Temperature at measurement",
+    );
 
     ui.add_space(10.0);
 
@@ -194,6 +240,13 @@ fn calc_sg_correction(app: &mut MazerionApp) {
         }
     };
 
+    let is_metric = matches!(app.state.unit_system, crate::state::UnitSystem::Metric);
+    let temp_celsius = if is_metric {
+        temp_val
+    } else {
+        mazerion_core::fahrenheit_to_celsius(temp_val)
+    };
+
     let sg_meas = match Measurement::sg(sg_val) {
         Ok(m) => m,
         Err(e) => {
@@ -202,7 +255,7 @@ fn calc_sg_correction(app: &mut MazerionApp) {
         }
     };
 
-    let temp_meas = match Measurement::celsius(temp_val) {
+    let temp_meas = match Measurement::celsius(temp_celsius) {
         Ok(m) => m,
         Err(e) => {
             app.result = Some(format!("Error: {}", e));
@@ -218,7 +271,29 @@ fn calc_sg_correction(app: &mut MazerionApp) {
         Ok(res) => {
             app.result = Some(format!("Corrected SG: {:.4}", res.output.value));
             app.warnings = res.warnings;
-            app.metadata = res.metadata;
+            app.metadata = res
+                .metadata
+                .into_iter()
+                .map(|(k, v)| {
+                    if k == "temperature" {
+                        if is_metric {
+                            (k, v)
+                        } else {
+                            (
+                                k,
+                                format!(
+                                    "{:.1} °F",
+                                    mazerion_core::celsius_to_fahrenheit(temp_celsius)
+                                ),
+                            )
+                        }
+                    } else if k == "calibration" {
+                        (k, if is_metric { v } else { "68°F".to_string() })
+                    } else {
+                        (k, v)
+                    }
+                })
+                .collect();
         }
         Err(e) => {
             app.result = Some(format!("Error: {}", e));

@@ -39,7 +39,9 @@ impl From<CoreError> for ApiError {
             CoreError::Parse(msg) => ApiError::InvalidInput(msg),
             CoreError::Io(msg) => ApiError::CalculationError(format!("IO error: {}", msg)),
             CoreError::Config(msg) => ApiError::CalculationError(format!("Config error: {}", msg)),
-            CoreError::DatabaseError(msg) => ApiError::CalculationError(format!("Database error: {}", msg)),
+            CoreError::DatabaseError(msg) => {
+                ApiError::CalculationError(format!("Database error: {}", msg))
+            }
         }
     }
 }

@@ -74,8 +74,7 @@ impl FileWatcher {
             .map_err(|e| Error::Io(format!("Failed to get mtime: {}", e)))?;
         let size = metadata.len();
 
-        let changed = self.last_modified.map_or(true, |last| last != modified)
-            || self.last_size.map_or(true, |last| last != size);
+        let changed = (self.last_modified != Some(modified)) || (self.last_size != Some(size));
 
         if changed {
             self.last_modified = Some(modified);

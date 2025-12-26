@@ -1,7 +1,7 @@
 //! Production CLI with automatic MCL integration
 
+use mazerion_core::{CalcInput, VALID_CATEGORIES, get_calculator, get_calculators_by_category};
 use mazerion_gui::run;
-use mazerion_core::{CalcInput, get_calculator, get_calculators_by_category, VALID_CATEGORIES};
 use std::env;
 
 fn main() {
@@ -93,9 +93,6 @@ fn execute_calculator(args: &[String]) {
         eprintln!();
         eprintln!("Example:");
         eprintln!("  mazerion calc abv og=1.090 fg=1.010");
-        eprintln!("  mazerion calc dilution current_volume=20 current_abv=14 target_abv=10");
-        eprintln!();
-        eprintln!("Run 'mazerion list' to see all available calculators");
         std::process::exit(1);
     }
 
@@ -106,53 +103,50 @@ fn execute_calculator(args: &[String]) {
         None => {
             eprintln!("❌ Error: Calculator '{}' not found", calc_id);
             eprintln!();
-            eprintln!("Run 'mazerion list' to see all available calculators");
+            eprintln!("Run 'mazerion list' to see available calculators");
             std::process::exit(1);
         }
     };
 
     let mut input = CalcInput::new();
-
     for arg in &args[1..] {
         if let Some((key, value)) = arg.split_once('=') {
-            input = input.add_param(key.trim(), value.trim());
+            input = input.add_param(key, value);
         } else {
-            eprintln!("⚠️  Warning: Invalid parameter format: '{}'", arg);
-            eprintln!("   Expected: key=value");
+            eprintln!("⚠️  Warning: Ignoring invalid parameter '{}'", arg);
+            eprintln!("    Expected format: key=value");
         }
     }
 
     println!("═══════════════════════════════════════════════════════════");
-    println!("🧮 {}", calc.name());
-    println!("   {}", calc.description());
+    println!("🧮 CALCULATOR: {}", calc.name());
     println!("───────────────────────────────────────────────────────────");
 
     match calc.calculate(input) {
         Ok(result) => {
-            println!("✓ Result: {}", result.output);
+            println!("✅ Result: {} {}", result.output.value, result.output.unit);
+
+            if !result.metadata.is_empty() {
+                println!();
+                println!("📊 Details:");
+                for (key, value) in &result.metadata {
+                    println!("  • {}: {}", key, value);
+                }
+            }
 
             if !result.warnings.is_empty() {
                 println!();
                 println!("⚠️  Warnings:");
                 for warning in &result.warnings {
-                    println!("   • {}", warning);
-                }
-            }
-
-            if !result.metadata.is_empty() {
-                println!();
-                println!("ℹ️  Additional Information:");
-                for (key, value) in &result.metadata {
-                    println!("   • {}: {}", key, value);
+                    println!("  • {}", warning);
                 }
             }
 
             println!("═══════════════════════════════════════════════════════════");
         }
         Err(e) => {
-            eprintln!();
-            eprintln!("❌ Calculation Error: {}", e);
-            eprintln!("═══════════════════════════════════════════════════════════");
+            println!("❌ Calculation Error: {}", e);
+            println!("═══════════════════════════════════════════════════════════");
             std::process::exit(1);
         }
     }
@@ -182,6 +176,9 @@ fn show_help() {
     println!("  mazerion calc carbonation volume=19 temperature=20 target_co2=2.5 method=priming");
     println!();
     println!("MCL VERSION: Production v1.0");
-    println!("Total Calculators: {}", mazerion_core::traits::calculator_count());
+    println!(
+        "Total Calculators: {}",
+        mazerion_core::traits::calculator_count()
+    );
     println!("═══════════════════════════════════════════════════════════");
 }

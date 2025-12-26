@@ -1,7 +1,7 @@
 //! Pyment calculator - grape-honey wine (wine-mead hybrid)
 
 use mazerion_core::{
-    register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
+    CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit, register_calculator,
 };
 use rust_decimal::Decimal;
 
@@ -36,9 +36,7 @@ impl Calculator for PymentCalculator {
         let target_abv = input
             .get_param("target_abv")
             .ok_or_else(|| Error::MissingInput("target_abv required".into()))?;
-        let juice_percent = input
-            .get_param("juice_percent")
-            .unwrap_or("40"); // Default 40% grape juice
+        let juice_percent = input.get_param("juice_percent").unwrap_or("40"); // Default 40% grape juice
 
         let vol: Decimal = volume
             .parse()
@@ -74,7 +72,8 @@ impl Calculator for PymentCalculator {
         let mut result = CalcResult::new(Measurement::new(honey_needed_g, Unit::Grams));
 
         if abv < Decimal::from(8) {
-            result = result.with_warning("Low ABV (<8%) - consider increasing target or juice percentage");
+            result = result
+                .with_warning("Low ABV (<8%) - consider increasing target or juice percentage");
         }
 
         if abv > Decimal::from(18) {
@@ -100,7 +99,10 @@ impl Calculator for PymentCalculator {
             .with_meta("abv_from_honey", format!("{:.1}%", abv_from_honey))
             .with_meta("total_abv", format!("{:.1}%", abv))
             .with_meta("volume", format!("{:.2} L", vol))
-            .with_meta("tip", "Use quality grape juice or wine must. Red or white grapes both work.");
+            .with_meta(
+                "tip",
+                "Use quality grape juice or wine must. Red or white grapes both work.",
+            );
 
         Ok(result)
     }

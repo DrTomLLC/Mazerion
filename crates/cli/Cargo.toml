@@ -15,6 +15,9 @@ mazerion-calculators = { path = "../calculators" }
 mazerion-gui = { path = "../gui" }
 mazerion-tui = { path = "../tui" }
 mazerion-api = { path = "../api" }
+eframe = "0.33.3"
+rust_decimal = "1.39.0"
+egui = "0.33.3"
 
 
 [lints.clippy]

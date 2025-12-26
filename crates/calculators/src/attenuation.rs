@@ -1,5 +1,5 @@
 use mazerion_core::{
-    register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
+    CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit, register_calculator,
 };
 use rust_decimal::Decimal;
 
@@ -44,12 +44,13 @@ impl Calculator for AttenuationCalculator {
 
         // Apparent Attenuation (AA%)
         // AA% = (OG - FG) / (OG - 1.000) × 100
-        let apparent_attenuation = ((og_val - fg_val) / (og_val - Decimal::ONE)) * Decimal::from(100);
+        let apparent_attenuation =
+            ((og_val - fg_val) / (og_val - Decimal::ONE)) * Decimal::from(100);
 
         // Convert SG to Plato (rough approximation)
         // P ≈ 250 × SG - 250
-        let p0 = (og_val - Decimal::ONE) * Decimal::from(250);  // Original extract (°P)
-        let pf = (fg_val - Decimal::ONE) * Decimal::from(250);  // Apparent extract (°P)
+        let p0 = (og_val - Decimal::ONE) * Decimal::from(250); // Original extract (°P)
+        let pf = (fg_val - Decimal::ONE) * Decimal::from(250); // Apparent extract (°P)
 
         // Real Extract (RE, °P) - ASBC formula
         // RE = 0.1808 × P_0 + 0.8192 × P_f
@@ -66,7 +67,8 @@ impl Calculator for AttenuationCalculator {
         let mut result = CalcResult::new(Measurement::new(apparent_attenuation, Unit::Percent));
 
         if apparent_attenuation < Decimal::from(65) {
-            result = result.with_warning("Low attenuation (<65%) - may be under-attenuated or stuck");
+            result =
+                result.with_warning("Low attenuation (<65%) - may be under-attenuated or stuck");
         }
 
         if apparent_attenuation > Decimal::from(85) {
@@ -74,7 +76,10 @@ impl Calculator for AttenuationCalculator {
         }
 
         result = result
-            .with_meta("apparent_attenuation", format!("{:.1}%", apparent_attenuation))
+            .with_meta(
+                "apparent_attenuation",
+                format!("{:.1}%", apparent_attenuation),
+            )
             .with_meta("real_attenuation", format!("{:.1}%", real_attenuation))
             .with_meta("real_extract", format!("{:.2}°P", re))
             .with_meta("original_extract", format!("{:.2}°P", p0))

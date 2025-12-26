@@ -9,9 +9,9 @@ use std::str::FromStr;
 fn test_cost_calculator_basic() {
     let calc = BatchCostCalculator::default();
     let input = CalcInput::new()
-        .add_param("volume", "19")              // FIXED: was "batch_size"
-        .add_param("honey_cost", "90")          // Total honey cost
-        .add_param("honey_kg", "3.6");          // Honey amount
+        .add_param("volume", "19") // FIXED: was "batch_size"
+        .add_param("honey_cost", "90") // Total honey cost
+        .add_param("honey_kg", "3.6"); // Honey amount
 
     let result = calc.calculate(input).unwrap();
     assert!(result.output.value > Decimal::ZERO);
@@ -21,10 +21,10 @@ fn test_cost_calculator_basic() {
 fn test_cost_calculator_with_extras() {
     let calc = BatchCostCalculator::default();
     let input = CalcInput::new()
-        .add_param("volume", "19")              // FIXED: was "batch_size"
+        .add_param("volume", "19") // FIXED: was "batch_size"
         .add_param("honey_cost", "90")
         .add_param("honey_kg", "3.6")
-        .add_param("fruit_cost", "20")          // Optional extras
+        .add_param("fruit_cost", "20") // Optional extras
         .add_param("yeast_cost", "10")
         .add_param("nutrient_cost", "8")
         .add_param("other_cost", "12");
@@ -32,14 +32,19 @@ fn test_cost_calculator_with_extras() {
     let result = calc.calculate(input).unwrap();
     assert!(result.output.value > Decimal::from(100));
     // Check for any cost-related metadata (flexible assertion)
-    assert!(result.metadata.iter().any(|(k, _)| k.contains("cost") || k.contains("total")));
+    assert!(
+        result
+            .metadata
+            .iter()
+            .any(|(k, _)| k.contains("cost") || k.contains("total"))
+    );
 }
 
 #[test]
 fn test_priming_alternatives_corn_sugar() {
     let calc = PrimingAlternativesCalculator::default();
     let input = CalcInput::new()
-        .add_param("volume", "19")              // FIXED: Added required params
+        .add_param("volume", "19") // FIXED: Added required params
         .add_param("target_co2", "2.5")
         .add_param("temperature", "20");
 
@@ -54,7 +59,7 @@ fn test_priming_alternatives_corn_sugar() {
 fn test_priming_alternatives_table_sugar() {
     let calc = PrimingAlternativesCalculator::default();
     let input = CalcInput::new()
-        .add_param("volume", "19")              // FIXED: Added required params
+        .add_param("volume", "19") // FIXED: Added required params
         .add_param("target_co2", "2.5")
         .add_param("temperature", "20");
 
@@ -68,13 +73,18 @@ fn test_water_chemistry_basic() {
     let calc = WaterChemistryCalculator::default();
     let input = CalcInput::new()
         .add_param("volume", "19")
-        .add_param("adjustment", "gypsum")      // Mineral type
-        .add_param("target_ppm", "50");         // Target mineral level
+        .add_param("adjustment", "gypsum") // Mineral type
+        .add_param("target_ppm", "50"); // Target mineral level
 
     let result = calc.calculate(input).unwrap();
     assert!(result.output.value > Decimal::ZERO);
     // Metadata keys match actual calculator output
-    assert!(result.metadata.iter().any(|(k, _)| k == "mineral" || k == "grams_needed"));
+    assert!(
+        result
+            .metadata
+            .iter()
+            .any(|(k, _)| k == "mineral" || k == "grams_needed")
+    );
 }
 
 #[test]
@@ -87,7 +97,12 @@ fn test_water_chemistry_with_additions() {
 
     let result = calc.calculate(input).unwrap();
     // Check for actual metadata keys from calculator
-    assert!(result.metadata.iter().any(|(k, _)| k == "mineral" || k == "ion_contribution"));
+    assert!(
+        result
+            .metadata
+            .iter()
+            .any(|(k, _)| k == "mineral" || k == "ion_contribution")
+    );
 }
 
 #[test]
@@ -106,8 +121,7 @@ fn test_bench_trials() {
 #[test]
 fn test_bench_trials_validation() {
     let calc = BenchTrialsCalculator::default();
-    let input = CalcInput::new()
-        .add_param("trial_volume", "100");
+    let input = CalcInput::new().add_param("trial_volume", "100");
 
     let result = calc.calculate(input);
     assert!(result.is_err());
@@ -117,14 +131,19 @@ fn test_bench_trials_validation() {
 fn test_cost_per_bottle() {
     let calc = BatchCostCalculator::default();
     let input = CalcInput::new()
-        .add_param("volume", "19")              // FIXED: was "batch_size"
+        .add_param("volume", "19") // FIXED: was "batch_size"
         .add_param("honey_cost", "90")
         .add_param("honey_kg", "3.6")
-        .add_param("bottle_cost", "1.0")        // Cost per bottle
+        .add_param("bottle_cost", "1.0") // Cost per bottle
         .add_param("bottle_size", "750");
 
     let result = calc.calculate(input).unwrap();
-    assert!(result.metadata.iter().any(|(k, _)| k.contains("bottle") || k.contains("cost")));
+    assert!(
+        result
+            .metadata
+            .iter()
+            .any(|(k, _)| k.contains("bottle") || k.contains("cost"))
+    );
 }
 
 #[test]
@@ -137,5 +156,10 @@ fn test_water_adjustment_calcium_chloride() {
 
     let result = calc.calculate(input).unwrap();
     // Check for actual calculator output - mineral and ion info
-    assert!(result.metadata.iter().any(|(k, _)| k == "mineral" || k == "ion_contribution"));
+    assert!(
+        result
+            .metadata
+            .iter()
+            .any(|(k, _)| k == "mineral" || k == "ion_contribution")
+    );
 }

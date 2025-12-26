@@ -3,7 +3,7 @@
 
 use crate::MazerionApp;
 use crate::state::{Theme, UnitSystem};
-use eframe::egui::{self, RichText, CornerRadius};
+use eframe::egui::{self, CornerRadius, RichText};
 
 pub fn render(app: &mut MazerionApp, ui: &mut egui::Ui) {
     egui::Frame::default()
@@ -20,11 +20,31 @@ pub fn render(app: &mut MazerionApp, ui: &mut egui::Ui) {
                 egui::ComboBox::from_id_salt("theme")
                     .selected_text(app.state.theme.name())
                     .show_ui(ui, |ui| {
-                        ui.selectable_value(&mut app.state.theme, Theme::HoneyGold, "🍯 Honey & Gold");
-                        ui.selectable_value(&mut app.state.theme, Theme::ForestGreen, "🌲 Forest Green");
-                        ui.selectable_value(&mut app.state.theme, Theme::OceanBlue, "🌊 Ocean Blue");
-                        ui.selectable_value(&mut app.state.theme, Theme::SunsetOrange, "🌅 Sunset Orange");
-                        ui.selectable_value(&mut app.state.theme, Theme::LavenderPurple, "💜 Lavender Purple");
+                        ui.selectable_value(
+                            &mut app.state.theme,
+                            Theme::HoneyGold,
+                            "🍯 Honey & Gold",
+                        );
+                        ui.selectable_value(
+                            &mut app.state.theme,
+                            Theme::ForestGreen,
+                            "🌲 Forest Green",
+                        );
+                        ui.selectable_value(
+                            &mut app.state.theme,
+                            Theme::OceanBlue,
+                            "🌊 Ocean Blue",
+                        );
+                        ui.selectable_value(
+                            &mut app.state.theme,
+                            Theme::SunsetOrange,
+                            "🌅 Sunset Orange",
+                        );
+                        ui.selectable_value(
+                            &mut app.state.theme,
+                            Theme::LavenderPurple,
+                            "💜 Lavender Purple",
+                        );
                     });
             });
             app.state.custom_colors = app.state.get_theme_colors();
@@ -36,8 +56,16 @@ pub fn render(app: &mut MazerionApp, ui: &mut egui::Ui) {
                 egui::ComboBox::from_id_salt("units")
                     .selected_text(app.state.unit_system.name())
                     .show_ui(ui, |ui| {
-                        ui.selectable_value(&mut app.state.unit_system, UnitSystem::Metric, "Metric");
-                        ui.selectable_value(&mut app.state.unit_system, UnitSystem::Imperial, "Imperial/US");
+                        ui.selectable_value(
+                            &mut app.state.unit_system,
+                            UnitSystem::Metric,
+                            "Metric",
+                        );
+                        ui.selectable_value(
+                            &mut app.state.unit_system,
+                            UnitSystem::Imperial,
+                            "Imperial/US",
+                        );
                     });
             });
 

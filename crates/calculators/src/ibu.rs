@@ -1,5 +1,5 @@
 use mazerion_core::{
-    register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
+    CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit, register_calculator,
 };
 use rust_decimal::Decimal;
 
@@ -44,11 +44,21 @@ impl Calculator for IbuCalculator {
             .get_param("boil_gravity")
             .ok_or_else(|| Error::MissingInput("boil_gravity required (SG)".into()))?;
 
-        let weight: Decimal = hop_weight_g.parse().map_err(|_| Error::Parse("Invalid hop_weight_g".into()))?;
-        let aa: Decimal = alpha_acid.parse().map_err(|_| Error::Parse("Invalid alpha_acid".into()))?;
-        let time_min: Decimal = boil_time.parse().map_err(|_| Error::Parse("Invalid boil_time".into()))?;
-        let volume: Decimal = volume_l.parse().map_err(|_| Error::Parse("Invalid volume_l".into()))?;
-        let sg: Decimal = boil_gravity.parse().map_err(|_| Error::Parse("Invalid boil_gravity".into()))?;
+        let weight: Decimal = hop_weight_g
+            .parse()
+            .map_err(|_| Error::Parse("Invalid hop_weight_g".into()))?;
+        let aa: Decimal = alpha_acid
+            .parse()
+            .map_err(|_| Error::Parse("Invalid alpha_acid".into()))?;
+        let time_min: Decimal = boil_time
+            .parse()
+            .map_err(|_| Error::Parse("Invalid boil_time".into()))?;
+        let volume: Decimal = volume_l
+            .parse()
+            .map_err(|_| Error::Parse("Invalid volume_l".into()))?;
+        let sg: Decimal = boil_gravity
+            .parse()
+            .map_err(|_| Error::Parse("Invalid boil_gravity".into()))?;
 
         // Tinseth formula:
         // B = 1.65 × 0.000125^(SG_boil - 1.0)
@@ -57,7 +67,10 @@ impl Calculator for IbuCalculator {
         // IBU = (W_g × AA% × U × 1000) / V_L
 
         // Convert to f64 for exponential calculations
-        let sg_f64 = (sg - Decimal::ONE).to_string().parse::<f64>().unwrap_or(0.05);
+        let sg_f64 = (sg - Decimal::ONE)
+            .to_string()
+            .parse::<f64>()
+            .unwrap_or(0.05);
         let time_f64 = time_min.to_string().parse::<f64>().unwrap_or(60.0);
 
         // Bigness factor (gravity correction)
@@ -86,7 +99,10 @@ impl Calculator for IbuCalculator {
 
         result = result
             .with_meta("ibu", format!("{:.1}", ibu))
-            .with_meta("utilization", format!("{:.1}%", util_decimal * Decimal::from(100)))
+            .with_meta(
+                "utilization",
+                format!("{:.1}%", util_decimal * Decimal::from(100)),
+            )
             .with_meta("bigness_factor", format!("{:.4}", bigness))
             .with_meta("boil_factor", format!("{:.4}", boil_factor))
             .with_meta("formula", "Tinseth")

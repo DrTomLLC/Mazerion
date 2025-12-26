@@ -1,5 +1,5 @@
 use mazerion_core::{
-    register_calculator, CalcInput, CalcResult, Calculator, Measurement, Result, Unit, Validator,
+    CalcInput, CalcResult, Calculator, Measurement, Result, Unit, Validator, register_calculator,
 };
 use rust_decimal::Decimal;
 

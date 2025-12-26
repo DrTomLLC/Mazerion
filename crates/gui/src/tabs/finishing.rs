@@ -1,23 +1,47 @@
 use crate::MazerionApp;
 use crate::state::{FinishingCalculator, UnitSystem};
 use eframe::egui;
+use eframe::epaint::Color32;
 use mazerion_calculators::*;
 use mazerion_core::{CalcInput, Calculator, Measurement};
 use rust_decimal::Decimal;
 use std::str::FromStr;
-use eframe::epaint::Color32;
 
 pub fn render(app: &mut MazerionApp, ui: &mut egui::Ui) {
     ui.heading("✨ Finishing & Stabilization");
     ui.add_space(10.0);
 
     ui.horizontal(|ui| {
-        ui.selectable_value(&mut app.state.finishing_calc, FinishingCalculator::Backsweetening, "🍯 Backsweetening");
-        ui.selectable_value(&mut app.state.finishing_calc, FinishingCalculator::Sulfite, "🧪 Sulfite");
-        ui.selectable_value(&mut app.state.finishing_calc, FinishingCalculator::AcidAddition, "🍋 Acid");
-        ui.selectable_value(&mut app.state.finishing_calc, FinishingCalculator::Pasteurization, "🔥 Pasteurization");
-        ui.selectable_value(&mut app.state.finishing_calc, FinishingCalculator::Stabilization, "🔒 Stabilization");
-        ui.selectable_value(&mut app.state.finishing_calc, FinishingCalculator::SweetnessChart, "📊 Sweetness");
+        ui.selectable_value(
+            &mut app.state.finishing_calc,
+            FinishingCalculator::Backsweetening,
+            "🍯 Backsweetening",
+        );
+        ui.selectable_value(
+            &mut app.state.finishing_calc,
+            FinishingCalculator::Sulfite,
+            "🧪 Sulfite",
+        );
+        ui.selectable_value(
+            &mut app.state.finishing_calc,
+            FinishingCalculator::AcidAddition,
+            "🍋 Acid",
+        );
+        ui.selectable_value(
+            &mut app.state.finishing_calc,
+            FinishingCalculator::Pasteurization,
+            "🔥 Pasteurization",
+        );
+        ui.selectable_value(
+            &mut app.state.finishing_calc,
+            FinishingCalculator::Stabilization,
+            "🔒 Stabilization",
+        );
+        ui.selectable_value(
+            &mut app.state.finishing_calc,
+            FinishingCalculator::SweetnessChart,
+            "📊 Sweetness",
+        );
     });
 
     ui.add_space(15.0);
@@ -40,7 +64,12 @@ fn render_backsweetening(app: &mut MazerionApp, ui: &mut egui::Ui) {
     let is_metric = app.state.unit_system == UnitSystem::Metric;
     let vol_unit = if is_metric { "L" } else { "gal" };
 
-    crate::input_field(ui, &format!("Volume ({}):", vol_unit), &mut app.sweet_vol, "Batch volume");
+    crate::input_field(
+        ui,
+        &format!("Volume ({}):", vol_unit),
+        &mut app.sweet_vol,
+        "Batch volume",
+    );
     crate::input_field(ui, "Current SG:", &mut app.current_sg, "e.g., 1.000");
     crate::input_field(ui, "Target SG:", &mut app.target_sg, "e.g., 1.015");
 
@@ -76,7 +105,7 @@ fn render_backsweetening(app: &mut MazerionApp, ui: &mut egui::Ui) {
             }
         };
 
-        let calc = BacksweeteningCalculator::default();
+        let calc = BacksweeteningCalculator;
         let input = CalcInput::new()
             .add_measurement(current_sg_meas)
             .add_param("volume", &app.sweet_vol)
@@ -103,9 +132,19 @@ fn render_sulfite(app: &mut MazerionApp, ui: &mut egui::Ui) {
     let is_metric = app.state.unit_system == UnitSystem::Metric;
     let vol_unit = if is_metric { "L" } else { "gal" };
 
-    crate::input_field(ui, &format!("Volume ({}):", vol_unit), &mut app.sulfite_vol, "Batch volume");
+    crate::input_field(
+        ui,
+        &format!("Volume ({}):", vol_unit),
+        &mut app.sulfite_vol,
+        "Batch volume",
+    );
     crate::input_field(ui, "pH:", &mut app.ph, "e.g., 3.5");
-    crate::input_field(ui, "Target Free SO₂ (ppm):", &mut app.target_so2, "e.g., 50");
+    crate::input_field(
+        ui,
+        "Target Free SO₂ (ppm):",
+        &mut app.target_so2,
+        "e.g., 50",
+    );
 
     ui.add_space(10.0);
 
@@ -129,7 +168,7 @@ fn render_sulfite(app: &mut MazerionApp, ui: &mut egui::Ui) {
             }
         };
 
-        let calc = SulfiteCalculator::default();
+        let calc = SulfiteCalculator;
         let input = CalcInput::new()
             .add_measurement(ph_meas)
             .add_param("volume", &app.sulfite_vol)
@@ -155,7 +194,12 @@ fn render_acid(app: &mut MazerionApp, ui: &mut egui::Ui) {
     let is_metric = app.state.unit_system == UnitSystem::Metric;
     let vol_unit = if is_metric { "L" } else { "gal" };
 
-    crate::input_field(ui, &format!("Volume ({}):", vol_unit), &mut app.acid_vol, "Batch volume");
+    crate::input_field(
+        ui,
+        &format!("Volume ({}):", vol_unit),
+        &mut app.acid_vol,
+        "Batch volume",
+    );
     crate::input_field(ui, "Current pH:", &mut app.current_ph, "e.g., 3.8");
     crate::input_field(ui, "Target pH:", &mut app.target_ph_acid, "e.g., 3.4");
 
@@ -192,7 +236,7 @@ fn render_acid(app: &mut MazerionApp, ui: &mut egui::Ui) {
             }
         };
 
-        let calc = AcidAdditionCalculator::default();
+        let calc = AcidAdditionCalculator;
         let input = CalcInput::new()
             .add_measurement(current_ph_meas)
             .add_param("volume", &app.acid_vol)
@@ -219,8 +263,12 @@ fn render_pasteurization(app: &mut MazerionApp, ui: &mut egui::Ui) {
     let is_metric = app.state.unit_system == UnitSystem::Metric;
     let temp_unit = if is_metric { "°C" } else { "°F" };
 
-    crate::input_field(ui, &format!("Temperature ({}):", temp_unit), &mut app.pasteurization_temp,
-                       if is_metric { "e.g., 63" } else { "e.g., 145" });
+    crate::input_field(
+        ui,
+        &format!("Temperature ({}):", temp_unit),
+        &mut app.pasteurization_temp,
+        if is_metric { "e.g., 63" } else { "e.g., 145" },
+    );
 
     ui.add_space(10.0);
 
@@ -251,9 +299,8 @@ fn render_pasteurization(app: &mut MazerionApp, ui: &mut egui::Ui) {
             temp_input
         };
 
-        let calc = PasteurizationCalculator::default();
-        let input = CalcInput::new()
-            .add_param("temperature", &temp_celsius.to_string());
+        let calc = PasteurizationCalculator;
+        let input = CalcInput::new().add_param("temperature", temp_celsius.to_string());
 
         match calc.calculate(input) {
             Ok(res) => {
@@ -261,15 +308,25 @@ fn render_pasteurization(app: &mut MazerionApp, ui: &mut egui::Ui) {
                 app.warnings = res.warnings;
 
                 // Override incorrect metadata with correct temperature values
-                app.metadata = res.metadata.into_iter().map(|(k, v)| {
-                    if k == "temperature_c" {
-                        ("Temperature (°C)".to_string(), format!("{:.1}°C", temp_celsius))
-                    } else if k == "temperature_f" {
-                        ("Temperature (°F)".to_string(), format!("{:.1}°F", temp_fahrenheit))
-                    } else {
-                        (k, v)
-                    }
-                }).collect();
+                app.metadata = res
+                    .metadata
+                    .into_iter()
+                    .map(|(k, v)| {
+                        if k == "temperature_c" {
+                            (
+                                "Temperature (°C)".to_string(),
+                                format!("{:.1}°C", temp_celsius),
+                            )
+                        } else if k == "temperature_f" {
+                            (
+                                "Temperature (°F)".to_string(),
+                                format!("{:.1}°F", temp_fahrenheit),
+                            )
+                        } else {
+                            (k, v)
+                        }
+                    })
+                    .collect();
             }
             Err(e) => {
                 app.result = Some(format!("Error: {}", e));
@@ -295,7 +352,12 @@ fn render_stabilization(app: &mut MazerionApp, ui: &mut egui::Ui) {
     let is_metric = app.state.unit_system == UnitSystem::Metric;
     let vol_unit = if is_metric { "L" } else { "gal" };
 
-    crate::input_field(ui, &format!("Volume ({}):", vol_unit), &mut app.stabilization_vol, "Batch volume");
+    crate::input_field(
+        ui,
+        &format!("Volume ({}):", vol_unit),
+        &mut app.stabilization_vol,
+        "Batch volume",
+    );
 
     ui.add_space(10.0);
 
@@ -303,9 +365,8 @@ fn render_stabilization(app: &mut MazerionApp, ui: &mut egui::Ui) {
         app.warnings.clear();
         app.metadata.clear();
 
-        let calc = StabilizationCalculator::default();
-        let input = CalcInput::new()
-            .add_param("volume", &app.stabilization_vol);
+        let calc = StabilizationCalculator;
+        let input = CalcInput::new().add_param("volume", &app.stabilization_vol);
 
         match calc.calculate(input) {
             Ok(res) => {
@@ -333,25 +394,49 @@ fn render_stabilization(app: &mut MazerionApp, ui: &mut egui::Ui) {
 fn render_sweetness_chart(app: &mut MazerionApp, ui: &mut egui::Ui) {
     let c = &app.state.custom_colors;
 
-    ui.heading(egui::RichText::new("🍯 Mead Sweetness Guide")
-        .size(24.0)
-        .color(c.honey_gold));
+    ui.heading(
+        egui::RichText::new("🍯 Mead Sweetness Guide")
+            .size(24.0)
+            .color(c.honey_gold),
+    );
     ui.add_space(20.0);
 
-    ui.label(egui::RichText::new("Understanding Final Gravity (FG) and Sweetness Perception")
-        .size(16.0)
-        .color(c.dark_text));
+    ui.label(
+        egui::RichText::new("Understanding Final Gravity (FG) and Sweetness Perception")
+            .size(16.0)
+            .color(c.dark_text),
+    );
     ui.add_space(5.0);
     ui.label("Final Gravity determines residual sweetness. Use this guide to hit your target sweetness level.");
     ui.add_space(25.0);
 
     // Sweetness categories - each in its own result-style box
     let categories = [
-        ("Bone Dry", "0.990 - 0.996", "Crisp, tart, wine-like finish. Zero residual sugar. Excellent for traditional meads aged on oak. Lets terroir shine through."),
-        ("Dry", "0.996 - 1.006", "Clean finish with very subtle sweetness. Honey character present but not sweet. Ideal for session meads and everyday drinking."),
-        ("Semi-Sweet", "1.006 - 1.015", "Noticeable honey sweetness, well-balanced. Most popular range. Perfect for traditional and fruit meads. Crowd-pleaser."),
-        ("Sweet", "1.015 - 1.025", "Dessert mead territory. Significant sweetness, honey-forward. Pairs excellently with spicy foods and strong cheeses."),
-        ("Very Sweet", "1.025 - 1.040", "Rich dessert mead, heavy sweetness. Best served in small portions. Excellent for sack mead or special occasions."),
+        (
+            "Bone Dry",
+            "0.990 - 0.996",
+            "Crisp, tart, wine-like finish. Zero residual sugar. Excellent for traditional meads aged on oak. Lets terroir shine through.",
+        ),
+        (
+            "Dry",
+            "0.996 - 1.006",
+            "Clean finish with very subtle sweetness. Honey character present but not sweet. Ideal for session meads and everyday drinking.",
+        ),
+        (
+            "Semi-Sweet",
+            "1.006 - 1.015",
+            "Noticeable honey sweetness, well-balanced. Most popular range. Perfect for traditional and fruit meads. Crowd-pleaser.",
+        ),
+        (
+            "Sweet",
+            "1.015 - 1.025",
+            "Dessert mead territory. Significant sweetness, honey-forward. Pairs excellently with spicy foods and strong cheeses.",
+        ),
+        (
+            "Very Sweet",
+            "1.025 - 1.040",
+            "Rich dessert mead, heavy sweetness. Best served in small portions. Excellent for sack mead or special occasions.",
+        ),
     ];
 
     for (name, fg_range, desc) in categories {
@@ -362,20 +447,22 @@ fn render_sweetness_chart(app: &mut MazerionApp, ui: &mut egui::Ui) {
             .inner_margin(15.0)
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
-                    ui.label(egui::RichText::new(name)
-                        .size(18.0)
-                        .strong()
-                        .color(c.honey_gold));
+                    ui.label(
+                        egui::RichText::new(name)
+                            .size(18.0)
+                            .strong()
+                            .color(c.honey_gold),
+                    );
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        ui.label(egui::RichText::new(format!("FG: {}", fg_range))
-                            .size(16.0)
-                            .color(c.dark_text));
+                        ui.label(
+                            egui::RichText::new(format!("FG: {}", fg_range))
+                                .size(16.0)
+                                .color(c.dark_text),
+                        );
                     });
                 });
                 ui.add_space(8.0);
-                ui.label(egui::RichText::new(desc)
-                    .size(14.0)
-                    .color(c.dark_text));
+                ui.label(egui::RichText::new(desc).size(14.0).color(c.dark_text));
             });
         ui.add_space(12.0);
     }
@@ -389,41 +476,67 @@ fn render_sweetness_chart(app: &mut MazerionApp, ui: &mut egui::Ui) {
         .corner_radius(egui::CornerRadius::same(8))
         .inner_margin(15.0)
         .show(ui, |ui| {
-            ui.label(egui::RichText::new("📋 Recommended FG by Mead Style")
-                .size(18.0)
-                .strong()
-                .color(c.forest_green));
+            ui.label(
+                egui::RichText::new("📋 Recommended FG by Mead Style")
+                    .size(18.0)
+                    .strong()
+                    .color(c.forest_green),
+            );
             ui.add_space(12.0);
 
             let styles = [
-                ("Traditional (Show Mead)", "1.000 - 1.010", "Let honey character shine"),
-                ("Melomel (Fruit Mead)", "1.008 - 1.015", "Balance fruit acidity"),
-                ("Metheglin (Spice Mead)", "1.000 - 1.012", "Prevent overpowering spices"),
-                ("Cyser (Apple Mead)", "1.010 - 1.015", "Complement apple tartness"),
-                ("Bochet (Caramelized)", "1.015 - 1.025", "Match caramel richness"),
-                ("Pyment (Grape Mead)", "0.996 - 1.006", "Wine-like, honey notes"),
+                (
+                    "Traditional (Show Mead)",
+                    "1.000 - 1.010",
+                    "Let honey character shine",
+                ),
+                (
+                    "Melomel (Fruit Mead)",
+                    "1.008 - 1.015",
+                    "Balance fruit acidity",
+                ),
+                (
+                    "Metheglin (Spice Mead)",
+                    "1.000 - 1.012",
+                    "Prevent overpowering spices",
+                ),
+                (
+                    "Cyser (Apple Mead)",
+                    "1.010 - 1.015",
+                    "Complement apple tartness",
+                ),
+                (
+                    "Bochet (Caramelized)",
+                    "1.015 - 1.025",
+                    "Match caramel richness",
+                ),
+                (
+                    "Pyment (Grape Mead)",
+                    "0.996 - 1.006",
+                    "Wine-like, honey notes",
+                ),
                 ("Braggot (Malt)", "1.008 - 1.018", "Balance malt sweetness"),
                 ("Acerglyn (Maple)", "1.010 - 1.020", "Highlight maple notes"),
             ];
 
             for (style, target, reason) in styles {
                 ui.horizontal(|ui| {
-                    ui.label(egui::RichText::new("▸")
-                        .size(16.0)
-                        .color(c.honey_gold));
+                    ui.label(egui::RichText::new("▸").size(16.0).color(c.honey_gold));
                     ui.vertical(|ui| {
                         ui.horizontal(|ui| {
-                            ui.label(egui::RichText::new(style)
-                                .size(15.0)
-                                .strong()
-                                .color(c.dark_text));
-                            ui.label(egui::RichText::new(format!("→ {}", target))
-                                .size(14.0)
-                                .color(c.forest_green));
+                            ui.label(
+                                egui::RichText::new(style)
+                                    .size(15.0)
+                                    .strong()
+                                    .color(c.dark_text),
+                            );
+                            ui.label(
+                                egui::RichText::new(format!("→ {}", target))
+                                    .size(14.0)
+                                    .color(c.forest_green),
+                            );
                         });
-                        ui.label(egui::RichText::new(reason)
-                            .size(13.0)
-                            .color(c.dark_text));
+                        ui.label(egui::RichText::new(reason).size(13.0).color(c.dark_text));
                     });
                 });
                 ui.add_space(8.0);

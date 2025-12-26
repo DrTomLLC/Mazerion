@@ -1,8 +1,7 @@
 // Convert degrees Brix to specific gravity using accurate Brew Your Own formula.
 
 use mazerion_core::{
-    register_calculator, CalcInput, CalcResult, Calculator, Measurement, Result, Unit,
-    Validator,
+    CalcInput, CalcResult, Calculator, Measurement, Result, Unit, Validator, register_calculator,
 };
 use rust_decimal::Decimal;
 
@@ -40,7 +39,8 @@ impl Calculator for BrixToSgCalculator {
         // CORRECT FORMULA (Brew Your Own / Brewer's Friend):
         // SG = (Brix / (258.6 - (Brix/258.2)×227.1)) + 1
 
-        let denominator = Decimal::new(2586, 1) - ((brix / Decimal::new(2582, 1)) * Decimal::new(2271, 1));
+        let denominator =
+            Decimal::new(2586, 1) - ((brix / Decimal::new(2582, 1)) * Decimal::new(2271, 1));
         let sg = (brix / denominator) + Decimal::ONE;
 
         let mut result = CalcResult::new(Measurement::sg(sg)?);
@@ -53,7 +53,10 @@ impl Calculator for BrixToSgCalculator {
             .with_meta("brix", format!("{:.2}°Bx", brix))
             .with_meta("sg", format!("{:.4}", sg))
             .with_meta("formula", "Brew Your Own (accurate)")
-            .with_meta("calculation", format!("{}/(258.6 - ({}÷258.2)×227.1) + 1", brix, brix));
+            .with_meta(
+                "calculation",
+                format!("{}/(258.6 - ({}÷258.2)×227.1) + 1", brix, brix),
+            );
 
         Ok(result)
     }

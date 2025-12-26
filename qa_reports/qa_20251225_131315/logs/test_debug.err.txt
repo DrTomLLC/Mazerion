@@ -1,0 +1,33 @@
+﻿   Compiling mazerion-calculators v0.18.0 (C:\Users\DrTom\RustroverProjects\Mazerion\crates\calculators)
+   Compiling mazerion-ffi v0.18.0 (C:\Users\DrTom\RustroverProjects\Mazerion\crates\ffi)
+   Compiling mazerion-api v0.18.0 (C:\Users\DrTom\RustroverProjects\Mazerion\crates\api)
+   Compiling mazerion-tui v0.18.0 (C:\Users\DrTom\RustroverProjects\Mazerion\crates\tui)
+   Compiling mazerion-gui v0.18.0 (C:\Users\DrTom\RustroverProjects\Mazerion\crates\gui)
+   Compiling mazerion v0.18.0 (C:\Users\DrTom\RustroverProjects\Mazerion\crates\cli)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.28s
+     Running unittests src\main.rs (target\debug\deps\line_guard-81587c5455fe7aba.exe)
+     Running unittests src\main.rs (target\debug\deps\mazerion-98165d1aba147d86.exe)
+     Running unittests src\lib.rs (target\debug\deps\mazerion_api-41e9a7541f178f32.exe)
+     Running unittests src\lib.rs (target\debug\deps\mazerion_calculators-41b5a9da08996053.exe)
+     Running tests\advanced_tests.rs (target\debug\deps\advanced_tests-b26ef4cec324b1bc.exe)
+     Running tests\basic_tests.rs (target\debug\deps\basic_tests-6a23b34b98f0eed3.exe)
+     Running tests\beer_tests.rs (target\debug\deps\beer_tests-77b609a139072d1a.exe)
+     Running tests\brewing_tests.rs (target\debug\deps\brewing_tests-691ea777741d8370.exe)
+     Running tests\finishing_tests.rs (target\debug\deps\finishing_tests-7878372926b3a89e.exe)
+     Running tests\mead_styles_tests.rs (target\debug\deps\mead_styles_tests-16ab978de2dc4c9e.exe)
+     Running tests\mod.rs (target\debug\deps\mod-153403b9406992c1.exe)
+     Running tests\utilities_tests.rs (target\debug\deps\utilities_tests-7cced5b617cbc91f.exe)
+     Running unittests src\lib.rs (target\debug\deps\mazerion_config-1614383315f9e1c9.exe)
+     Running unittests src\lib.rs (target\debug\deps\mazerion_core-4b606a17265c8a48.exe)
+     Running unittests src\lib.rs (target\debug\deps\mazerion_ffi-85fe2db644f07f2a.exe)
+     Running unittests src\lib.rs (target\debug\deps\mazerion_gui-f82df60a6510b645.exe)
+     Running unittests src\lib.rs (target\debug\deps\mazerion_tui-f788527bb1b58685.exe)
+     Running unittests src\lib.rs (target\debug\deps\mazerion_voice-81826a39890c0b76.exe)
+   Doc-tests mazerion_api
+   Doc-tests mazerion_calculators
+   Doc-tests mazerion_config
+   Doc-tests mazerion_core
+   Doc-tests mazerion_gui
+   Doc-tests mazerion_tui
+   Doc-tests mazerion_voice
+

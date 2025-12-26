@@ -1,5 +1,5 @@
 use mazerion_core::{
-    register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result,
+    CalcInput, CalcResult, Calculator, Error, Measurement, Result, register_calculator,
 };
 use rust_decimal::Decimal;
 
@@ -55,14 +55,12 @@ impl Calculator for HydrometerCorrectionCalculator {
         let tc_f64 = t_c.to_string().parse::<f64>().unwrap_or(68.0);
 
         // Calculate numerator (for reading temperature)
-        let numerator = 1.00130346
-            - (0.000134722124 * tr_f64)
+        let numerator = 1.00130346 - (0.000134722124 * tr_f64)
             + (0.00000204052596 * tr_f64 * tr_f64)
             - (0.00000000232820948 * tr_f64 * tr_f64 * tr_f64);
 
         // Calculate denominator (for calibration temperature)
-        let denominator = 1.00130346
-            - (0.000134722124 * tc_f64)
+        let denominator = 1.00130346 - (0.000134722124 * tc_f64)
             + (0.00000204052596 * tc_f64 * tc_f64)
             - (0.00000000232820948 * tc_f64 * tc_f64 * tc_f64);
 
@@ -85,7 +83,10 @@ impl Calculator for HydrometerCorrectionCalculator {
             .with_meta("sample_temp", format!("{}°F", t_r))
             .with_meta("calibration_temp", format!("{}°F", t_c))
             .with_meta("correction", format!("{:+.5}", correction))
-            .with_meta("formula", "General polynomial (accurate for any calibration temp)");
+            .with_meta(
+                "formula",
+                "General polynomial (accurate for any calibration temp)",
+            );
 
         Ok(result)
     }

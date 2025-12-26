@@ -22,11 +22,9 @@ impl MazerionError {
     fn new(code: c_int, message: &str) -> Self {
         let msg = match CString::new(message) {
             Ok(s) => s.into_raw(),
-            Err(_) => {
-                CString::new("Error creating error message")
-                    .unwrap_or_else(|_| CString::new("").unwrap_or_default())
-                    .into_raw()
-            }
+            Err(_) => CString::new("Error creating error message")
+                .unwrap_or_else(|_| CString::new("").unwrap_or_default())
+                .into_raw(),
         };
         Self { code, message: msg }
     }
@@ -58,7 +56,7 @@ impl MazerionResult {
                 return Self {
                     error: MazerionError::json_error("Invalid JSON output"),
                     json_output: ptr::null_mut(),
-                }
+                };
             }
         };
         Self {
@@ -114,6 +112,15 @@ pub extern "C" fn mazerion_list_calculators() -> MazerionResult {
     }
 }
 
+/// Calculate using specified calculator
+///
+/// # Safety
+///
+/// The caller must ensure:
+/// - `calculator_id` points to a valid null-terminated C string
+/// - `json_input` points to a valid null-terminated C string
+/// - Both strings are valid UTF-8
+/// - Both pointers remain valid for the duration of the call
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn mazerion_calculate(
     calculator_id: *const c_char,
@@ -121,10 +128,7 @@ pub unsafe extern "C" fn mazerion_calculate(
 ) -> MazerionResult {
     let result = panic::catch_unwind(|| {
         if calculator_id.is_null() {
-            return MazerionResult::error(MazerionError::new(
-                1,
-                "Calculator ID pointer is null",
-            ));
+            return MazerionResult::error(MazerionError::new(1, "Calculator ID pointer is null"));
         }
         if json_input.is_null() {
             return MazerionResult::error(MazerionError::new(2, "JSON input pointer is null"));
@@ -137,7 +141,7 @@ pub unsafe extern "C" fn mazerion_calculate(
                 return MazerionResult::error(MazerionError::new(
                     3,
                     "Invalid UTF-8 in calculator ID",
-                ))
+                ));
             }
         };
 
@@ -145,10 +149,7 @@ pub unsafe extern "C" fn mazerion_calculate(
         let json_str = match unsafe { CStr::from_ptr(json_input) }.to_str() {
             Ok(s) => s,
             Err(_) => {
-                return MazerionResult::error(MazerionError::new(
-                    4,
-                    "Invalid UTF-8 in JSON input",
-                ))
+                return MazerionResult::error(MazerionError::new(4, "Invalid UTF-8 in JSON input"));
             }
         };
 
@@ -158,7 +159,7 @@ pub unsafe extern "C" fn mazerion_calculate(
                 return MazerionResult::error(MazerionError::json_error(&format!(
                     "Failed to parse JSON input: {}",
                     e
-                )))
+                )));
             }
         };
 
@@ -209,6 +210,14 @@ pub extern "C" fn mazerion_get_categories() -> MazerionResult {
     }
 }
 
+/// Free a string allocated by Mazerion
+///
+/// # Safety
+///
+/// The caller must ensure:
+/// - `ptr` was allocated by a Mazerion FFI function
+/// - `ptr` has not been freed already
+/// - `ptr` will not be used after this call
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn mazerion_free_string(ptr: *mut c_char) {
     if !ptr.is_null() {
@@ -219,6 +228,14 @@ pub unsafe extern "C" fn mazerion_free_string(ptr: *mut c_char) {
     }
 }
 
+/// Free a result structure allocated by Mazerion
+///
+/// # Safety
+///
+/// The caller must ensure:
+/// - `result` was returned by a Mazerion FFI function
+/// - `result` has not been freed already
+/// - `result` will not be used after this call
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn mazerion_free_result(result: MazerionResult) {
     if !result.error.message.is_null() {

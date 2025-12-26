@@ -1,5 +1,5 @@
 use mazerion_core::{
-    register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
+    CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit, register_calculator,
 };
 use rust_decimal::Decimal;
 use std::str::FromStr;
@@ -29,18 +29,21 @@ impl Calculator for MelomelCalculator {
     }
 
     fn calculate(&self, input: CalcInput) -> Result<CalcResult> {
-        let volume = input.get_param("volume")
+        let volume = input
+            .get_param("volume")
             .ok_or_else(|| Error::MissingInput("volume required".into()))?;
-        let target_abv = input.get_param("target_abv")
+        let target_abv = input
+            .get_param("target_abv")
             .ok_or_else(|| Error::MissingInput("target_abv required".into()))?;
-        let fruit_weight = input.get_param("fruit_weight")
+        let fruit_weight = input
+            .get_param("fruit_weight")
             .ok_or_else(|| Error::MissingInput("fruit_weight required".into()))?;
         let fruit_type = input.get_param("fruit_type").unwrap_or("strawberry");
 
-        let vol: Decimal = Decimal::from_str(volume)
-            .map_err(|_| Error::Parse("Invalid volume".into()))?;
-        let abv: Decimal = Decimal::from_str(target_abv)
-            .map_err(|_| Error::Parse("Invalid target_abv".into()))?;
+        let vol: Decimal =
+            Decimal::from_str(volume).map_err(|_| Error::Parse("Invalid volume".into()))?;
+        let abv: Decimal =
+            Decimal::from_str(target_abv).map_err(|_| Error::Parse("Invalid target_abv".into()))?;
         let fruit_kg: Decimal = Decimal::from_str(fruit_weight)
             .map_err(|_| Error::Parse("Invalid fruit_weight".into()))?;
 
@@ -74,7 +77,10 @@ impl Calculator for MelomelCalculator {
             .with_meta("fruit_weight_kg", format!("{:.2} kg", fruit_kg))
             .with_meta("fruit_sugar_g", format!("{:.0} g", fruit_sugar_g))
             .with_meta("fruit_abv", format!("{:.1}%", fruit_abv))
-            .with_meta("honey_kg", format!("{:.2} kg", honey_sugar_g / Decimal::from(1000)));
+            .with_meta(
+                "honey_kg",
+                format!("{:.2} kg", honey_sugar_g / Decimal::from(1000)),
+            );
 
         if fruit_kg / vol < Decimal::new(5, 1) {
             result = result.with_warning("Low fruit ratio - may have weak fruit character");

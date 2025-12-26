@@ -1,95 +1,333 @@
-//! Beer styles data structures and loading
-//! SAFETY-CRITICAL: Zero panics, all errors handled
+//! Beer Styles Encyclopedia with Food Pairings
 
-use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct BeerStyle {
-    pub name: String,
-    pub number: String,
-    pub category: String,
-    pub categorynumber: String,
-    pub overallimpression: String,
-    pub aroma: String,
-    pub appearance: String,
-    pub flavor: String,
-    pub mouthfeel: String,
-    pub comments: String,
-    pub history: String,
-    #[serde(rename = "characteristicingredients")]
-    pub characteristic_ingredients: String,
-    #[serde(rename = "stylecomparison")]
-    pub style_comparison: String,
-    #[serde(rename = "ibumin")]
-    pub ibu_min: String,
-    #[serde(rename = "ibumax")]
-    pub ibu_max: String,
-    #[serde(rename = "ogmin")]
-    pub og_min: String,
-    #[serde(rename = "ogmax")]
-    pub og_max: String,
-    #[serde(rename = "fgmin")]
-    pub fg_min: String,
-    #[serde(rename = "fgmax")]
-    pub fg_max: String,
-    #[serde(rename = "abvmin")]
-    pub abv_min: String,
-    #[serde(rename = "abvmax")]
-    pub abv_max: String,
-    #[serde(rename = "srmmin")]
-    pub srm_min: String,
-    #[serde(rename = "srmmax")]
-    pub srm_max: String,
-    #[serde(rename = "commercialexamples")]
-    pub commercial_examples: String,
-    pub tags: String,
+    pub name: &'static str,
+    pub category: &'static str,
+    pub description: &'static str,
+    pub abv_min: f32,
+    pub abv_max: f32,
+    pub ibu_min: u32,
+    pub ibu_max: u32,
+    pub srm_min: u32,
+    pub srm_max: u32,
+    pub food_pairings: Vec<&'static str>,
 }
 
-impl BeerStyle {
-    /// Get vital statistics as formatted string
-    pub fn vital_stats(&self) -> String {
-        format!(
-            "OG: {}-{} | FG: {}-{} | IBU: {}-{} | SRM: {}-{} | ABV: {}-{}%",
-            self.og_min, self.og_max,
-            self.fg_min, self.fg_max,
-            self.ibu_min, self.ibu_max,
-            self.srm_min, self.srm_max,
-            self.abv_min, self.abv_max
-        )
-    }
+pub const BEER_STYLES: &[BeerStyle] = &[
+    // ALES
+    BeerStyle {
+        name: "American IPA",
+        category: "Ale",
+        description: "Bold, hoppy American ale featuring citrus, pine, and tropical fruit hop aromas. Medium body with prominent bitterness balanced by malt sweetness.",
+        abv_min: 5.5, abv_max: 7.5,
+        ibu_min: 40, ibu_max: 70,
+        srm_min: 6, srm_max: 14,
+        food_pairings: vec![
+            "Spicy Thai or Indian curry",
+            "Strong cheeses (aged cheddar, blue cheese)",
+            "Grilled burgers and steaks",
+            "Fish and chips, fried chicken",
+            "Mexican food (tacos, enchiladas)",
+        ],
+    },
+    BeerStyle {
+        name: "New England IPA",
+        category: "Ale",
+        description: "Hazy, juicy IPA with intense tropical fruit and citrus flavors. Soft, pillowy mouthfeel with low bitterness and explosive hop aroma.",
+        abv_min: 6.0, abv_max: 7.5,
+        ibu_min: 25, ibu_max: 60,
+        srm_min: 3, srm_max: 7,
+        food_pairings: vec![
+            "Mild curries and Asian fusion",
+            "Fresh seafood (ceviche, poke)",
+            "Soft cheeses (brie, camembert)",
+            "Citrus-based desserts",
+            "Grilled chicken with fruit salsa",
+        ],
+    },
+    BeerStyle {
+        name: "West Coast IPA",
+        category: "Ale",
+        description: "Clean, crisp IPA showcasing hop bitterness and piney, resinous flavors. Dry finish with assertive hop profile and crystal-clear appearance.",
+        abv_min: 6.0, abv_max: 7.5,
+        ibu_min: 50, ibu_max: 70,
+        srm_min: 6, srm_max: 14,
+        food_pairings: vec![
+            "Bold, spicy foods",
+            "Sharp cheddar, pepper jack",
+            "BBQ ribs and brisket",
+            "Pizza with bold toppings",
+            "Spicy wings",
+        ],
+    },
+    BeerStyle {
+        name: "English Pale Ale",
+        category: "Ale",
+        description: "Traditional English ale with earthy, floral hops and biscuity malt character. Balanced bitterness with medium body and fruity esters.",
+        abv_min: 4.5, abv_max: 5.5,
+        ibu_min: 20, ibu_max: 40,
+        srm_min: 6, srm_max: 14,
+        food_pairings: vec![
+            "Roast beef and Yorkshire pudding",
+            "Fish and chips",
+            "Mild curries",
+            "Cheddar cheese",
+            "Shepherd's pie",
+        ],
+    },
+    BeerStyle {
+        name: "Dry Stout",
+        category: "Ale",
+        description: "Classic Irish-style stout with roasted coffee and chocolate notes. Dry finish, creamy head, and moderate bitterness from roasted barley.",
+        abv_min: 4.0, abv_max: 5.0,
+        ibu_min: 30, ibu_max: 45,
+        srm_min: 25, srm_max: 40,
+        food_pairings: vec![
+            "Oysters and shellfish",
+            "Chocolate desserts",
+            "Beef stew",
+            "Sharp cheddar",
+            "Smoked salmon",
+        ],
+    },
+    BeerStyle {
+        name: "Imperial Stout",
+        category: "Ale",
+        description: "Intense, full-bodied stout with bold flavors of dark chocolate, coffee, and dried fruit. High alcohol warmth with rich, velvety mouthfeel.",
+        abv_min: 8.0, abv_max: 12.0,
+        ibu_min: 50, ibu_max: 90,
+        srm_min: 30, srm_max: 40,
+        food_pairings: vec![
+            "Dark chocolate truffles",
+            "Blue cheese",
+            "Braised short ribs",
+            "Crème brûlée",
+            "Aged gouda",
+        ],
+    },
+    BeerStyle {
+        name: "Porter",
+        category: "Ale",
+        description: "Dark ale with chocolate, caramel, and coffee notes. Medium body with moderate bitterness and smooth finish.",
+        abv_min: 4.5, abv_max: 6.0,
+        ibu_min: 20, ibu_max: 40,
+        srm_min: 20, srm_max: 35,
+        food_pairings: vec![
+            "BBQ pulled pork",
+            "Smoked gouda",
+            "Chocolate chip cookies",
+            "Roasted vegetables",
+            "Maple glazed ham",
+        ],
+    },
+    BeerStyle {
+        name: "Brown Ale",
+        category: "Ale",
+        description: "Malty, approachable ale with nutty, caramel flavors. Low hop bitterness with smooth, slightly sweet finish.",
+        abv_min: 4.5, abv_max: 6.0,
+        ibu_min: 15, ibu_max: 30,
+        srm_min: 15, srm_max: 22,
+        food_pairings: vec![
+            "Roasted chicken",
+            "Mild cheddar",
+            "Pecan pie",
+            "Grilled pork chops",
+            "Caramel desserts",
+        ],
+    },
+    BeerStyle {
+        name: "Saison",
+        category: "Ale",
+        description: "Belgian farmhouse ale with spicy, fruity yeast character. Dry, highly carbonated with peppery hop notes.",
+        abv_min: 5.0, abv_max: 7.0,
+        ibu_min: 20, ibu_max: 35,
+        srm_min: 5, srm_max: 14,
+        food_pairings: vec![
+            "Goat cheese",
+            "Grilled chicken",
+            "Seafood paella",
+            "Fresh salads",
+            "Lemon tart",
+        ],
+    },
+    BeerStyle {
+        name: "Hefeweizen",
+        category: "Ale",
+        description: "German wheat beer with banana and clove yeast character. Cloudy appearance, light body, highly carbonated.",
+        abv_min: 4.5, abv_max: 5.5,
+        ibu_min: 8, ibu_max: 15,
+        srm_min: 2, srm_max: 6,
+        food_pairings: vec![
+            "Weisswurst (white sausage)",
+            "Bavarian pretzels",
+            "Fruit salad",
+            "Light seafood",
+            "Lemon desserts",
+        ],
+    },
 
-    /// Check if style matches search query
-    pub fn matches(&self, query: &str) -> bool {
-        let query_lower = query.to_lowercase();
-        self.name.to_lowercase().contains(&query_lower) ||
-            self.category.to_lowercase().contains(&query_lower) ||
-            self.tags.to_lowercase().contains(&query_lower) ||
-            self.commercial_examples.to_lowercase().contains(&query_lower)
-    }
+    // LAGERS
+    BeerStyle {
+        name: "Czech Pilsner",
+        category: "Lager",
+        description: "Classic golden lager with rich malt character and noble Saaz hop spice. Clean, crisp finish with balanced bitterness.",
+        abv_min: 4.2, abv_max: 5.4,
+        ibu_min: 30, ibu_max: 45,
+        srm_min: 3, srm_max: 6,
+        food_pairings: vec![
+            "Schnitzel",
+            "Gouda cheese",
+            "Roasted pork",
+            "Potato pancakes",
+            "Apple strudel",
+        ],
+    },
+    BeerStyle {
+        name: "Helles",
+        category: "Lager",
+        description: "Malt-forward Munich lager with bread-like sweetness and low hop bitterness. Smooth, clean, refreshing.",
+        abv_min: 4.7, abv_max: 5.4,
+        ibu_min: 16, ibu_max: 22,
+        srm_min: 3, srm_max: 5,
+        food_pairings: vec![
+            "Soft pretzels",
+            "Emmental cheese",
+            "Grilled sausages",
+            "Light salads",
+            "Vanilla custard",
+        ],
+    },
+    BeerStyle {
+        name: "Märzen",
+        category: "Lager",
+        description: "Amber German lager with rich toasted malt character. Medium body, clean finish, balanced bitterness.",
+        abv_min: 5.8, abv_max: 6.3,
+        ibu_min: 18, ibu_max: 24,
+        srm_min: 8, srm_max: 17,
+        food_pairings: vec![
+            "Roast chicken",
+            "Smoked ham",
+            "Gruyere cheese",
+            "Roasted vegetables",
+            "Apple pie",
+        ],
+    },
+    BeerStyle {
+        name: "Dunkel",
+        category: "Lager",
+        description: "Dark Munich lager with bread crust, chocolate, and caramel flavors. Smooth, clean finish with low bitterness.",
+        abv_min: 4.5, abv_max: 5.6,
+        ibu_min: 18, ibu_max: 28,
+        srm_min: 14, srm_max: 28,
+        food_pairings: vec![
+            "Roasted duck",
+            "Fontina cheese",
+            "Mushroom risotto",
+            "Chocolate cake",
+            "Braised beef",
+        ],
+    },
+    BeerStyle {
+        name: "Schwarzbier",
+        category: "Lager",
+        description: "German black lager with roasted malt character but surprisingly light body. Coffee and chocolate notes, crisp finish.",
+        abv_min: 4.4, abv_max: 5.4,
+        ibu_min: 20, ibu_max: 30,
+        srm_min: 17, srm_max: 30,
+        food_pairings: vec![
+            "Grilled sausages",
+            "Swiss cheese",
+            "Roasted vegetables",
+            "Dark chocolate",
+            "Smoked fish",
+        ],
+    },
+
+    // HYBRID
+    BeerStyle {
+        name: "Cream Ale",
+        category: "Hybrid",
+        description: "Light, crisp American ale-lager hybrid. Smooth, refreshing with subtle corn sweetness and low bitterness.",
+        abv_min: 4.2, abv_max: 5.6,
+        ibu_min: 8, ibu_max: 20,
+        srm_min: 2, srm_max: 5,
+        food_pairings: vec![
+            "Fried chicken",
+            "Mild cheddar",
+            "Corn on the cob",
+            "Light salads",
+            "Vanilla ice cream",
+        ],
+    },
+    BeerStyle {
+        name: "Kölsch",
+        category: "Hybrid",
+        description: "German ale with lager-like crispness. Delicate fruit character, light body, clean finish.",
+        abv_min: 4.4, abv_max: 5.2,
+        ibu_min: 18, ibu_max: 30,
+        srm_min: 3, srm_max: 5,
+        food_pairings: vec![
+            "Sushi",
+            "Goat cheese",
+            "Light seafood",
+            "Chicken salad",
+            "Fruit tarts",
+        ],
+    },
+
+    // WILD/SOUR
+    BeerStyle {
+        name: "Berliner Weisse",
+        category: "Wild/Sour",
+        description: "Tart, refreshing wheat beer with lactic sourness. Light body, low alcohol, traditionally served with syrup.",
+        abv_min: 2.8, abv_max: 3.8,
+        ibu_min: 3, ibu_max: 8,
+        srm_min: 2, srm_max: 3,
+        food_pairings: vec![
+            "Fresh fruit",
+            "Chevre",
+            "Light salads",
+            "Grilled shrimp",
+            "Sorbet",
+        ],
+    },
+    BeerStyle {
+        name: "Gose",
+        category: "Wild/Sour",
+        description: "German sour wheat beer with salt and coriander. Tart, refreshing with herbal notes.",
+        abv_min: 4.2, abv_max: 4.8,
+        ibu_min: 5, ibu_max: 12,
+        srm_min: 3, srm_max: 4,
+        food_pairings: vec![
+            "Oysters",
+            "Ceviche",
+            "Soft cheeses",
+            "Cucumber salad",
+            "Lemon desserts",
+        ],
+    },
+    BeerStyle {
+        name: "Flanders Red",
+        category: "Wild/Sour",
+        description: "Complex Belgian sour aged in oak. Wine-like with tart fruit, acetic sourness, and malt complexity.",
+        abv_min: 4.6, abv_max: 6.5,
+        ibu_min: 10, ibu_max: 25,
+        srm_min: 10, srm_max: 16,
+        food_pairings: vec![
+            "Duck à l'orange",
+            "Aged cheeses",
+            "Pork belly",
+            "Dark chocolate",
+            "Berry compote",
+        ],
+    },
+];
+
+pub fn get_style_by_name(name: &str) -> Option<&'static BeerStyle> {
+    BEER_STYLES.iter().find(|s| s.name == name)
 }
 
-/// Load beer styles from embedded JSON
-pub fn load_beer_styles() -> Result<Vec<BeerStyle>, String> {
-    const BEER_STYLES_JSON: &str = include_str!("../../../../data/beer_styles.v1.json");
-
-    serde_json::from_str(BEER_STYLES_JSON)
-        .map_err(|e| format!("Failed to parse beer styles JSON: {}", e))
-}
-
-/// Get all unique categories
-pub fn get_categories(styles: &[BeerStyle]) -> Vec<String> {
-    let mut cats: Vec<String> = styles.iter()
-        .map(|s| s.category.clone())
-        .collect();
-    cats.sort();
-    cats.dedup();
-    cats
-}
-
-/// Filter styles by category
-pub fn filter_by_category(styles: &[BeerStyle], category: &str) -> Vec<BeerStyle> {
-    styles.iter()
-        .filter(|s| s.category == category)
-        .cloned()
-        .collect()
+pub fn get_styles_by_category(category: &str) -> Vec<&'static BeerStyle> {
+    BEER_STYLES.iter().filter(|s| s.category == category).collect()
 }

@@ -1,5 +1,5 @@
 use mazerion_core::{
-    register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
+    CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit, register_calculator,
 };
 use rust_decimal::Decimal;
 use std::str::FromStr;
@@ -29,16 +29,18 @@ impl Calculator for BochetCalculator {
     }
 
     fn calculate(&self, input: CalcInput) -> Result<CalcResult> {
-        let volume = input.get_param("volume")
+        let volume = input
+            .get_param("volume")
             .ok_or_else(|| Error::MissingInput("volume required".into()))?;
-        let target_abv = input.get_param("target_abv")
+        let target_abv = input
+            .get_param("target_abv")
             .ok_or_else(|| Error::MissingInput("target_abv required".into()))?;
         let bochet_level = input.get_param("bochet_level").unwrap_or("medium");
 
-        let vol: Decimal = Decimal::from_str(volume)
-            .map_err(|_| Error::Parse("Invalid volume".into()))?;
-        let abv: Decimal = Decimal::from_str(target_abv)
-            .map_err(|_| Error::Parse("Invalid target_abv".into()))?;
+        let vol: Decimal =
+            Decimal::from_str(volume).map_err(|_| Error::Parse("Invalid volume".into()))?;
+        let abv: Decimal =
+            Decimal::from_str(target_abv).map_err(|_| Error::Parse("Invalid target_abv".into()))?;
 
         let loss_pct = match bochet_level {
             "light" => Decimal::new(5, 2),
@@ -53,9 +55,10 @@ impl Calculator for BochetCalculator {
 
         let mut result = CalcResult::new(Measurement::new(honey_before_caramel, Unit::Grams));
 
-        result = result
-            .with_meta("caramel_level", bochet_level)
-            .with_meta("sugar_loss", format!("{:.0}%", loss_pct * Decimal::from(100)));
+        result = result.with_meta("caramel_level", bochet_level).with_meta(
+            "sugar_loss",
+            format!("{:.0}%", loss_pct * Decimal::from(100)),
+        );
 
         Ok(result)
     }

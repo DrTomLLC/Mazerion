@@ -1,5 +1,5 @@
 use mazerion_core::{
-    register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
+    CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit, register_calculator,
 };
 use rust_decimal::Decimal;
 
@@ -29,23 +29,23 @@ impl Calculator for RefractometerCalculator {
 
     fn calculate(&self, input: CalcInput) -> Result<CalcResult> {
         let orig_brix_meas = input.get_measurement(Unit::Brix)?;
-        let current_brix = input.get_param("current_brix")
+        let current_brix = input
+            .get_param("current_brix")
             .ok_or_else(|| Error::MissingInput("current_brix required".into()))?;
 
         let ob = orig_brix_meas.value;
-        let cb: Decimal = current_brix.parse()
+        let cb: Decimal = current_brix
+            .parse()
             .map_err(|_| Error::Parse("Invalid current_brix".into()))?;
 
         let ob_f64 = ob.to_string().parse::<f64>().unwrap_or(0.0);
         let cb_f64 = cb.to_string().parse::<f64>().unwrap_or(0.0);
 
-        let fg_f64 = 1.0000
-            - (0.0044993 * ob_f64)
-            + (0.011774 * cb_f64)
-            + (0.00027581 * ob_f64 * ob_f64)
-            - (0.0012717 * cb_f64 * cb_f64)
-            - (0.0000072800 * ob_f64 * ob_f64 * ob_f64)
-            + (0.000063293 * cb_f64 * cb_f64 * cb_f64);
+        let fg_f64 =
+            1.0000 - (0.0044993 * ob_f64) + (0.011774 * cb_f64) + (0.00027581 * ob_f64 * ob_f64)
+                - (0.0012717 * cb_f64 * cb_f64)
+                - (0.0000072800 * ob_f64 * ob_f64 * ob_f64)
+                + (0.000063293 * cb_f64 * cb_f64 * cb_f64);
 
         let fg = Decimal::from_f64_retain(fg_f64).unwrap_or(Decimal::ONE);
         let abv = (ob - cb) * Decimal::new(55, 2);
@@ -62,7 +62,9 @@ impl Calculator for RefractometerCalculator {
             .with_meta("formula", "Terrill Cubic");
 
         if cb > ob {
-            result = result.with_warning("Current Brix higher than original - fermentation may not have started");
+            result = result.with_warning(
+                "Current Brix higher than original - fermentation may not have started",
+            );
         }
         if abv > Decimal::from(18) {
             result = result.with_warning("ABV >18% - equation accuracy decreases");

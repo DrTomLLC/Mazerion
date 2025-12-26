@@ -36,7 +36,7 @@ fn walk_dir(dir: &Path, pattern: &str) -> Vec<bool> {
         for entry in entries.filter_map(Result::ok) {
             let path = entry.path();
 
-            if path.is_dir() && !path.file_name().map_or(true, |n| n == "target") {
+            if path.is_dir() && path.file_name().is_some_and(|n| n != "target") {
                 results.extend(walk_dir(&path, pattern));
             } else if path.extension().and_then(|e| e.to_str()) == Some(pattern) {
                 results.push(check_file(&path));
@@ -51,7 +51,10 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     let root = args.get(1).map(String::as_str).unwrap_or(".");
 
-    println!("🔍 Checking Rust files in {} (max {} lines per file)", root, MAX_LINES);
+    println!(
+        "🔍 Checking Rust files in {} (max {} lines per file)",
+        root, MAX_LINES
+    );
 
     let results = walk_dir(Path::new(root), "rs");
 

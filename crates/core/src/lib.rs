@@ -3,8 +3,8 @@
 
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use std::fmt;
 use std::collections::HashMap;
+use std::fmt;
 
 pub mod error;
 pub mod traits;
@@ -21,7 +21,9 @@ mod units_tests;
 mod validation_tests;
 
 pub use error::{Error, Result};
-pub use traits::{Calculator, get_calculator, get_all_calculators, list_calculator_ids, calculator_count};
+pub use traits::{
+    Calculator, calculator_count, get_all_calculators, get_calculator, list_calculator_ids,
+};
 pub use units::*;
 pub use validation::*;
 
@@ -165,7 +167,10 @@ impl CalcInput {
         self.measurements
             .iter()
             .find(|m| m.unit == unit)
-            .ok_or(Error::MissingInput(format!("No measurement with unit {}", unit)))
+            .ok_or(Error::MissingInput(format!(
+                "No measurement with unit {}",
+                unit
+            )))
     }
 
     pub fn get_param(&self, key: &str) -> Option<&str> {

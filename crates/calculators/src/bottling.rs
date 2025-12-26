@@ -1,5 +1,5 @@
 use mazerion_core::{
-    register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
+    CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit, register_calculator,
 };
 use rust_decimal::Decimal;
 
@@ -28,16 +28,20 @@ impl Calculator for BottlingCalculator {
     }
 
     fn calculate(&self, input: CalcInput) -> Result<CalcResult> {
-        let volume = input.get_param("volume")
+        let volume = input
+            .get_param("volume")
             .ok_or_else(|| Error::MissingInput("volume required".into()))?;
         let bottle_size = input.get_param("bottle_size").unwrap_or("750");
         let loss_percent = input.get_param("loss_percent").unwrap_or("3");
 
-        let vol: Decimal = volume.parse()
+        let vol: Decimal = volume
+            .parse()
             .map_err(|_| Error::Parse("Invalid volume".into()))?;
-        let bottle_ml: Decimal = bottle_size.parse()
+        let bottle_ml: Decimal = bottle_size
+            .parse()
             .map_err(|_| Error::Parse("Invalid bottle_size".into()))?;
-        let loss_pct: Decimal = loss_percent.parse()
+        let loss_pct: Decimal = loss_percent
+            .parse()
             .map_err(|_| Error::Parse("Invalid loss_percent".into()))?;
 
         // Account for losses (racking, lees, sampling, spillage)
@@ -60,9 +64,15 @@ impl Calculator for BottlingCalculator {
         result = result
             .with_meta("bottle_size_ml", format!("{} mL", bottle_ml))
             .with_meta("bottles_needed", format!("{:.0} bottles", bottles_needed))
-            .with_meta("cases_12", format!("{:.0} cases + {:.0} loose", cases_12, loose_bottles))
+            .with_meta(
+                "cases_12",
+                format!("{:.0} cases + {:.0} loose", cases_12, loose_bottles),
+            )
             .with_meta("usable_volume_L", format!("{:.2} L", usable_volume))
-            .with_meta("loss_L", format!("{:.2} L ({}%)", vol - usable_volume, loss_pct))
+            .with_meta(
+                "loss_L",
+                format!("{:.2} L ({}%)", vol - usable_volume, loss_pct),
+            )
             .with_meta("leftover_ml", format!("{:.0} mL", leftover_ml));
 
         if leftover_ml > Decimal::from(200) {

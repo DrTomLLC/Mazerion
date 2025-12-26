@@ -1,5 +1,5 @@
 use mazerion_core::{
-    register_calculator, CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit,
+    CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit, register_calculator,
 };
 use rust_decimal::Decimal;
 use std::str::FromStr;
@@ -29,17 +29,20 @@ impl Calculator for CyserCalculator {
     }
 
     fn calculate(&self, input: CalcInput) -> Result<CalcResult> {
-        let volume = input.get_param("volume")
+        let volume = input
+            .get_param("volume")
             .ok_or_else(|| Error::MissingInput("volume required".into()))?;
-        let target_abv = input.get_param("target_abv")
+        let target_abv = input
+            .get_param("target_abv")
             .ok_or_else(|| Error::MissingInput("target_abv required".into()))?;
-        let juice_percent = input.get_param("juice_percent")
+        let juice_percent = input
+            .get_param("juice_percent")
             .ok_or_else(|| Error::MissingInput("juice_percent required".into()))?;
 
-        let vol: Decimal = Decimal::from_str(volume)
-            .map_err(|_| Error::Parse("Invalid volume".into()))?;
-        let abv: Decimal = Decimal::from_str(target_abv)
-            .map_err(|_| Error::Parse("Invalid target_abv".into()))?;
+        let vol: Decimal =
+            Decimal::from_str(volume).map_err(|_| Error::Parse("Invalid volume".into()))?;
+        let abv: Decimal =
+            Decimal::from_str(target_abv).map_err(|_| Error::Parse("Invalid target_abv".into()))?;
         let juice_pct: Decimal = Decimal::from_str(juice_percent)
             .map_err(|_| Error::Parse("Invalid juice_percent".into()))?;
 
@@ -59,7 +62,10 @@ impl Calculator for CyserCalculator {
         result = result
             .with_meta("juice_volume_L", format!("{:.2} L", juice_volume))
             .with_meta("juice_sugar_g", format!("{:.0} g", juice_sugar_g))
-            .with_meta("honey_kg", format!("{:.2} kg", honey_sugar_g / Decimal::from(1000)));
+            .with_meta(
+                "honey_kg",
+                format!("{:.2} kg", honey_sugar_g / Decimal::from(1000)),
+            );
 
         Ok(result)
     }
