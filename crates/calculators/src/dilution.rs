@@ -1,8 +1,3 @@
-//! FIXED VERSION - NO DIVISION BY ZERO PANIC!
-//! Location: crates/calculators/src/dilution.rs
-//!
-//! REPLACE YOUR ENTIRE dilution.rs FILE WITH THIS
-
 use mazerion_core::{
     CalcInput, CalcResult, Calculator, Error, Measurement, Result, Unit, register_calculator,
 };
@@ -53,13 +48,18 @@ impl Calculator for DilutionCalculator {
             .parse()
             .map_err(|_| Error::Parse("Invalid target ABV".into()))?;
 
+        if vol <= Decimal::ZERO {
+            return Err(Error::Validation(
+                "Current volume must be positive".into(),
+            ));
+        }
+
         if targ_abv >= curr_abv {
             return Err(Error::Validation(
                 "Target ABV must be less than current ABV".into(),
             ));
         }
 
-        // CRITICAL FIX: Prevent division by zero panic
         if targ_abv == Decimal::ZERO {
             return Err(Error::Validation(
                 "Cannot dilute to 0% ABV - mathematically impossible".into(),

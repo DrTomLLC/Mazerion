@@ -54,7 +54,18 @@ impl Calculator for BlendingCalculator {
             .parse()
             .map_err(|_| Error::Parse("Invalid abv2".into()))?;
 
+        if v1 < Decimal::ZERO || v2 < Decimal::ZERO {
+            return Err(Error::Validation("Volumes must be non-negative".into()));
+        }
+
         let total_vol = v1 + v2;
+
+        if total_vol == Decimal::ZERO {
+            return Err(Error::Validation(
+                "Total volume cannot be zero - at least one batch must have volume".into(),
+            ));
+        }
+
         let blended_abv = (v1 * a1 + v2 * a2) / total_vol;
 
         Ok(CalcResult::new(Measurement::new(blended_abv, Unit::Abv))

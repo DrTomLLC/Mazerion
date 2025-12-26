@@ -8,7 +8,7 @@ git checkout first-dev
 git status
 
 # Commit
-git commit -m "Complete Mazerion v0.18.0 - Major Bug Fixes and Feature Additions to 0.25.0"
+git commit -m "Complete Mazerion v0.30.0 - Major Bug Fixes and Tests Additions"
 
 # Push to first-dev
 git push origin first-dev

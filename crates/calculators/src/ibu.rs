@@ -60,30 +60,27 @@ impl Calculator for IbuCalculator {
             .parse()
             .map_err(|_| Error::Parse("Invalid boil_gravity".into()))?;
 
-        // Tinseth formula:
-        // B = 1.65 × 0.000125^(SG_boil - 1.0)
-        // T = (1 - e^(-0.04 × t)) / 4.15
-        // U = B × T
-        // IBU = (W_g × AA% × U × 1000) / V_L
+        if volume <= Decimal::ZERO {
+            return Err(Error::Validation("Volume must be positive".into()));
+        }
 
-        // Convert to f64 for exponential calculations
+        if aa < Decimal::ZERO || aa > Decimal::from(30) {
+            return Err(Error::Validation(
+                "Alpha acid % must be between 0-30%".into(),
+            ));
+        }
+
         let sg_f64 = (sg - Decimal::ONE)
             .to_string()
             .parse::<f64>()
             .unwrap_or(0.05);
         let time_f64 = time_min.to_string().parse::<f64>().unwrap_or(60.0);
 
-        // Bigness factor (gravity correction)
         let bigness = 1.65 * 0.000125_f64.powf(sg_f64);
-
-        // Boil time factor (utilization from boil time) - NO DIVISION BY 60!
         let boil_factor = (1.0 - (-0.04 * time_f64).exp()) / 4.15;
-
-        // Total utilization
         let utilization = bigness * boil_factor;
         let util_decimal = Decimal::from_f64_retain(utilization).unwrap_or(Decimal::ZERO);
 
-        // IBU calculation (metric)
         let aa_decimal = aa / Decimal::from(100);
         let ibu = (weight * aa_decimal * util_decimal * Decimal::from(1000)) / volume;
 
