@@ -2,7 +2,7 @@
 
 use eframe::egui::{self, Color32, CornerRadius, RichText};
 
-mod state;
+pub mod state;
 mod tabs;
 
 use state::{AppState, TabView};

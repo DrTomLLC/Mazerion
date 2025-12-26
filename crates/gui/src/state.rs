@@ -241,6 +241,7 @@ pub struct AppState {
     pub conv_to_unit: (),
     pub conv_result: (),
     pub conv_value: (),
+    pub og: ()
 }
 
 impl Default for AppState {
@@ -270,6 +271,7 @@ impl Default for AppState {
             conversion_from_unit: "".to_string(),
             conversion_to_unit: "".to_string(),
             conversion_result: None,
+            og: (),
         }
     }
 }

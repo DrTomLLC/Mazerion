@@ -13,3 +13,7 @@ workspace = true
 mazerion-core = { path = "../core" }
 rust_decimal = { workspace = true }
 linkme = "0.3.35"
+
+[dev-dependencies]
+proptest = "1.9.0"
+quickcheck = "1.0"
