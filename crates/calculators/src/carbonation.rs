@@ -50,9 +50,12 @@ impl Calculator for CarbonationCalculator {
 
         let method = input.get_param("method").unwrap_or("priming");
 
-        if method != "priming" && method != "keg" {
+        // Accept both "keg" and "force" as aliases for force carbonation
+        let normalized_method = if method == "force" { "keg" } else { method };
+
+        if normalized_method != "priming" && normalized_method != "keg" {
             return Err(Error::Validation(
-                "Invalid method - must be 'priming' or 'keg'".into(),
+                "Invalid method - must be 'priming', 'keg', or 'force'".into(),
             ));
         }
 
@@ -71,7 +74,7 @@ impl Calculator for CarbonationCalculator {
             ));
         }
 
-        let result = if method == "keg" {
+        let result = if normalized_method == "keg" {
             let t = temp_f_f64;
             let co2 = target.to_string().parse::<f64>().unwrap_or(2.5);
             let psi_f64 = -16.6999 - (0.0101059 * t)

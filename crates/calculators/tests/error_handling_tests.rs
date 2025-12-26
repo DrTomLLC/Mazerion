@@ -422,6 +422,7 @@ fn test_nutrition_missing_volume() {
 
 #[test]
 fn test_nutrition_missing_starting_gravity() {
+    // starting_gravity is now OPTIONAL - calculates from target_abv
     let calc = NutritionCalculator::default();
     let input = CalcInput::new()
         .add_param("volume", "19")
@@ -429,7 +430,12 @@ fn test_nutrition_missing_starting_gravity() {
         .add_param("protocol", "tosna");
 
     let result = calc.calculate(input);
-    assert!(result.is_err(), "Should error when starting_gravity missing");
+
+    // Should succeed - starting_gravity is optional
+    assert!(result.is_ok(), "starting_gravity is optional - calculates from ABV");
+
+    let output = result.unwrap();
+    assert!(output.output.value > Decimal::ZERO, "Should calculate nutrient amount");
 }
 
 #[test]
