@@ -1,10 +1,11 @@
-```markdown
 # Calculator Catalog
 
-This branch currently wires **46 calculators** into the registry (see `crates/calculators/src/lib.rs`).
+**Version:** 0.30.0  
+**Last Updated:** December 29, 2025
+
+This branch currently wires **47 calculators** into the registry (see `crates/calculators/src/lib.rs`). All use rust_decimal for precision and return Result for error handling.
 
 ## Basic (7)
-
 | ID | Name | Description |
 |---|---|---|
 | `abv` | ABV Calculator | Calculate alcohol by volume from original and final specific gravity |
@@ -16,7 +17,6 @@ This branch currently wires **46 calculators** into the registry (see `crates/ca
 | `sg_to_brix` | SG to Brix | Convert specific gravity to degrees Brix (cubic polynomial) |
 
 ## Advanced (7)
-
 | ID | Name | Description |
 |---|---|---|
 | `alcohol_tolerance` | Alcohol Tolerance | Calculate maximum ABV and estimated FG for yeast strain |
@@ -28,7 +28,6 @@ This branch currently wires **46 calculators** into the registry (see `crates/ca
 | `volume_adjustment` | Volume Adjustment | Calculate volume adjustments for target gravity (dilution or concentration) |
 
 ## Brewing (4)
-
 | ID | Name | Description |
 |---|---|---|
 | `carbonation` | Carbonation Calculator | Calculate priming sugar or keg PSI for target carbonation |
@@ -37,7 +36,6 @@ This branch currently wires **46 calculators** into the registry (see `crates/ca
 | `yeast_starter` | Yeast Starter | Calculate yeast starter size and DME requirements |
 
 ## Beer (4)
-
 | ID | Name | Description |
 |---|---|---|
 | `efficiency` | Brewhouse Efficiency | Calculate brewhouse efficiency from grain and gravity |
@@ -46,7 +44,6 @@ This branch currently wires **46 calculators** into the registry (see `crates/ca
 | `srm` | SRM Color Calculator | Calculate beer color using Morey equation |
 
 ## Finishing (7)
-
 | ID | Name | Description |
 |---|---|---|
 | `acid_addition` | Acid Addition | Calculate acid additions to adjust pH - accounts for different acid strengths |
@@ -58,7 +55,6 @@ This branch currently wires **46 calculators** into the registry (see `crates/ca
 | `tannin` | Tannin Calculator | Calculate tannin additions for body and mouthfeel |
 
 ## Mead Styles (10)
-
 | ID | Name | Description |
 |---|---|---|
 | `acerglyn` | Acerglyn Calculator | Calculate ingredients for maple mead |
@@ -72,8 +68,7 @@ This branch currently wires **46 calculators** into the registry (see `crates/ca
 | `metheglin` | Metheglin Calculator | Calculate ingredients for spiced mead (metheglin) with spice dosage |
 | `sack` | Sack Mead Calculator | Calculate ingredients for high-gravity dessert mead (14-18% ABV) |
 
-## Utilities (7)
-
+## Utilities (8)
 | ID | Name | Description |
 |---|---|---|
 | `batch_cost` | Batch Cost Calculator | Calculate total cost per batch and per bottle |
@@ -83,7 +78,8 @@ This branch currently wires **46 calculators** into the registry (see `crates/ca
 | `upscaling` | Recipe Upscaling | Scale recipes up or down - maintains perfect proportions |
 | `waste` | Waste/Loss Calculator | Calculate expected losses through brewing process from start to bottle |
 | `water_chemistry` | Water Chemistry | Calculate water profile and mineral additions |
+| `fruit_comparison` | Fresh vs. Frozen Fruits Comparison | Scalable price/weight comparison for fruits (e.g., raspberries: fresh ~$8-10/lb vs. frozen ~$4-5/lb), with brewing tips |
 
----
-## In progress
+## In Progress
 `fermentation_timeline` exists in the repo but is not currently exported/registered in `crates/calculators/src/lib.rs`.
+Future: Expression-based dynamic calcs, pH simulators, aging forecasts.

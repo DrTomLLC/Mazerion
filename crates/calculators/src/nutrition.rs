@@ -53,7 +53,8 @@ impl Calculator for NutritionCalculator {
                 .parse::<Decimal>()
                 .map_err(|_| Error::Parse("Invalid starting_gravity".into()))?
         } else {
-            Decimal::ONE + (abv / Decimal::new(1115625, 4))
+            // ABV = (OG - 1.000) × 131.25, so OG = 1.000 + (ABV / 131.25)
+            Decimal::ONE + (abv / Decimal::new(13125, 2))
         };
 
         let protocol = input.get_param("protocol").unwrap_or("tosna_2");
