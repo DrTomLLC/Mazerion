@@ -1,0 +1,11 @@
+C:\Users\DrTom\RustroverProjects\Mazerion\android\app\src\main\kotlin\com\mazerion\ui\theme\Color.kt
+C:\Users\DrTom\RustroverProjects\Mazerion\android\app\src\main\kotlin\com\mazerion\data\MazerionRepository.kt
+C:\Users\DrTom\RustroverProjects\Mazerion\android\app\src\main\kotlin\com\mazerion\ui\screens\CalculatorDetailScreen.kt
+C:\Users\DrTom\RustroverProjects\Mazerion\android\app\src\main\kotlin\uniffi\mazerion_ffi\mazerion_ffi.kt
+C:\Users\DrTom\RustroverProjects\Mazerion\android\app\src\main\kotlin\com\mazerion\ui\viewmodels\CalculatorListViewModel.kt
+C:\Users\DrTom\RustroverProjects\Mazerion\android\app\src\main\kotlin\com\mazerion\ui\screens\CalculatorListScreen.kt
+C:\Users\DrTom\RustroverProjects\Mazerion\android\app\src\main\kotlin\com\mazerion\ui\theme\Type.kt
+C:\Users\DrTom\RustroverProjects\Mazerion\android\app\src\main\kotlin\com\mazerion\MainActivity.kt
+C:\Users\DrTom\RustroverProjects\Mazerion\android\app\src\main\kotlin\com\mazerion\ui\theme\Theme.kt
+C:\Users\DrTom\RustroverProjects\Mazerion\android\app\src\main\kotlin\com\mazerion\ui\viewmodels\CalculatorDetailViewModel.kt
+C:\Users\DrTom\RustroverProjects\Mazerion\android\app\src\main\kotlin\com\mazerion\MazerionApp.kt

@@ -1,82 +1,43 @@
 // crates/ffi/src/lib.rs
-// UniFFI Bridge for Mazerion — Version 0.30.0
-// This file implements the interface defined in mazerion.udl
-// All operations are safe: no panics, full Result propagation
+// UniFFI Bridge for Mazerion v0.30.0
+// Zero panics, full Result propagation, coarse-grained batch operations
 
 uniffi::setup_scaffolding!();
 
-use mazerion_core::{
-    get_calculator_registry,
-    traits::Calculator,  // Adjust if your Calculator trait is in a different module
-    types::{CalcInput, CalcOutput},  // Adjust if paths differ
-};
-use std::collections::HashMap;
+mod error;
+mod types;
+mod validation;
+mod batch;
 
-// ──────────────────────────────────────────────────────────────
-// Custom Error Type — Exposed to foreign languages as flat error
-// ──────────────────────────────────────────────────────────────
-#[derive(Debug, thiserror::Error, uniffi::Error)]
-#[uniffi(flat)]  // Important: flat error for simple string variants
-pub enum MazerionError {
-    #[error("Invalid input provided")]
-    InvalidInput,
+pub use error::MazerionError;
+pub use types::*;
+pub use batch::*;
 
-    #[error("Calculator not found")]
-    CalculatorNotFound,
-
-    #[error("Calculation failed")]
-    CalculationFailed,
-
-    #[error("Database error")]
-    DatabaseError,
-
-    #[error("Internal error")]
-    InternalError,
-}
-
-// ──────────────────────────────────────────────────────────────
-// Records exposed to Kotlin
-// ──────────────────────────────────────────────────────────────
-#[derive(uniffi::Record)]
-pub struct CalculatorInfo {
-    pub id: String,
-    pub name: String,
-    pub description: String,
-    pub category: String,
-}
-
-#[derive(uniffi::Record)]
-pub struct CalcParams {
-    pub key: String,
-    pub value: String,
-}
-
-#[derive(uniffi::Record)]
-pub struct CalcResult {
-    pub display_text: String,
-    pub details: HashMap<String, String>,
-}
-
-// ──────────────────────────────────────────────────────────────
-// Exported Functions (sync — matching current UDL)
-// ──────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// SINGLE OPERATIONS
+// ══════════════════════════════════════════════════════════════════════════════
 
 #[uniffi::export]
 pub fn version() -> String {
-    "0.30.0".to_string()
+    env!("CARGO_PKG_VERSION").to_string()
 }
 
 #[uniffi::export]
 pub fn list_calculators() -> Result<Vec<CalculatorInfo>, MazerionError> {
-    let registry = get_calculator_registry();
+    validation::check_system_ready()?;
 
-    let infos: Vec<CalculatorInfo> = registry
-        .iter()  // Assuming registry has .iter() returning (&str, &dyn Calculator)
-        .map(|(id, calc)| CalculatorInfo {
-            id: id.to_string(),
-            name: calc.name().to_string(),
-            description: calc.description().to_string(),
-            category: calc.category().to_string(),
+    let calculators = mazerion_core::traits::get_all_calculators();
+
+    let infos: Vec<CalculatorInfo> = calculators
+        .iter()
+        .map(|calc| {
+            let c: &dyn mazerion_core::traits::Calculator = calc.as_ref();
+            CalculatorInfo {
+                id: c.id().to_string(),
+                name: c.name().to_string(),
+                description: c.description().to_string(),
+                category: c.category().to_string(),
+            }
         })
         .collect();
 
@@ -84,31 +45,44 @@ pub fn list_calculators() -> Result<Vec<CalculatorInfo>, MazerionError> {
 }
 
 #[uniffi::export]
-pub fn execute_calculator(
-    calculator_id: String,
-    params: Vec<CalcParams>,
-) -> Result<CalcResult, MazerionError> {
-    let registry = get_calculator_registry();
+pub fn get_categories() -> Result<CategoryMap, MazerionError> {
+    validation::check_system_ready()?;
 
-    let calculator = registry
-        .get(&calculator_id)
-        .ok_or(MazerionError::CalculatorNotFound)?;
+    let calculators = mazerion_core::traits::get_all_calculators();
+    let mut categories: std::collections::HashMap<String, u32> = std::collections::HashMap::new();
 
-    let mut input_map: HashMap<String, String> = HashMap::with_capacity(params.len());
-    for p in params {
-        input_map.insert(p.key, p.value);
+    for calc in calculators {
+        let c: &dyn mazerion_core::traits::Calculator = calc.as_ref();
+        *categories.entry(c.category().to_string()).or_insert(0) += 1;
     }
 
-    let calc_input = calculator
-        .parse_input(&input_map)
-        .map_err(|_| MazerionError::InvalidInput)?;
+    let entries = categories
+        .into_iter()
+        .map(|(category, count)| CategoryEntry { category, count })
+        .collect();
 
-    let calc_output = calculator
-        .calculate(&calc_input)
-        .map_err(|_| MazerionError::CalculationFailed)?;
+    Ok(CategoryMap { entries })
+}
 
-    Ok(CalcResult {
-        display_text: calc_output.display().to_string(),
-        details: calc_output.to_details_map(),
-    })
+#[uniffi::export]
+pub fn execute_calculator(
+    calculator_id: String,
+    params: Vec<CalcParam>,
+) -> Result<CalcResult, MazerionError> {
+    validation::validate_calculator_id(&calculator_id)?;
+    validation::validate_params(&params)?;
+
+    let calculator = mazerion_core::traits::get_calculator(&calculator_id)
+        .ok_or(MazerionError::CalculatorNotFound)?;
+
+    let mut input = mazerion_core::CalcInput::new();
+    for param in params {
+        input = input.add_param(param.key, param.value);
+    }
+
+    let result = calculator
+        .calculate(input)
+        .map_err(MazerionError::from_core_error)?;
+
+    Ok(CalcResult::from_core_result(result))
 }

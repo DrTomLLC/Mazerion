@@ -1,36 +1,84 @@
 namespace mazerion {
-String version();
+string version();
 
-record CalculatorInfo {
-string id;
-string name;
-string description;
-string category;
+    [Throws=MazerionError]
+    sequence<CalculatorInfo> list_calculators();
+
+    [Throws=MazerionError]
+    CategoryMap get_categories();
+
+    [Throws=MazerionError]
+    sequence<CalculatorInfo> get_calculators_by_category(string category);
+
+    [Throws=MazerionError]
+    CalcResult execute_calculator(
+    string calculator_id,
+    sequence<CalcParam> params
+    );
+
+    [Throws=MazerionError]
+    sequence<BatchCalculatorResult> execute_batch(
+    sequence<BatchCalculatorRequest> requests
+    );
 };
 
-dictionary CalcParams {
-string key;
-string value;
+dictionary CalculatorInfo {
+    string id;
+    string name;
+    string description;
+    string category;
 };
 
-record CalcResult {
-string display_text;
-dictionary<string, string> details;
+dictionary CalcParam {
+    string key;
+    string value;
+};
+
+dictionary CalcResult {
+    string value;
+    string unit;
+    string display_text;
+    sequence<string> warnings;
+    MetadataMap metadata;
+};
+
+dictionary BatchCalculatorRequest {
+    string calculator_id;
+    sequence<CalcParam> params;
+};
+
+dictionary BatchCalculatorResult {
+    string calculator_id;
+    CalcResult? result;
+    string? error;
+};
+
+dictionary CategoryMap {
+    sequence<CategoryEntry> entries;
+};
+
+dictionary CategoryEntry {
+    string category;
+    u32 count;
+};
+
+dictionary MetadataMap {
+    sequence<MetadataEntry> entries;
+};
+
+dictionary MetadataEntry {
+    string key;
+    string value;
 };
 
 [Error]
 enum MazerionError {
-"InvalidInput",
-"CalculatorNotFound",
-"CalculationFailed",
-"DatabaseError",
-"InternalError",
-};
-
-sequence<CalculatorInfo> list_calculators() throws MazerionError;
-
-CalcResult execute_calculator(
-string calculator_id,
-sequence<CalcParams> params
-) throws MazerionError;
+    "InvalidInput",
+    "CalculatorNotFound",
+    "CalculationFailed",
+    "ValidationError",
+    "DatabaseError",
+    "SystemNotReady",
+    "InputTooLarge",
+    "RateLimitExceeded"
 };

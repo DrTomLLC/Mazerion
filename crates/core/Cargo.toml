@@ -18,4 +18,4 @@ inventory = "0.3.21"
 
 [lib]
 # This is required for inventory’s linker magic
-crate-type = ["rlib", "cdylib"]
+crate-type = ["rlib"]

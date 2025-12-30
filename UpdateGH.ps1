@@ -8,7 +8,7 @@ git checkout first-dev
 git status
 
 # Commit
-git commit -m "Complete Mazerion v0.30.0 - Replacing FFI with UniFFI"
+git commit -m "Complete Mazerion v0.30.0 - Replacing FFI with UniFFI - Still working on Android Support."
 
 # Push to first-dev
 git push origin first-dev
