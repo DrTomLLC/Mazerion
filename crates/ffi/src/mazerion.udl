@@ -1,0 +1,36 @@
+namespace mazerion {
+String version();
+
+record CalculatorInfo {
+string id;
+string name;
+string description;
+string category;
+};
+
+dictionary CalcParams {
+string key;
+string value;
+};
+
+record CalcResult {
+string display_text;
+dictionary<string, string> details;
+};
+
+[Error]
+enum MazerionError {
+"InvalidInput",
+"CalculatorNotFound",
+"CalculationFailed",
+"DatabaseError",
+"InternalError",
+};
+
+sequence<CalculatorInfo> list_calculators() throws MazerionError;
+
+CalcResult execute_calculator(
+string calculator_id,
+sequence<CalcParams> params
+) throws MazerionError;
+};
