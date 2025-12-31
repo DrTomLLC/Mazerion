@@ -1,19 +1,26 @@
-//! Database layer with optional SQLite support.
+// Database layer for Mazerion
 
-#[cfg(feature = "db")]
+#![allow(clippy::module_inception)]
+
+pub use mazerion_core::{Error, Result};
+
+mod manager;
+mod models;
+mod repositories;
+pub mod schemas;
 mod sqlite;
 
-#[cfg(feature = "db")]
-pub use sqlite::{Logbook, LogEntry};
-
-#[cfg(not(feature = "db"))]
-pub struct Logbook;
-
-#[cfg(not(feature = "db"))]
-impl Logbook {
-    pub fn new(_path: &str) -> mazerion_core::Result<Self> {
-        Err(mazerion_core::Error::DatabaseError(
-            "Database feature not enabled".into(),
-        ))
-    }
-}
+pub use manager::{DatabaseManager, DbStats};
+pub use models::{
+    Batch, BatchReading, BatchStatus, InventoryItem,
+    Recipe, RecipeIngredient, RecipeInstruction,
+};
+pub use repositories::{BatchRepository, InventoryRepository, RecipeRepository};
+pub use schemas::{
+    create_user_schema,
+    create_encyclopedia_master_schema,
+    create_recipes_master_schema,
+    create_styles_master_schema,
+    verify_database_integrity,
+    get_schema_version,
+};

@@ -1,184 +1,33 @@
-//! Production CLI with automatic MCL integration
+// Mazerion CLI - Precision brewing calculators
 
-use mazerion_core::{CalcInput, VALID_CATEGORIES, get_calculator, get_calculators_by_category};
-use mazerion_gui::run;
-use std::env;
+use clap::{Parser, Subcommand};
 
-fn main() {
-    // CRITICAL: Initialize calculators to force linking
-    let _ = mazerion_calculators::init();
+mod commands;
+use commands::DbCommand;
 
-    let args: Vec<String> = env::args().collect();
-    let command = args.get(1).map(String::as_str);
-
-    match command {
-        Some("gui") => launch_gui(),
-        Some("tui") => launch_tui(),
-        Some("list") => list_calculators(),
-        Some("categories") => list_categories(),
-        Some("calc") => execute_calculator(&args[2..]),
-        Some("help") | Some("--help") | Some("-h") => show_help(),
-        _ => show_help(),
-    }
+#[derive(Debug, Parser)]
+#[command(
+    name = "mazerion",
+    version,
+    about = "Precision brewing calculators for beer, mead, wine, and cider",
+    long_about = None
+)]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
 }
 
-fn launch_gui() {
-    println!("🚀 Launching GUI...");
-    if let Err(e) = run() {
-        eprintln!("❌ GUI error: {}", e);
-        std::process::exit(1);
-    }
+#[derive(Debug, Subcommand)]
+enum Commands {
+    /// Database operations
+    #[command(visible_alias = "d", subcommand)]
+    Db(DbCommand),
 }
 
-fn launch_tui() {
-    println!("🚀 Launching TUI...");
-    if let Err(e) = mazerion_tui::run() {
-        eprintln!("❌ TUI error: {}", e);
-        std::process::exit(1);
+fn main() -> anyhow::Result<()> {
+    let cli = Cli::parse();
+
+    match cli.command {
+        Commands::Db(cmd) => cmd.execute(),
     }
-}
-
-fn list_calculators() {
-    let by_category = get_calculators_by_category();
-
-    println!("═══════════════════════════════════════════════════════════");
-    println!("MAZERION CALCULATORS");
-    println!("═══════════════════════════════════════════════════════════");
-    println!();
-
-    let mut total = 0;
-
-    for category in VALID_CATEGORIES {
-        if let Some(calcs) = by_category.get(*category) {
-            println!("📂 {} ({} calculators)", category, calcs.len());
-            println!("───────────────────────────────────────────────────────────");
-
-            for calc in calcs {
-                println!("  🔹 {} ({})", calc.name(), calc.id());
-                println!("     {}", calc.description());
-            }
-
-            println!();
-            total += calcs.len();
-        }
-    }
-
-    println!("═══════════════════════════════════════════════════════════");
-    println!("Total: {} calculators", total);
-    println!("═══════════════════════════════════════════════════════════");
-}
-
-fn list_categories() {
-    let by_category = get_calculators_by_category();
-
-    println!("═══════════════════════════════════════════════════════════");
-    println!("MAZERION CATEGORIES");
-    println!("═══════════════════════════════════════════════════════════");
-
-    for category in VALID_CATEGORIES {
-        let count = by_category.get(*category).map(|v| v.len()).unwrap_or(0);
-        if count > 0 {
-            println!("  📂 {} - {} calculators", category, count);
-        }
-    }
-
-    println!("═══════════════════════════════════════════════════════════");
-}
-
-fn execute_calculator(args: &[String]) {
-    if args.is_empty() {
-        eprintln!("❌ Error: Calculator ID required");
-        eprintln!();
-        eprintln!("Usage: mazerion calc <calculator_id> param=value ...");
-        eprintln!();
-        eprintln!("Example:");
-        eprintln!("  mazerion calc abv og=1.090 fg=1.010");
-        std::process::exit(1);
-    }
-
-    let calc_id = &args[0];
-
-    let calc = match get_calculator(calc_id) {
-        Some(c) => c,
-        None => {
-            eprintln!("❌ Error: Calculator '{}' not found", calc_id);
-            eprintln!();
-            eprintln!("Run 'mazerion list' to see available calculators");
-            std::process::exit(1);
-        }
-    };
-
-    let mut input = CalcInput::new();
-    for arg in &args[1..] {
-        if let Some((key, value)) = arg.split_once('=') {
-            input = input.add_param(key, value);
-        } else {
-            eprintln!("⚠️  Warning: Ignoring invalid parameter '{}'", arg);
-            eprintln!("    Expected format: key=value");
-        }
-    }
-
-    println!("═══════════════════════════════════════════════════════════");
-    println!("🧮 CALCULATOR: {}", calc.name());
-    println!("───────────────────────────────────────────────────────────");
-
-    match calc.calculate(input) {
-        Ok(result) => {
-            println!("✅ Result: {} {}", result.output.value, result.output.unit);
-
-            if !result.metadata.is_empty() {
-                println!();
-                println!("📊 Details:");
-                for (key, value) in &result.metadata {
-                    println!("  • {}: {}", key, value);
-                }
-            }
-
-            if !result.warnings.is_empty() {
-                println!();
-                println!("⚠️  Warnings:");
-                for warning in &result.warnings {
-                    println!("  • {}", warning);
-                }
-            }
-
-            println!("═══════════════════════════════════════════════════════════");
-        }
-        Err(e) => {
-            println!("❌ Calculation Error: {}", e);
-            println!("═══════════════════════════════════════════════════════════");
-            std::process::exit(1);
-        }
-    }
-}
-
-fn show_help() {
-    println!("═══════════════════════════════════════════════════════════");
-    println!("🍯 MAZERION - PRECISION BEVERAGE CALCULATOR");
-    println!("═══════════════════════════════════════════════════════════");
-    println!();
-    println!("USAGE:");
-    println!("  mazerion <command> [options]");
-    println!();
-    println!("COMMANDS:");
-    println!("  gui              Launch graphical interface (recommended)");
-    println!("  tui              Launch terminal interface");
-    println!("  list             List all available calculators");
-    println!("  categories       List all categories with counts");
-    println!("  calc <id> ...    Execute a calculator from command line");
-    println!("  help             Show this help message");
-    println!();
-    println!("EXAMPLES:");
-    println!("  mazerion gui");
-    println!("  mazerion list");
-    println!("  mazerion calc abv og=1.090 fg=1.010");
-    println!("  mazerion calc dilution current_volume=20 current_abv=14 target_abv=10");
-    println!("  mazerion calc carbonation volume=19 temperature=20 target_co2=2.5 method=priming");
-    println!();
-    println!("MCL VERSION: Production v1.0");
-    println!(
-        "Total Calculators: {}",
-        mazerion_core::traits::calculator_count()
-    );
-    println!("═══════════════════════════════════════════════════════════");
 }

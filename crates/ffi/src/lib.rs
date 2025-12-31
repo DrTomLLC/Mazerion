@@ -8,6 +8,7 @@ mod error;
 mod types;
 mod validation;
 mod batch;
+mod database;
 
 pub use error::MazerionError;
 pub use types::*;

@@ -1,20 +1,18 @@
-//! SQLite logbook for calculation history.
+// SQLite utilities and helper functions
 
 use mazerion_core::{Error, Result};
-use rusqlite::{params, Connection};
-use serde::{Deserialize, Serialize};
+use rusqlite::Connection;
 
-/// Log entry for calculations.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+// Logbook structures (not currently used but kept for future)
+#[derive(Debug, Clone)]
 pub struct LogEntry {
     pub id: Option<i64>,
     pub timestamp: String,
-    pub calculator_id: String,
-    pub input: String,
-    pub output: String,
+    pub category: String,
+    pub message: String,
 }
 
-/// SQLite-backed logbook.
+#[derive(Debug)]
 pub struct Logbook {
     conn: Connection,
 }
@@ -22,61 +20,52 @@ pub struct Logbook {
 impl Logbook {
     /// Create or open logbook at path.
     pub fn new(path: &str) -> Result<Self> {
-        let conn =
-            Connection::open(path).map_err(|e| Error::Database(format!("Open failed: {}", e)))?;
+        let conn = Connection::open(path)
+            .map_err(|e| Error::DatabaseError(format!("Failed to open logbook: {}", e)))?;
 
         conn.execute(
-            "CREATE TABLE IF NOT EXISTS log (
-                id INTEGER PRIMARY KEY,
+            "CREATE TABLE IF NOT EXISTS logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
                 timestamp TEXT NOT NULL,
-                calculator_id TEXT NOT NULL,
-                input TEXT NOT NULL,
-                output TEXT NOT NULL
+                category TEXT NOT NULL,
+                message TEXT NOT NULL
             )",
             [],
         )
-        .map_err(|e| Error::Database(format!("Schema creation failed: {}", e)))?;
+            .map_err(|e| Error::DatabaseError(format!("Failed to create logs table: {}", e)))?;
 
         Ok(Self { conn })
     }
 
-    /// Add entry to log.
     pub fn add(&mut self, entry: &LogEntry) -> Result<i64> {
         self.conn
             .execute(
-                "INSERT INTO log (timestamp, calculator_id, input, output) VALUES (?1, ?2, ?3, ?4)",
-                params![
-                    &entry.timestamp,
-                    &entry.calculator_id,
-                    &entry.input,
-                    &entry.output
-                ],
+                "INSERT INTO logs (timestamp, category, message) VALUES (?1, ?2, ?3)",
+                rusqlite::params![&entry.timestamp, &entry.category, &entry.message],
             )
-            .map_err(|e| Error::Database(format!("Insert failed: {}", e)))?;
+            .map_err(|e| Error::DatabaseError(format!("Failed to add log: {}", e)))?;
 
         Ok(self.conn.last_insert_rowid())
     }
 
-    /// Get recent entries (limit 100).
-    pub fn recent(&self, limit: usize) -> Result<Vec<LogEntry>> {
+    pub fn recent(&self, limit: i64) -> Result<Vec<LogEntry>> {
         let mut stmt = self
             .conn
-            .prepare("SELECT id, timestamp, calculator_id, input, output FROM log ORDER BY id DESC LIMIT ?1")
-            .map_err(|e| Error::Database(format!("Query prepare failed: {}", e)))?;
+            .prepare("SELECT id, timestamp, category, message FROM logs ORDER BY id DESC LIMIT ?1")
+            .map_err(|e| Error::DatabaseError(format!("Failed to prepare query: {}", e)))?;
 
         let entries = stmt
             .query_map([limit], |row| {
                 Ok(LogEntry {
                     id: Some(row.get(0)?),
                     timestamp: row.get(1)?,
-                    calculator_id: row.get(2)?,
-                    input: row.get(3)?,
-                    output: row.get(4)?,
+                    category: row.get(2)?,
+                    message: row.get(3)?,
                 })
             })
-            .map_err(|e| Error::Database(format!("Query failed: {}", e)))?
+            .map_err(|e| Error::DatabaseError(format!("Failed to query logs: {}", e)))?
             .collect::<std::result::Result<Vec<_>, _>>()
-            .map_err(|e| Error::Database(format!("Row parse failed: {}", e)))?;
+            .map_err(|e| Error::DatabaseError(format!("Failed to parse logs: {}", e)))?;
 
         Ok(entries)
     }

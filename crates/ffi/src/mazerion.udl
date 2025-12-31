@@ -1,84 +1,245 @@
 namespace mazerion {
-string version();
-
+// Calculator functions
     [Throws=MazerionError]
-    sequence<CalculatorInfo> list_calculators();
+    CalculatorResult calculate(string calculator_id, sequence<CalculatorInput> inputs);
 
-    [Throws=MazerionError]
-    CategoryMap get_categories();
+sequence<string> list_calculators();
 
-    [Throws=MazerionError]
-    sequence<CalculatorInfo> get_calculators_by_category(string category);
+sequence<string> list_calculator_categories();
 
-    [Throws=MazerionError]
-    CalcResult execute_calculator(
-    string calculator_id,
-    sequence<CalcParam> params
-    );
-
-    [Throws=MazerionError]
-    sequence<BatchCalculatorResult> execute_batch(
-    sequence<BatchCalculatorRequest> requests
-    );
-};
-
-dictionary CalculatorInfo {
-    string id;
-    string name;
-    string description;
-    string category;
-};
-
-dictionary CalcParam {
-    string key;
-    string value;
-};
-
-dictionary CalcResult {
-    string value;
-    string unit;
-    string display_text;
-    sequence<string> warnings;
-    MetadataMap metadata;
-};
-
-dictionary BatchCalculatorRequest {
-    string calculator_id;
-    sequence<CalcParam> params;
-};
-
-dictionary BatchCalculatorResult {
-    string calculator_id;
-    CalcResult? result;
-    string? error;
-};
-
-dictionary CategoryMap {
-    sequence<CategoryEntry> entries;
-};
-
-dictionary CategoryEntry {
-    string category;
-    u32 count;
-};
-
-dictionary MetadataMap {
-    sequence<MetadataEntry> entries;
-};
-
-dictionary MetadataEntry {
-    string key;
-    string value;
+sequence<string> list_calculators_in_category(string category);
 };
 
 [Error]
 enum MazerionError {
+    "CalculationError",
     "InvalidInput",
-    "CalculatorNotFound",
-    "CalculationFailed",
     "ValidationError",
-    "DatabaseError",
-    "SystemNotReady",
-    "InputTooLarge",
-    "RateLimitExceeded"
+    "UnsupportedOperation",
+    "InternalError",
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// CALCULATOR TYPES
+// ══════════════════════════════════════════════════════════════════════════════
+
+dictionary CalculatorInput {
+    string name;
+    string value;
+    string unit;
+};
+
+dictionary CalculatorOutput {
+    string name;
+    string value;
+    string unit;
+    string? display_label;
+};
+
+dictionary CalculatorResult {
+    string calculator_id;
+    string calculator_name;
+    sequence<CalculatorOutput> outputs;
+    string? error;
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// BATCH TYPES
+// ══════════════════════════════════════════════════════════════════════════════
+
+dictionary BatchInfo {
+    i64 id;
+    string name;
+    string category;
+    string batch_size_l;
+    string brew_date;
+    string? target_og;
+    string? target_fg;
+    string? target_abv;
+    string status;
+    string? notes;
+    string created_at;
+    string updated_at;
+};
+
+dictionary CreateBatchRequest {
+    string name;
+    string category;
+    string batch_size_l;
+    string brew_date;
+    string? target_og;
+    string? target_fg;
+    string? target_abv;
+    string? notes;
+};
+
+dictionary ReadingInfo {
+    i64 id;
+    i64 batch_id;
+    string reading_date;
+    string gravity;
+    string? temperature_c;
+    string? ph;
+    string? notes;
+    string source;
+};
+
+dictionary AddReadingRequest {
+    i64 batch_id;
+    string reading_date;
+    string gravity;
+    string? temperature_c;
+    string? ph;
+    string? notes;
+    string source;
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// INVENTORY TYPES
+// ══════════════════════════════════════════════════════════════════════════════
+
+dictionary InventoryItemInfo {
+    i64 id;
+    string item_type;
+    string item_name;
+    string quantity;
+    string unit;
+    string? location;
+    string? purchase_date;
+    string? expiration_date;
+    string? cost;
+    string? notes;
+};
+
+dictionary AddInventoryRequest {
+    string item_type;
+    string item_name;
+    string quantity;
+    string unit;
+    string? location;
+    string? purchase_date;
+    string? expiration_date;
+    string? cost;
+    string? notes;
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// RECIPE TYPES
+// ══════════════════════════════════════════════════════════════════════════════
+
+dictionary RecipeInfo {
+    i64 id;
+    string name;
+    string category;
+    string? subcategory;
+    string? description;
+    string? author;
+    string? source;
+    string batch_size_l;
+    string? target_og;
+    string? target_fg;
+    string? target_abv;
+    string created_at;
+    string updated_at;
+};
+
+dictionary CreateRecipeRequest {
+    string name;
+    string category;
+    string? subcategory;
+    string? description;
+    string batch_size_l;
+    string? target_og;
+    string? target_fg;
+    string? target_abv;
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// STATS TYPE
+// ══════════════════════════════════════════════════════════════════════════════
+
+dictionary DbStats {
+    u32 batch_count;
+    u32 inventory_count;
+    u32 reading_count;
+    u32 calculation_count;
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// DATABASE HANDLE
+// ══════════════════════════════════════════════════════════════════════════════
+
+interface DbHandle {
+    [Throws=MazerionError]
+    constructor(string user_db_path, string packs_dir);
+
+// Batch operations
+    [Throws=MazerionError]
+    i64 create_batch(CreateBatchRequest request);
+
+    [Throws=MazerionError]
+    BatchInfo? get_batch(i64 id);
+
+    [Throws=MazerionError]
+    sequence<BatchInfo> list_batches(string? status_filter, u32 limit);
+
+    [Throws=MazerionError]
+    void update_batch_status(i64 id, string status);
+
+    [Throws=MazerionError]
+    void update_batch_notes(i64 id, string? notes);
+
+    [Throws=MazerionError]
+    void delete_batch(i64 id);
+
+    [Throws=MazerionError]
+    i64 add_reading(AddReadingRequest request);
+
+    [Throws=MazerionError]
+    sequence<ReadingInfo> get_readings(i64 batch_id);
+
+// Inventory operations
+    [Throws=MazerionError]
+    i64 add_inventory(AddInventoryRequest request);
+
+    [Throws=MazerionError]
+    InventoryItemInfo? get_inventory(i64 id);
+
+    [Throws=MazerionError]
+    sequence<InventoryItemInfo> list_inventory(string? item_type_filter, u32 limit);
+
+    [Throws=MazerionError]
+    void update_inventory_quantity(i64 id, string quantity);
+
+    [Throws=MazerionError]
+    void delete_inventory(i64 id);
+
+    [Throws=MazerionError]
+    sequence<InventoryItemInfo> search_inventory(string query, u32 limit);
+
+// Recipe operations
+    [Throws=MazerionError]
+    i64 create_recipe(CreateRecipeRequest request);
+
+    [Throws=MazerionError]
+    RecipeInfo? get_recipe(i64 id);
+
+    [Throws=MazerionError]
+    sequence<RecipeInfo> list_recipes(string? category, u32 limit);
+
+    [Throws=MazerionError]
+    void update_recipe(i64 id, CreateRecipeRequest request);
+
+    [Throws=MazerionError]
+    void delete_recipe(i64 id);
+
+    [Throws=MazerionError]
+    sequence<RecipeInfo> search_recipes(string query, u32 limit);
+
+// Utility operations
+    [Throws=MazerionError]
+    sequence<string> list_packs();
+
+    [Throws=MazerionError]
+    DbStats get_stats();
 };

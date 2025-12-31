@@ -1,33 +1,23 @@
 [package]
 name = "mazerion-ffi"
-version = "0.30.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
 
 [lib]
+crate-type = ["cdylib", "staticlib"]
 name = "mazerion_ffi"
-crate-type = ["cdylib", "staticlib", "rlib"]
 
-[[bin]]
-name = "uniffi_bindgen"
-path = "src/bin/uniffi_bindgen.rs"
-required-features = ["bindgen"]
+[lints]
+workspace = true
 
 [dependencies]
 mazerion-core = { path = "../core" }
-mazerion-api = { path = "../api" }
-uniffi = "0.30.0"
-thiserror = "2.0"
-
-[dev-dependencies]
 mazerion-calculators = { path = "../calculators" }
+mazerion-db = { path = "../db", features = ["db"] }
+uniffi = { version = "0.30.0", features = ["cli"] }
+thiserror = "2.0.17"
+rust_decimal = { workspace = true }
 
 [build-dependencies]
-uniffi_build = { version = "0.30.0", features = ["builtin-bindgen"] }
-
-[features]
-bindgen = ["uniffi/cli"]
-
-[lints.clippy]
-unwrap_used = "deny"
-expect_used = "deny"
-panic = "deny"
+uniffi = { version = "0.30.0", features = ["build"] }

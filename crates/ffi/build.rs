@@ -1,12 +1,10 @@
-// crates/ffi/build.rs
+// Build script for UniFFI scaffolding generation
 
 fn main() {
-    match uniffi_build::generate_scaffolding("./src/mazerion.udl") {
-        Ok(_) => {},
+    match uniffi::generate_scaffolding("./src/mazerion.udl") {
+        Ok(_) => println!("cargo:rerun-if-changed=src/mazerion.udl"),
         Err(e) => {
-            eprintln!("UniFFI scaffolding generation failed:");
-            eprintln!("  Error: {e}");
-            eprintln!("  Check your mazerion.udl file for syntax errors.");
+            eprintln!("Error generating scaffolding: {}", e);
             std::process::exit(1);
         }
     }

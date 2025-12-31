@@ -2,8 +2,10 @@
 name = "mazerion"
 version.workspace = true
 edition.workspace = true
-license.workspace = true
-authors.workspace = true
+rust-version.workspace = true
+
+[lints]
+workspace = true
 
 [[bin]]
 name = "mazerion"
@@ -12,15 +14,8 @@ path = "src/main.rs"
 [dependencies]
 mazerion-core = { path = "../core" }
 mazerion-calculators = { path = "../calculators" }
-mazerion-gui = { path = "../gui" }
-mazerion-tui = { path = "../tui" }
-mazerion-api = { path = "../api" }
-eframe = "0.33.3"
-rust_decimal = "1.39.0"
-egui = "0.33.3"
-
-
-[lints.clippy]
-unwrap_used = "deny"
-expect_used = "deny"
-panic = "deny"
+mazerion-db = { path = "../db", features = ["db"] }
+clap = { version = "4.5.53", features = ["derive"] }
+rust_decimal = { workspace = true }
+anyhow = "1.0.100"
+chrono = "0.4.42"  # Add this for date handling

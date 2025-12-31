@@ -4,14 +4,15 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 
+[features]
+default = ["db"]
+db = []  # Keep as marker feature for compatibility
+cannabis = []  # Optional paid feature
+
 [lints]
 workspace = true
 
-[features]
-default = []
-db = ["dep:rusqlite"]
-
 [dependencies]
 mazerion-core = { path = "../core" }
-serde = { workspace = true }
-rusqlite = { version = "0.37.0", features = ["bundled"], optional = true }
+rusqlite = { version = "0.38.0", features = ["bundled"] }  # NOT optional anymore
+rust_decimal = { workspace = true }
