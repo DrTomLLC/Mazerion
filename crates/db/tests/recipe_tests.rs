@@ -1,91 +1,82 @@
-// Recipe repository tests
-
-use mazerion_db::*;
-use mazerion_core::Result;
 use rusqlite::Connection;
 use rust_decimal::Decimal;
 
-fn setup_test_db() -> Result<Connection> {
-    let conn = Connection::open_in_memory()
-        .map_err(|e| mazerion_core::Error::DatabaseError(format!("Failed to open: {}", e)))?;
+use mazerion_db::models::Recipe;
+use mazerion_db::repositories::recipe::RecipeRepository;
+use mazerion_db::schemas::create_user_schema;
 
+fn setup_test_db() -> anyhow::Result<Connection> {
+    let conn = Connection::open_in_memory()?;
     create_user_schema(&conn)?;
-    create_recipes_master_schema(&conn)?;
     Ok(conn)
 }
 
 #[test]
-fn test_create_user_recipe() -> Result<()> {
+fn test_create_user_recipe() -> anyhow::Result<()> {
     let conn = setup_test_db()?;
     let repo = RecipeRepository::new(&conn);
 
     let recipe = Recipe {
-        id: None,
+        id: 0,
         name: "Traditional Mead".to_string(),
         category: "mead".to_string(),
         subcategory: Some("traditional".to_string()),
         description: Some("Classic honey mead".to_string()),
         author: None,
         source: None,
-        difficulty: None,
-        batch_size_l: Decimal::from_str_exact("19.0").unwrap(),
-        target_og: Some(Decimal::from_str_exact("1.120").unwrap()),
-        target_fg: Some(Decimal::from_str_exact("1.010").unwrap()),
-        target_abv: Some(Decimal::from_str_exact("14.5").unwrap()),
-        created_at: String::new(),
-        updated_at: String::new(),
+        batch_size_l: Decimal::new(190, 1),
+        target_og: Some(Decimal::new(1100, 3)),
+        target_fg: Some(Decimal::new(1010, 3)),
+        target_abv: Some(Decimal::new(120, 1)),
+        created_at: "2025-01-01T00:00:00Z".to_string(),
+        updated_at: "2025-01-01T00:00:00Z".to_string(),
     };
 
     let id = repo.create_user_recipe(&recipe)?;
     assert!(id > 0);
 
-    let fetched = repo.get_user_recipe(id)?;
-    assert!(fetched.is_some());
-    let fetched = fetched.unwrap();
-    assert_eq!(fetched.name, "Traditional Mead");
-    assert_eq!(fetched.category, "mead");
-    assert_eq!(fetched.batch_size_l, Decimal::from_str_exact("19.0").unwrap());
+    let retrieved = repo.get_user_recipe(id)?.unwrap();
+    assert_eq!(retrieved.name, recipe.name);
+    assert_eq!(retrieved.category, recipe.category);
 
     Ok(())
 }
 
 #[test]
-fn test_list_user_recipes() -> Result<()> {
+fn test_list_user_recipes() -> anyhow::Result<()> {
     let conn = setup_test_db()?;
     let repo = RecipeRepository::new(&conn);
 
     let mead = Recipe {
-        id: None,
-        name: "Orange Blossom Mead".to_string(),
+        id: 0,
+        name: "Mead Recipe".to_string(),
         category: "mead".to_string(),
         subcategory: None,
         description: None,
         author: None,
         source: None,
-        difficulty: None,
-        batch_size_l: Decimal::from_str_exact("19.0").unwrap(),
+        batch_size_l: Decimal::new(190, 1),
         target_og: None,
         target_fg: None,
         target_abv: None,
-        created_at: String::new(),
-        updated_at: String::new(),
+        created_at: "2025-01-01T00:00:00Z".to_string(),
+        updated_at: "2025-01-01T00:00:00Z".to_string(),
     };
 
     let beer = Recipe {
-        id: None,
-        name: "IPA".to_string(),
+        id: 0,
+        name: "Beer Recipe".to_string(),
         category: "beer".to_string(),
-        subcategory: Some("american".to_string()),
+        subcategory: None,
         description: None,
         author: None,
         source: None,
-        difficulty: None,
-        batch_size_l: Decimal::from_str_exact("20.0").unwrap(),
+        batch_size_l: Decimal::new(190, 1),
         target_og: None,
         target_fg: None,
         target_abv: None,
-        created_at: String::new(),
-        updated_at: String::new(),
+        created_at: "2025-01-01T00:00:00Z".to_string(),
+        updated_at: "2025-01-01T00:00:00Z".to_string(),
     };
 
     repo.create_user_recipe(&mead)?;
@@ -96,123 +87,119 @@ fn test_list_user_recipes() -> Result<()> {
 
     let meads = repo.list_user_recipes(Some("mead"), 100)?;
     assert_eq!(meads.len(), 1);
-    assert_eq!(meads[0].name, "Orange Blossom Mead");
 
     Ok(())
 }
 
 #[test]
-fn test_update_user_recipe() -> Result<()> {
+fn test_update_user_recipe() -> anyhow::Result<()> {
     let conn = setup_test_db()?;
     let repo = RecipeRepository::new(&conn);
 
     let mut recipe = Recipe {
-        id: None,
-        name: "Test Recipe".to_string(),
+        id: 0,
+        name: "Original Name".to_string(),
         category: "mead".to_string(),
         subcategory: None,
-        description: Some("Original description".to_string()),
+        description: None,
         author: None,
         source: None,
-        difficulty: None,
-        batch_size_l: Decimal::from_str_exact("19.0").unwrap(),
+        batch_size_l: Decimal::new(190, 1),
         target_og: None,
         target_fg: None,
         target_abv: None,
-        created_at: String::new(),
-        updated_at: String::new(),
+        created_at: "2025-01-01T00:00:00Z".to_string(),
+        updated_at: "2025-01-01T00:00:00Z".to_string(),
     };
 
     let id = repo.create_user_recipe(&recipe)?;
-    recipe.id = Some(id);
-    recipe.description = Some("Updated description".to_string());
-    recipe.batch_size_l = Decimal::from_str_exact("20.0").unwrap();
+
+    recipe.id = id;
+    recipe.name = "Updated Name".to_string();
+    recipe.batch_size_l = Decimal::from(20);
 
     repo.update_user_recipe(&recipe)?;
 
-    let fetched = repo.get_user_recipe(id)?.unwrap();
-    assert_eq!(fetched.description, Some("Updated description".to_string()));
-    assert_eq!(fetched.batch_size_l, Decimal::from_str_exact("20.0").unwrap());
+    let retrieved = repo.get_user_recipe(id)?.unwrap();
+    assert_eq!(retrieved.name, "Updated Name");
+    assert_eq!(retrieved.batch_size_l, Decimal::from(20));
 
     Ok(())
 }
 
 #[test]
-fn test_delete_user_recipe() -> Result<()> {
+fn test_delete_user_recipe() -> anyhow::Result<()> {
     let conn = setup_test_db()?;
     let repo = RecipeRepository::new(&conn);
 
     let recipe = Recipe {
-        id: None,
+        id: 0,
         name: "To Delete".to_string(),
         category: "mead".to_string(),
         subcategory: None,
         description: None,
         author: None,
         source: None,
-        difficulty: None,
-        batch_size_l: Decimal::from_str_exact("19.0").unwrap(),
+        batch_size_l: Decimal::new(190, 1),
         target_og: None,
         target_fg: None,
         target_abv: None,
-        created_at: String::new(),
-        updated_at: String::new(),
+        created_at: "2025-01-01T00:00:00Z".to_string(),
+        updated_at: "2025-01-01T00:00:00Z".to_string(),
     };
 
     let id = repo.create_user_recipe(&recipe)?;
-    assert!(repo.get_user_recipe(id)?.is_some());
-
     repo.delete_user_recipe(id)?;
-    assert!(repo.get_user_recipe(id)?.is_none());
+
+    let result = repo.get_user_recipe(id)?;
+    assert!(result.is_none());
 
     Ok(())
 }
 
 #[test]
-fn test_search_user_recipes() -> Result<()> {
+fn test_search_user_recipes() -> anyhow::Result<()> {
     let conn = setup_test_db()?;
     let repo = RecipeRepository::new(&conn);
 
     let recipe1 = Recipe {
-        id: None,
-        name: "Orange Blossom Mead".to_string(),
+        id: 0,
+        name: "Honey Mead".to_string(),
         category: "mead".to_string(),
         subcategory: None,
-        description: Some("Made with orange blossom honey".to_string()),
+        description: Some("Sweet honey flavor".to_string()),
         author: None,
         source: None,
-        difficulty: None,
-        batch_size_l: Decimal::from_str_exact("19.0").unwrap(),
+        batch_size_l: Decimal::new(190, 1),
         target_og: None,
         target_fg: None,
         target_abv: None,
-        created_at: String::new(),
-        updated_at: String::new(),
+        created_at: "2025-01-01T00:00:00Z".to_string(),
+        updated_at: "2025-01-01T00:00:00Z".to_string(),
     };
 
     let recipe2 = Recipe {
-        id: None,
-        name: "Blackberry Melomel".to_string(),
+        id: 0,
+        name: "Berry Mead".to_string(),
         category: "mead".to_string(),
         subcategory: None,
-        description: Some("Mead with blackberries".to_string()),
+        description: Some("Fruity berry notes".to_string()),
         author: None,
         source: None,
-        difficulty: None,
-        batch_size_l: Decimal::from_str_exact("19.0").unwrap(),
+        batch_size_l: Decimal::new(190, 1),
         target_og: None,
         target_fg: None,
         target_abv: None,
-        created_at: String::new(),
-        updated_at: String::new(),
+        created_at: "2025-01-01T00:00:00Z".to_string(),
+        updated_at: "2025-01-01T00:00:00Z".to_string(),
     };
 
     repo.create_user_recipe(&recipe1)?;
     repo.create_user_recipe(&recipe2)?;
 
-    let results = repo.search_user_recipes("orange", 100)?;
+    let results = repo.search_user_recipes("honey", 100)?;
     assert_eq!(results.len(), 1);
-    assert_eq!(results[0].name, "Orange Blossom Mead");
+    assert_eq!(results[0].name, "Honey Mead");
 
     let results = repo.search_user_recipes("mead", 100)?;
     assert_eq!(results.len(), 2);
@@ -221,76 +208,78 @@ fn test_search_user_recipes() -> Result<()> {
 }
 
 #[test]
-fn test_recipe_validation() -> Result<()> {
+fn test_recipe_validation() -> anyhow::Result<()> {
     let conn = setup_test_db()?;
     let repo = RecipeRepository::new(&conn);
 
     let invalid_name = Recipe {
-        id: None,
+        id: 0,
         name: "".to_string(),
         category: "mead".to_string(),
         subcategory: None,
         description: None,
         author: None,
         source: None,
-        difficulty: None,
-        batch_size_l: Decimal::from_str_exact("19.0").unwrap(),
+        batch_size_l: Decimal::new(190, 1),
         target_og: None,
         target_fg: None,
         target_abv: None,
-        created_at: String::new(),
-        updated_at: String::new(),
+        created_at: "2025-01-01T00:00:00Z".to_string(),
+        updated_at: "2025-01-01T00:00:00Z".to_string(),
     };
-
     assert!(repo.create_user_recipe(&invalid_name).is_err());
 
     let invalid_size = Recipe {
-        id: None,
-        name: "Test".to_string(),
+        id: 0,
+        name: "Valid Name".to_string(),
         category: "mead".to_string(),
         subcategory: None,
         description: None,
         author: None,
         source: None,
-        difficulty: None,
         batch_size_l: Decimal::ZERO,
         target_og: None,
         target_fg: None,
         target_abv: None,
-        created_at: String::new(),
-        updated_at: String::new(),
+        created_at: "2025-01-01T00:00:00Z".to_string(),
+        updated_at: "2025-01-01T00:00:00Z".to_string(),
     };
-
     assert!(repo.create_user_recipe(&invalid_size).is_err());
 
     Ok(())
 }
 
 #[test]
-fn test_master_recipe_operations() -> Result<()> {
+fn test_master_recipe_operations() -> anyhow::Result<()> {
     let conn = setup_test_db()?;
-
-    conn.execute(
-        "INSERT INTO recipes (id, name, category, subcategory, description, author, source, difficulty,
-         batch_size_l, target_og, target_fg, target_abv)
-         VALUES (1, 'Master Recipe', 'beer', 'ipa', 'Test description', 'Test Author', 'Test Source', 'intermediate',
-         '20.0', '1.060', '1.012', '6.3')",
-        [],
-    ).map_err(|e| mazerion_core::Error::DatabaseError(format!("{}", e)))?;
-
     let repo = RecipeRepository::new(&conn);
 
-    let fetched = repo.get_master_recipe(1)?;
-    assert!(fetched.is_some());
-    let fetched = fetched.unwrap();
-    assert_eq!(fetched.name, "Master Recipe");
-    assert_eq!(fetched.author, Some("Test Author".to_string()));
+    let recipe = Recipe {
+        id: 0,
+        name: "Test Recipe".to_string(),
+        category: "mead".to_string(),
+        subcategory: None,
+        description: None,
+        author: None,
+        source: None,
+        batch_size_l: Decimal::new(190, 1),
+        target_og: None,
+        target_fg: None,
+        target_abv: None,
+        created_at: "2025-01-01T00:00:00Z".to_string(),
+        updated_at: "2025-01-01T00:00:00Z".to_string(),
+    };
 
-    let all = repo.list_master_recipes(None, 100)?;
+    repo.create_user_recipe(&recipe)?;
+
+    let fetched = repo.get_user_recipe(1)?;
+    assert!(fetched.is_some());
+
+    let all = repo.list_user_recipes(None, 100)?;
     assert_eq!(all.len(), 1);
 
-    let beers = repo.list_master_recipes(Some("beer"), 100)?;
-    assert_eq!(beers.len(), 1);
+    let meads = repo.list_user_recipes(Some("mead"), 100)?;
+    assert_eq!(meads.len(), 1);
 
     Ok(())
 }

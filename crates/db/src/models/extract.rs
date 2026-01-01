@@ -16,6 +16,8 @@ pub struct Extract {
     pub compatible_styles: Option<String>,
     pub created_at: String,
     pub updated_at: String,
+    pub concentration: (),
+    pub notes: ()
 }
 
 impl Extract {

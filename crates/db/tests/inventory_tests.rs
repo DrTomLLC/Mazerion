@@ -1,147 +1,151 @@
-// Inventory repository tests
-
-use mazerion_db::*;
-use mazerion_core::Result;
 use rusqlite::Connection;
 use rust_decimal::Decimal;
 
-fn setup_test_db() -> Result<Connection> {
-    let conn = Connection::open_in_memory()
-        .map_err(|e| mazerion_core::Error::DatabaseError(format!("Failed to open: {}", e)))?;
+use mazerion_db::models::InventoryItem;
+use mazerion_db::repositories::inventory::InventoryRepository;
+use mazerion_db::schemas::create_user_schema;
 
+fn setup_test_db() -> anyhow::Result<Connection> {
+    let conn = Connection::open_in_memory()?;
     create_user_schema(&conn)?;
     Ok(conn)
 }
 
 #[test]
-fn test_add_inventory_item() -> Result<()> {
+fn test_add_inventory_item() -> anyhow::Result<()> {
     let conn = setup_test_db()?;
     let repo = InventoryRepository::new(&conn);
 
     let item = InventoryItem {
-        id: None,
+        id: 0,
         item_type: "honey".to_string(),
-        item_name: "Orange Blossom Honey".to_string(),
-        quantity: Decimal::from_str_exact("5.4").unwrap(),
+        item_name: "Wildflower Honey".to_string(),
+        quantity: Decimal::new(50, 1),
         unit: "kg".to_string(),
-        location: Some("pantry".to_string()),
+        location: Some("Storage Room A".to_string()),
         purchase_date: Some("2025-01-01".to_string()),
         expiration_date: None,
-        cost: Some(Decimal::from(45)),
-        notes: Some("From local beekeeper".to_string()),
-        created_at: String::new(),
-        updated_at: String::new(),
+        cost: Some(Decimal::from(150)),
+        notes: Some("Premium quality".to_string()),
+        created_at: "2025-01-01T00:00:00Z".to_string(),
+        updated_at: "2025-01-01T00:00:00Z".to_string(),
     };
 
     let id = repo.add(&item)?;
     assert!(id > 0);
 
     let retrieved = repo.get(id)?.unwrap();
-    assert_eq!(retrieved.item_name, "Orange Blossom Honey");
-    assert_eq!(retrieved.quantity, Decimal::from_str_exact("5.4").unwrap());
+    assert_eq!(retrieved.item_name, item.item_name);
+    assert_eq!(retrieved.quantity, item.quantity);
 
     Ok(())
 }
 
 #[test]
-fn test_update_quantity() -> Result<()> {
+fn test_update_quantity() -> anyhow::Result<()> {
     let conn = setup_test_db()?;
     let repo = InventoryRepository::new(&conn);
 
     let item = InventoryItem {
-        id: None,
+        id: 0,
         item_type: "yeast".to_string(),
         item_name: "Lalvin 71B".to_string(),
-        quantity: Decimal::from(5),
+        quantity: Decimal::from(10),
         unit: "packets".to_string(),
-        location: Some("fridge".to_string()),
+        location: None,
         purchase_date: None,
         expiration_date: None,
         cost: None,
         notes: None,
-        created_at: String::new(),
-        updated_at: String::new(),
+        created_at: "2025-01-01T00:00:00Z".to_string(),
+        updated_at: "2025-01-01T00:00:00Z".to_string(),
     };
 
     let id = repo.add(&item)?;
-
-    repo.update_quantity(id, Decimal::from(3))?;
+    repo.update_quantity(id, Decimal::from(5))?;
 
     let retrieved = repo.get(id)?.unwrap();
-    assert_eq!(retrieved.quantity, Decimal::from(3));
+    assert_eq!(retrieved.quantity, Decimal::from(5));
 
     Ok(())
 }
 
 #[test]
-fn test_search_inventory() -> Result<()> {
+fn test_search_inventory() -> anyhow::Result<()> {
     let conn = setup_test_db()?;
     let repo = InventoryRepository::new(&conn);
 
-    let items = vec![
-        ("Orange Blossom Honey", "honey"),
-        ("Wildflower Honey", "honey"),
-        ("Cascade Hops", "hops"),
-    ];
-
-    for (name, itype) in items {
+    for i in 0..3 {
         let item = InventoryItem {
-            id: None,
-            item_type: itype.to_string(),
-            item_name: name.to_string(),
-            quantity: Decimal::from(1),
+            id: 0,
+            item_type: "honey".to_string(),
+            item_name: format!("Honey Type {}", i),
+            quantity: Decimal::from(10),
             unit: "kg".to_string(),
-            location: None,
+            location: Some(format!("Location {}", i)),
             purchase_date: None,
             expiration_date: None,
             cost: None,
             notes: None,
-            created_at: String::new(),
-            updated_at: String::new(),
+            created_at: "2025-01-01T00:00:00Z".to_string(),
+            updated_at: "2025-01-01T00:00:00Z".to_string(),
         };
         repo.add(&item)?;
     }
 
-    let results = repo.search("honey", 10)?;
-    assert_eq!(results.len(), 2);
-
-    let results = repo.search("cascade", 10)?;
+    let results = repo.search("Type 1", 100)?;
     assert_eq!(results.len(), 1);
 
+    let results = repo.search("honey", 100)?;
+    assert_eq!(results.len(), 3);
+
     Ok(())
 }
 
 #[test]
-fn test_list_by_type() -> Result<()> {
+fn test_list_by_type() -> anyhow::Result<()> {
     let conn = setup_test_db()?;
     let repo = InventoryRepository::new(&conn);
 
-    for i in 0..5 {
+    for i in 0..2 {
         let item = InventoryItem {
-            id: None,
-            item_type: if i < 3 { "grain" } else { "hops" }.to_string(),
-            item_name: format!("Item {}", i),
-            quantity: Decimal::from(1),
+            id: 0,
+            item_type: "honey".to_string(),
+            item_name: format!("Honey {}", i),
+            quantity: Decimal::from(10),
             unit: "kg".to_string(),
             location: None,
             purchase_date: None,
             expiration_date: None,
             cost: None,
             notes: None,
-            created_at: String::new(),
-            updated_at: String::new(),
+            created_at: "2025-01-01T00:00:00Z".to_string(),
+            updated_at: "2025-01-01T00:00:00Z".to_string(),
         };
         repo.add(&item)?;
     }
 
-    let grains = repo.list(Some("grain"), 100)?;
-    assert_eq!(grains.len(), 3);
+    let item = InventoryItem {
+        id: 0,
+        item_type: "yeast".to_string(),
+        item_name: "Yeast 1".to_string(),
+        quantity: Decimal::from(5),
+        unit: "packets".to_string(),
+        location: None,
+        purchase_date: None,
+        expiration_date: None,
+        cost: None,
+        notes: None,
+        created_at: "2025-01-01T00:00:00Z".to_string(),
+        updated_at: "2025-01-01T00:00:00Z".to_string(),
+    };
+    repo.add(&item)?;
 
-    let hops = repo.list(Some("hops"), 100)?;
-    assert_eq!(hops.len(), 2);
+    let honey_items = repo.list(Some("honey"), 100)?;
+    assert_eq!(honey_items.len(), 2);
 
-    let all = repo.list(None, 100)?;
-    assert_eq!(all.len(), 5);
+    let all_items = repo.list(None, 100)?;
+    assert_eq!(all_items.len(), 3);
 
     Ok(())
 }

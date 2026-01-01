@@ -1,8 +1,8 @@
 use rusqlite::Connection;
 use rust_decimal::Decimal;
 use std::str::FromStr;
-use mazerion_db::models::fruit::{Fruit, FruitRepository};
 use mazerion_db::repositories::fruit::FruitRepository;
+use mazerion_db::models::fruit::Fruit;
 use mazerion_db::schemas::fruits::FRUIT_SCHEMA;
 
 fn setup_test_db() -> Connection {

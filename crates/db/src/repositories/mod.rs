@@ -1,5 +1,3 @@
-// crates/db/src/repositories/mod.rs
-
 pub mod yeast;
 pub mod honey;
 pub mod hop;
@@ -18,3 +16,7 @@ pub mod nutrient;
 pub mod enzyme;
 pub mod bacteria;
 pub mod tannin;
+
+pub mod batch;
+pub mod recipe;
+pub mod inventory;

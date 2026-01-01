@@ -1,5 +1,3 @@
-// Inventory repository with proper Decimal handling
-
 use rusqlite::{params, Connection, OptionalExtension, Row};
 use rust_decimal::Decimal;
 use mazerion_core::{Error, Result};
@@ -16,7 +14,8 @@ impl<'a> InventoryRepository<'a> {
     }
 
     pub fn add(&self, item: &InventoryItem) -> Result<i64> {
-        item.validate()?;
+        item.validate()
+            .map_err(|e| Error::Validation(e))?;
 
         self.conn
             .execute(
@@ -35,7 +34,7 @@ impl<'a> InventoryRepository<'a> {
                     &item.notes,
                 ],
             )
-            .map_err(|e| Error::DatabaseError(format!("Failed to insert: {}", e)))?;
+            .map_err(|e| Error::DatabaseError(format!("Insert inventory: {}", e)))?;
 
         Ok(self.conn.last_insert_rowid())
     }
@@ -48,136 +47,134 @@ impl<'a> InventoryRepository<'a> {
                  purchase_date, expiration_date, cost, notes, created_at, updated_at
                  FROM inventory WHERE id = ?1",
             )
-            .map_err(|e| Error::DatabaseError(format!("Failed to prepare: {}", e)))?;
+            .map_err(|e| Error::DatabaseError(format!("Prepare query: {}", e)))?;
 
         let result = stmt
             .query_row([id], |row| Self::row_to_item(row))
             .optional()
-            .map_err(|e| Error::DatabaseError(format!("Failed to get: {}", e)))?;
+            .map_err(|e| Error::DatabaseError(format!("Get inventory: {}", e)))?;
 
         Ok(result)
     }
 
     pub fn list(&self, item_type: Option<&str>, limit: usize) -> Result<Vec<InventoryItem>> {
+        let capped_limit = limit.min(1000);
         let (query, params): (String, Vec<Box<dyn rusqlite::ToSql>>) = if let Some(itype) = item_type {
             (
                 "SELECT id, item_type, item_name, quantity, unit, location,
                  purchase_date, expiration_date, cost, notes, created_at, updated_at
                  FROM inventory WHERE item_type = ?1 ORDER BY item_name ASC LIMIT ?2".to_string(),
-                vec![Box::new(itype.to_string()), Box::new(limit as i64)],
+                vec![Box::new(itype.to_string()), Box::new(capped_limit as i64)],
             )
         } else {
             (
                 "SELECT id, item_type, item_name, quantity, unit, location,
                  purchase_date, expiration_date, cost, notes, created_at, updated_at
                  FROM inventory ORDER BY item_name ASC LIMIT ?1".to_string(),
-                vec![Box::new(limit as i64)],
+                vec![Box::new(capped_limit as i64)],
             )
         };
 
-        let mut stmt = self
-            .conn
-            .prepare(&query)
-            .map_err(|e| Error::DatabaseError(format!("Failed to prepare: {}", e)))?;
+        let mut stmt = self.conn.prepare(&query)
+            .map_err(|e| Error::DatabaseError(format!("Prepare list: {}", e)))?;
 
-        let params_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
+        let params_ref: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
+        let rows = stmt.query_map(&params_ref[..], |row| Self::row_to_item(row))
+            .map_err(|e| Error::DatabaseError(format!("Execute list: {}", e)))?;
 
-        let items = stmt
-            .query_map(params_refs.as_slice(), |row| Self::row_to_item(row))
-            .map_err(|e| Error::DatabaseError(format!("Query failed: {}", e)))?
-            .collect::<std::result::Result<Vec<_>, _>>()
-            .map_err(|e| Error::DatabaseError(format!("Parse failed: {}", e)))?;
+        let mut results = Vec::new();
+        for row_result in rows {
+            results.push(row_result.map_err(|e| Error::DatabaseError(format!("Row error: {}", e)))?);
+        }
+        Ok(results)
+    }
 
-        Ok(items)
+    pub fn search(&self, query: &str, limit: usize) -> Result<Vec<InventoryItem>> {
+        if query.trim().is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let search_pattern = format!("%{}%", query.trim());
+        let capped_limit = limit.min(1000);
+
+        let mut stmt = self.conn.prepare(
+            "SELECT id, item_type, item_name, quantity, unit, location,
+             purchase_date, expiration_date, cost, notes, created_at, updated_at
+             FROM inventory
+             WHERE item_name LIKE ?1 OR item_type LIKE ?1 OR location LIKE ?1
+             ORDER BY item_name ASC
+             LIMIT ?2"
+        ).map_err(|e| Error::DatabaseError(format!("Prepare search: {}", e)))?;
+
+        let rows = stmt.query_map(
+            params![search_pattern, capped_limit as i64],
+            |row| Self::row_to_item(row)
+        ).map_err(|e| Error::DatabaseError(format!("Execute search: {}", e)))?;
+
+        let mut results = Vec::new();
+        for row_result in rows {
+            results.push(row_result.map_err(|e| Error::DatabaseError(format!("Row error: {}", e)))?);
+        }
+        Ok(results)
     }
 
     pub fn update_quantity(&self, id: i64, quantity: Decimal) -> Result<()> {
-        if quantity < Decimal::ZERO || quantity > Decimal::from(1000000) {
-            return Err(Error::Validation("Invalid quantity".into()));
+        if quantity < Decimal::ZERO {
+            return Err(Error::Validation("Quantity cannot be negative".to_string()));
         }
 
-        let affected = self
-            .conn
-            .execute(
-                "UPDATE inventory SET quantity = ?1, updated_at = CURRENT_TIMESTAMP WHERE id = ?2",
-                params![quantity.to_string(), id],
-            )
-            .map_err(|e| Error::DatabaseError(format!("Update failed: {}", e)))?;
+        let updated_at = chrono::Utc::now().to_rfc3339();
 
-        if affected == 0 {
-            return Err(Error::Validation(format!("Item {} not found", id)));
+        let rows_affected = self.conn.execute(
+            "UPDATE inventory SET quantity = ?1, updated_at = ?2 WHERE id = ?3",
+            params![quantity.to_string(), updated_at, id]
+        ).map_err(|e| Error::DatabaseError(format!("Update quantity: {}", e)))?;
+
+        if rows_affected == 0 {
+            return Err(Error::DatabaseError(format!("Inventory item {} not found", id)));
         }
 
         Ok(())
     }
 
     pub fn delete(&self, id: i64) -> Result<()> {
-        let affected = self
-            .conn
-            .execute("DELETE FROM inventory WHERE id = ?1", params![id])
-            .map_err(|e| Error::DatabaseError(format!("Delete failed: {}", e)))?;
+        let rows_affected = self.conn.execute(
+            "DELETE FROM inventory WHERE id = ?1",
+            params![id]
+        ).map_err(|e| Error::DatabaseError(format!("Delete inventory: {}", e)))?;
 
-        if affected == 0 {
-            return Err(Error::Validation(format!("Item {} not found", id)));
+        if rows_affected == 0 {
+            return Err(Error::DatabaseError(format!("Inventory item {} not found", id)));
         }
 
         Ok(())
     }
 
-    pub fn search(&self, query: &str, limit: usize) -> Result<Vec<InventoryItem>> {
-        if query.len() > 200 {
-            return Err(Error::Validation("Query too long".into()));
-        }
+    pub fn count(&self) -> Result<u32> {
+        let count: i64 = self.conn.query_row(
+            "SELECT COUNT(*) FROM inventory",
+            [],
+            |row| row.get(0)
+        ).map_err(|e| Error::DatabaseError(format!("Count inventory: {}", e)))?;
 
-        let search_pattern = format!("%{}%", query);
-
-        let mut stmt = self
-            .conn
-            .prepare(
-                "SELECT id, item_type, item_name, quantity, unit, location,
-                 purchase_date, expiration_date, cost, notes, created_at, updated_at
-                 FROM inventory WHERE item_name LIKE ?1 ORDER BY item_name ASC LIMIT ?2",
-            )
-            .map_err(|e| Error::DatabaseError(format!("Prepare failed: {}", e)))?;
-
-        let items = stmt
-            .query_map(params![search_pattern, limit as i64], |row| Self::row_to_item(row))
-            .map_err(|e| Error::DatabaseError(format!("Search failed: {}", e)))?
-            .collect::<std::result::Result<Vec<_>, _>>()
-            .map_err(|e| Error::DatabaseError(format!("Parse failed: {}", e)))?;
-
-        Ok(items)
+        Ok(count as u32)
     }
 
     fn row_to_item(row: &Row) -> rusqlite::Result<InventoryItem> {
-        let qty_str: String = row.get(3)?;
-        let quantity = Decimal::from_str(&qty_str)
-            .map_err(|e| rusqlite::Error::FromSqlConversionFailure(
-                3,
-                rusqlite::types::Type::Text,
-                Box::new(e),
-            ))?;
-
-        let cost_str: Option<String> = row.get(8)?;
-        let cost = cost_str
-            .map(|s| Decimal::from_str(&s))
-            .transpose()
-            .map_err(|e| rusqlite::Error::FromSqlConversionFailure(
-                8,
-                rusqlite::types::Type::Text,
-                Box::new(e),
-            ))?;
+        fn parse_decimal(s: Option<String>) -> Option<Decimal> {
+            s.and_then(|s| Decimal::from_str(&s).ok())
+        }
 
         Ok(InventoryItem {
-            id: Some(row.get(0)?),
+            id: row.get(0)?,
             item_type: row.get(1)?,
             item_name: row.get(2)?,
-            quantity,
+            quantity: parse_decimal(Some(row.get::<_, String>(3)?)).unwrap(),
             unit: row.get(4)?,
             location: row.get(5)?,
             purchase_date: row.get(6)?,
             expiration_date: row.get(7)?,
-            cost,
+            cost: parse_decimal(row.get(8)?),
             notes: row.get(9)?,
             created_at: row.get(10)?,
             updated_at: row.get(11)?,

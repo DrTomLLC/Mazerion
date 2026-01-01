@@ -3,6 +3,7 @@
 /// Comprehensive water salt/mineral database for brewing water chemistry.
 /// Optimized for mobile performance with strategic indexing.
 /// HARDENED: Multiple CHECK constraints, composite indexes, comprehensive tests.
+use crate::schemas::water_salts::WATER_SALT_SCHEMA;
 
 pub const ACID_SCHEMA: &str = "
 -- Water salts encyclopedia

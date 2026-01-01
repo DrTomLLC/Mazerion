@@ -18,3 +18,6 @@ rusqlite = { version = "0.38.0", features = ["bundled"] }  # NOT optional anymor
 rust_decimal = { workspace = true }
 serde = { version = "1.0.228", features = ["derive"] }
 chrono = "0.4.42"
+rust_decimal_macros = "1.39.0"
+tempfile = "3.24.0"
+anyhow = "1.0.100"

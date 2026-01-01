@@ -65,7 +65,7 @@ fn test_get_by_id() {
 #[test]
 fn test_list_hops() {
     let conn = setup_test_db();
-    let mut hop1 = create_test_hop();
+    let hop1 = create_test_hop();
     let mut hop2 = create_test_hop();
     hop2.name = "Citra".to_string();
 

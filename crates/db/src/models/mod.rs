@@ -51,3 +51,12 @@ pub use bacteria::Bacteria;
 
 pub mod tannin;
 pub use tannin::Tannin;
+
+pub mod batch;
+pub use batch::{Batch, BatchReading, BatchStatus};
+
+pub mod recipe;
+pub use recipe::Recipe;
+
+pub mod inventory;
+pub use inventory::InventoryItem;
