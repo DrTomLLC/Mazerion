@@ -1,73 +1,117 @@
-// Yeast nutrient encyclopedia schema
+/// Nutrient Encyclopedia Schema
+///
+/// Comprehensive yeast nutrient database for fermentation management.
+/// Optimized for mobile performance with strategic indexing.
+/// HARDENED: Multiple CHECK constraints, composite indexes, comprehensive tests.
 
-use rusqlite::Connection;
-use mazerion_core::{Error, Result};
+pub const NUTRIENT_SCHEMA: &str = "
+-- Nutrients encyclopedia
+-- Professional brewing yeast nutrient database with security hardening
+CREATE TABLE IF NOT EXISTS nutrients (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
 
-pub fn create_nutrient_tables(conn: &Connection) -> Result<()> {
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS nutrients (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
+    -- Core identification
+    name TEXT NOT NULL,                      -- e.g., 'Fermaid K', 'DAP', 'Go-Ferm'
+    nutrient_type TEXT NOT NULL,             -- DAP, fermaid, yeast_hulls, urea, complete, other
+    manufacturer TEXT,                       -- Brand/producer, NULL if unknown
 
-            -- Source & Type
-            manufacturer TEXT,
-            nutrient_type TEXT,
-            organic_inorganic TEXT,
+    -- Nutrient composition (TEXT for Decimal precision) - percentage content
+    nitrogen_content TEXT,                   -- N% 0-100, NULL if unknown
+    phosphorus_content TEXT,                 -- P% 0-100, NULL if unknown
+    potassium_content TEXT,                  -- K% 0-100, NULL if unknown
+    typical_dosage_grams_per_gallon TEXT,    -- Recommended usage 0-10 g/gal
 
-            -- Composition
-            composition TEXT,
-            nitrogen_content TEXT,
-            nitrogen_type TEXT,
-            yan_contribution TEXT,
-            vitamin_content TEXT,
-            mineral_content TEXT,
-            amino_acid_profile TEXT,
+    -- Professional guidance (JSON arrays for structured data)
+    usage_notes TEXT,                        -- Professional brewing notes and warnings
+    best_suited_styles TEXT,                 -- JSON array of beverage styles
+    compatible_styles TEXT,                  -- JSON array of compatible styles
+    timing TEXT,                             -- When to add (pitch, 24h, 48h, etc)
 
-            -- Usage Guidelines
-            typical_dosage_per_gallon TEXT,
-            typical_dosage_per_liter TEXT,
-            max_recommended_dose TEXT,
+    -- Metadata
+    created_at TEXT NOT NULL,                -- ISO 8601 timestamp
+    updated_at TEXT NOT NULL,                -- ISO 8601 timestamp
 
-            -- Timing Protocols
-            rehydration_usage TEXT,
-            pitch_usage TEXT,
-            lag_phase_usage TEXT,
-            active_fermentation_usage TEXT,
-            staggered_addition_schedule TEXT,
+    -- Validation constraints (security hardening)
+    CHECK(nutrient_type IN ('DAP', 'fermaid', 'yeast_hulls', 'urea', 'complete', 'other')),
+    CHECK(name != ''),                       -- Prevent empty names
+    CHECK(length(name) <= 200)               -- Prevent abuse
+);
 
-            -- Applications
-            recommended_beer_styles TEXT,
-            recommended_mead_styles TEXT,
-            recommended_wine_styles TEXT,
-            high_gravity_fermentation TEXT,
+-- Performance indexes for mobile-first queries
+CREATE INDEX IF NOT EXISTS idx_nutrients_name ON nutrients(name);
+CREATE INDEX IF NOT EXISTS idx_nutrients_type ON nutrients(nutrient_type);
+CREATE INDEX IF NOT EXISTS idx_nutrients_type_name ON nutrients(nutrient_type, name);
+";
 
-            -- Effects
-            fermentation_speed_impact TEXT,
-            attenuation_impact TEXT,
-            flavor_impact TEXT,
-            off_flavor_prevention TEXT,
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rusqlite::Connection;
 
-            -- Specific Protocols
-            tosna_protocol TEXT,
-            tosna_20_schedule TEXT,
-            tosna_30_schedule TEXT,
+    #[test]
+    fn test_schema_creates_successfully() {
+        let conn = Connection::open_in_memory().expect("Failed to create in-memory database");
+        conn.execute_batch(NUTRIENT_SCHEMA).expect("Failed to execute schema");
+        let table_exists: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='nutrients'", [], |row| row.get(0))
+            .expect("Failed to query table existence");
+        assert_eq!(table_exists, 1);
+    }
 
-            -- Professional Notes
-            brewmaster_notes TEXT,
-            mazer_notes TEXT,
-            winemaker_notes TEXT,
-            description TEXT,
+    #[test]
+    fn test_schema_has_correct_indexes() {
+        let conn = Connection::open_in_memory().expect("Failed to create in-memory database");
+        conn.execute_batch(NUTRIENT_SCHEMA).expect("Failed to execute schema");
+        let index_count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND tbl_name='nutrients' AND name LIKE 'idx_%'", [], |row| row.get(0))
+            .expect("Failed to query index count");
+        assert_eq!(index_count, 3);
+    }
 
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-        )",
-        [],
-    ).map_err(|e| Error::DatabaseError(format!("Create nutrients: {}", e)))?;
+    #[test]
+    fn test_schema_enforces_type_constraint() {
+        let conn = Connection::open_in_memory().expect("Failed to create in-memory database");
+        conn.execute_batch(NUTRIENT_SCHEMA).expect("Failed to execute schema");
+        let result = conn.execute("INSERT INTO nutrients (name, nutrient_type, created_at, updated_at) VALUES (?, ?, ?, ?)",
+                                  rusqlite::params!["Test", "invalid", "2025-01-01", "2025-01-01"]);
+        assert!(result.is_err());
+    }
 
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_nutrient_type ON nutrients(nutrient_type)",
-        [],
-    ).map_err(|e| Error::DatabaseError(format!("{}", e)))?;
+    #[test]
+    fn test_schema_accepts_valid_types() {
+        let conn = Connection::open_in_memory().expect("Failed to create in-memory database");
+        conn.execute_batch(NUTRIENT_SCHEMA).expect("Failed to execute schema");
+        for nutrient_type in vec!["DAP", "fermaid", "yeast_hulls", "urea", "complete", "other"] {
+            let result = conn.execute("INSERT INTO nutrients (name, nutrient_type, created_at, updated_at) VALUES (?, ?, ?, ?)",
+                                      rusqlite::params![format!("Test {}", nutrient_type), nutrient_type, "2025-01-01", "2025-01-01"]);
+            assert!(result.is_ok());
+        }
+    }
 
-    Ok(())
+    #[test]
+    fn test_schema_requires_non_null_fields() {
+        let conn = Connection::open_in_memory().expect("Failed to create in-memory database");
+        conn.execute_batch(NUTRIENT_SCHEMA).expect("Failed to execute schema");
+        let result = conn.execute("INSERT INTO nutrients (nutrient_type, created_at, updated_at) VALUES (?, ?, ?)",
+                                  rusqlite::params!["DAP", "2025-01-01", "2025-01-01"]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_schema_rejects_empty_name() {
+        let conn = Connection::open_in_memory().expect("Failed to create in-memory database");
+        conn.execute_batch(NUTRIENT_SCHEMA).expect("Failed to execute schema");
+        let result = conn.execute("INSERT INTO nutrients (name, nutrient_type, created_at, updated_at) VALUES (?, ?, ?, ?)",
+                                  rusqlite::params!["", "DAP", "2025-01-01", "2025-01-01"]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_schema_rejects_oversized_name() {
+        let conn = Connection::open_in_memory().expect("Failed to create in-memory database");
+        conn.execute_batch(NUTRIENT_SCHEMA).expect("Failed to execute schema");
+        let result = conn.execute("INSERT INTO nutrients (name, nutrient_type, created_at, updated_at) VALUES (?, ?, ?, ?)",
+                                  rusqlite::params!["A".repeat(201), "DAP", "2025-01-01", "2025-01-01"]);
+        assert!(result.is_err());
+    }
 }

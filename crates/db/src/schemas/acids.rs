@@ -1,64 +1,129 @@
-// Acid encyclopedia schema
+/// Water Salt Encyclopedia Schema
+///
+/// Comprehensive water salt/mineral database for brewing water chemistry.
+/// Optimized for mobile performance with strategic indexing.
+/// HARDENED: Multiple CHECK constraints, composite indexes, comprehensive tests.
 
-use rusqlite::Connection;
-use mazerion_core::{Error, Result};
+pub const ACID_SCHEMA: &str = "
+-- Water salts encyclopedia
+-- Professional brewing water chemistry salts database with security hardening
+CREATE TABLE IF NOT EXISTS water_salts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
 
-pub fn create_acid_tables(conn: &Connection) -> Result<()> {
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS acids (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
+    -- Core identification
+    name TEXT NOT NULL,                      -- e.g., 'Gypsum (CaSO₄)', 'Calcium Chloride'
+    salt_type TEXT NOT NULL,                 -- gypsum, calcium_chloride, epsom, baking_soda, chalk, table_salt, other
+    chemical_formula TEXT,                   -- e.g., 'CaSO₄·2H₂O', NULL if unknown
+    manufacturer TEXT,                       -- Brand/producer, NULL if unknown
 
-            -- Chemistry
-            acid_type TEXT,
-            chemical_formula TEXT,
-            concentration TEXT,
-            pka_value TEXT,
+    -- Ion contributions (TEXT for Decimal precision) - ppm per gram
+    calcium_contribution TEXT,               -- Ca²⁺ ppm/g, 0-500, NULL if unknown
+    magnesium_contribution TEXT,             -- Mg²⁺ ppm/g, 0-500, NULL if unknown
+    sodium_contribution TEXT,                -- Na⁺ ppm/g, 0-500, NULL if unknown
+    chloride_contribution TEXT,              -- Cl⁻ ppm/g, 0-500, NULL if unknown
+    sulfate_contribution TEXT,               -- SO₄²⁻ ppm/g, 0-500, NULL if unknown
+    bicarbonate_contribution TEXT,           -- HCO₃⁻ ppm/g, 0-500, NULL if unknown
 
-            -- pH Impact
-            ph_reduction_rate TEXT,
-            buffering_capacity TEXT,
+    -- Usage characteristics (TEXT for Decimal precision)
+    typical_dosage_grams_per_gallon TEXT,    -- Recommended usage 0-10 g/gal
+    solubility TEXT,                         -- Solubility description
 
-            -- Usage Guidelines
-            typical_usage_rate_mash TEXT,
-            typical_usage_rate_sparge TEXT,
-            typical_usage_rate_kettle TEXT,
-            typical_usage_rate_fermentation TEXT,
-            optimal_usage_timing TEXT,
+    -- Professional guidance (JSON arrays for structured data)
+    usage_notes TEXT,                        -- Professional brewing notes and warnings
+    flavor_impact TEXT,                      -- Description of flavor contributions
+    best_suited_styles TEXT,                 -- JSON array of beverage styles
+    compatible_styles TEXT,                  -- JSON array of compatible styles
 
-            -- Sensory Impact
-            flavor_contribution TEXT,
-            aroma_contribution TEXT,
-            perceived_acidity TEXT,
-            tartness_character TEXT,
+    -- Metadata
+    created_at TEXT NOT NULL,                -- ISO 8601 timestamp
+    updated_at TEXT NOT NULL,                -- ISO 8601 timestamp
 
-            -- Applications
-            mash_acidification TEXT,
-            sparge_acidification TEXT,
-            kettle_souring TEXT,
-            post_fermentation_adjustment TEXT,
+    -- Validation constraints (security hardening)
+    CHECK(salt_type IN ('gypsum', 'calcium_chloride', 'epsom', 'baking_soda', 'chalk', 'table_salt', 'other')),
+    CHECK(name != ''),                       -- Prevent empty names
+    CHECK(length(name) <= 200)               -- Prevent abuse
+);
 
-            -- Safety
-            safety_precautions TEXT,
-            handling_requirements TEXT,
-            protective_equipment TEXT,
-            first_aid TEXT,
+-- Performance indexes for mobile-first queries
+-- Index on name for search operations (most common query)
+CREATE INDEX IF NOT EXISTS idx_water_salts_name ON water_salts(name);
 
-            -- Professional Notes
-            brewmaster_notes TEXT,
-            chemistry_notes TEXT,
-            description TEXT,
+-- Index on type for filtering by category
+CREATE INDEX IF NOT EXISTS idx_water_salts_type ON water_salts(salt_type);
 
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-        )",
-        [],
-    ).map_err(|e| Error::DatabaseError(format!("Create acids: {}", e)))?;
+-- Composite index for type + name sorting (common query pattern)
+CREATE INDEX IF NOT EXISTS idx_water_salts_type_name ON water_salts(salt_type, name);
+";
 
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_acid_type ON acids(acid_type)",
-        [],
-    ).map_err(|e| Error::DatabaseError(format!("{}", e)))?;
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rusqlite::Connection;
 
-    Ok(())
+    #[test]
+    fn test_schema_creates_successfully() {
+        let conn = Connection::open_in_memory().expect("Failed to create in-memory database");
+        conn.execute_batch(WATER_SALT_SCHEMA).expect("Failed to execute schema");
+        let table_exists: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='water_salts'", [], |row| row.get(0))
+            .expect("Failed to query table existence");
+        assert_eq!(table_exists, 1, "Water salts table should exist");
+    }
+
+    #[test]
+    fn test_schema_has_correct_indexes() {
+        let conn = Connection::open_in_memory().expect("Failed to create in-memory database");
+        conn.execute_batch(WATER_SALT_SCHEMA).expect("Failed to execute schema");
+        let index_count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND tbl_name='water_salts' AND name LIKE 'idx_%'", [], |row| row.get(0))
+            .expect("Failed to query index count");
+        assert_eq!(index_count, 3, "Should have 3 performance indexes including composite");
+    }
+
+    #[test]
+    fn test_schema_enforces_type_constraint() {
+        let conn = Connection::open_in_memory().expect("Failed to create in-memory database");
+        conn.execute_batch(WATER_SALT_SCHEMA).expect("Failed to execute schema");
+        let result = conn.execute("INSERT INTO water_salts (name, salt_type, created_at, updated_at) VALUES (?, ?, ?, ?)",
+                                  rusqlite::params!["Test", "invalid", "2025-01-01", "2025-01-01"]);
+        assert!(result.is_err(), "Should reject invalid salt type");
+    }
+
+    #[test]
+    fn test_schema_accepts_valid_types() {
+        let conn = Connection::open_in_memory().expect("Failed to create in-memory database");
+        conn.execute_batch(WATER_SALT_SCHEMA).expect("Failed to execute schema");
+        for salt_type in vec!["gypsum", "calcium_chloride", "epsom", "baking_soda", "chalk", "table_salt", "other"] {
+            let result = conn.execute("INSERT INTO water_salts (name, salt_type, created_at, updated_at) VALUES (?, ?, ?, ?)",
+                                      rusqlite::params![format!("Test {}", salt_type), salt_type, "2025-01-01", "2025-01-01"]);
+            assert!(result.is_ok(), "Should accept valid type: {}", salt_type);
+        }
+    }
+
+    #[test]
+    fn test_schema_requires_non_null_fields() {
+        let conn = Connection::open_in_memory().expect("Failed to create in-memory database");
+        conn.execute_batch(WATER_SALT_SCHEMA).expect("Failed to execute schema");
+        let result = conn.execute("INSERT INTO water_salts (salt_type, created_at, updated_at) VALUES (?, ?, ?)",
+                                  rusqlite::params!["gypsum", "2025-01-01", "2025-01-01"]);
+        assert!(result.is_err(), "Should require name field");
+    }
+
+    #[test]
+    fn test_schema_rejects_empty_name() {
+        let conn = Connection::open_in_memory().expect("Failed to create in-memory database");
+        conn.execute_batch(WATER_SALT_SCHEMA).expect("Failed to execute schema");
+        let result = conn.execute("INSERT INTO water_salts (name, salt_type, created_at, updated_at) VALUES (?, ?, ?, ?)",
+                                  rusqlite::params!["", "gypsum", "2025-01-01", "2025-01-01"]);
+        assert!(result.is_err(), "Should reject empty name");
+    }
+
+    #[test]
+    fn test_schema_rejects_oversized_name() {
+        let conn = Connection::open_in_memory().expect("Failed to create in-memory database");
+        conn.execute_batch(WATER_SALT_SCHEMA).expect("Failed to execute schema");
+        let result = conn.execute("INSERT INTO water_salts (name, salt_type, created_at, updated_at) VALUES (?, ?, ?, ?)",
+                                  rusqlite::params!["A".repeat(201), "gypsum", "2025-01-01", "2025-01-01"]);
+        assert!(result.is_err(), "Should reject names longer than 200 characters");
+    }
 }

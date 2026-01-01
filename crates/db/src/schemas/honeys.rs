@@ -1,141 +1,221 @@
-// Honey encyclopedia schema
+/// Honey Varietal Encyclopedia Schema
+///
+/// Comprehensive honey database with professional beekeeping and brewing standards.
+/// Optimized for mobile performance with strategic indexing.
 
-use rusqlite::Connection;
-use mazerion_core::{Error, Result};
+pub const HONEY_SCHEMA: &str = "
+-- Honey varieties encyclopedia
+-- Professional-level honey varietal database
+CREATE TABLE IF NOT EXISTS honeys (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
 
-pub fn create_honey_tables(conn: &Connection) -> Result<()> {
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS honey_varieties (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
+    -- Core identification
+    name TEXT NOT NULL,                      -- e.g., 'Orange Blossom', 'Wildflower'
+    floral_source TEXT NOT NULL,             -- e.g., 'Citrus sinensis', 'Mixed wildflowers'
+    origin TEXT,                             -- Geographic origin/region
+    color TEXT NOT NULL,                     -- Honey color classification
 
-            -- Provenance & Terroir
-            botanical_source TEXT,
-            latin_name TEXT,
-            origin_region TEXT,
-            origin_country TEXT,
-            terroir_notes TEXT,
-            harvest_elevation TEXT,
-            harvest_season TEXT,
-            climate_influence TEXT,
+    -- Composition (TEXT for Decimal precision)
+    moisture_content TEXT,                   -- Percentage, typically 15-20%
+    fructose_percentage TEXT,                -- Percentage, typically 35-45%
+    glucose_percentage TEXT,                 -- Percentage, typically 25-35%
+    other_sugars_percentage TEXT,            -- Sucrose, maltose, etc.
+    specific_gravity TEXT,                   -- Typically 1.410-1.450
+    ph TEXT,                                 -- Typically 3.5-4.5
 
-            -- Appearance
-            color_lovibond TEXT,
-            color_description TEXT,
-            clarity TEXT,
-            viscosity TEXT,
-            crystallization_tendency TEXT,
-            crystallization_rate TEXT,
+    -- Sensory characteristics
+    flavor_intensity TEXT NOT NULL,          -- delicate, mild, moderate, strong, robust
+    flavor_profile TEXT,                     -- JSON array, professional sommelier vocabulary
+    aroma_profile TEXT,                      -- JSON array, professional aroma descriptors
 
-            -- Chemical Composition
-            moisture_content TEXT,
-            fructose_percentage TEXT,
-            glucose_percentage TEXT,
-            sucrose_percentage TEXT,
-            maltose_percentage TEXT,
-            ph_range TEXT,
-            acidity TEXT,
-            enzyme_content TEXT,
-            mineral_content TEXT,
-            pollen_percentage TEXT,
+    -- Physical properties
+    crystallization_tendency TEXT,           -- rapid, moderate, slow, very slow
 
-            -- Sensory Profile (Professional Tasting)
-            aroma_intensity TEXT,
-            aroma_primary TEXT,
-            aroma_secondary TEXT,
-            aroma_tertiary TEXT,
-            aroma_complexity TEXT,
-            flavor_intensity TEXT,
-            flavor_primary TEXT,
-            flavor_secondary TEXT,
-            flavor_tertiary TEXT,
-            flavor_complexity TEXT,
-            sweetness_level TEXT,
-            acidity_perception TEXT,
-            bitterness_level TEXT,
-            astringency TEXT,
-            mouthfeel TEXT,
-            finish_length TEXT,
-            finish_character TEXT,
+    -- Usage information
+    best_suited_styles TEXT,                 -- JSON array of beverage styles
+    usage_notes TEXT,                        -- Professional brewing notes
+    sensory_notes TEXT,                      -- Master-level sensory evaluation
+    harvest_season TEXT,                     -- e.g., 'Spring', 'Summer', 'Fall'
 
-            -- Fermentation Properties
-            fermentability TEXT,
-            typical_gravity_contribution TEXT,
-            nutrient_profile TEXT,
-            staggered_nutrition_requirements TEXT,
+    -- Classification
+    is_monofloral INTEGER NOT NULL DEFAULT 1, -- Boolean: single floral source
+    is_raw INTEGER,                          -- Boolean: unpasteurized/raw
 
-            -- Professional Pairing
-            cheese_pairings TEXT,
-            meat_pairings TEXT,
-            dessert_pairings TEXT,
-            wine_pairings TEXT,
-            spirit_pairings TEXT,
-            beer_pairings TEXT,
-            mead_style_pairings TEXT,
-            seasonal_pairings TEXT,
-            temperature_serving TEXT,
+    -- Compatibility
+    compatible_yeasts TEXT,                  -- JSON array of yeast types
 
-            -- Culinary Applications
-            cooking_applications TEXT,
-            baking_suitability TEXT,
-            marinade_usage TEXT,
-            glaze_usage TEXT,
-            sauce_usage TEXT,
+    -- Metadata
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
 
-            -- Quality & Grading
-            grade TEXT,
-            quality_indicators TEXT,
-            adulteration_risks TEXT,
-            authenticity_markers TEXT,
-            certification TEXT,
+    -- Validation constraints
+    CHECK(color IN (
+        'extra white', 'white', 'extra light amber', 'light amber',
+        'amber', 'dark amber', 'dark'
+    )),
+    CHECK(flavor_intensity IN ('delicate', 'mild', 'moderate', 'strong', 'robust')),
+    CHECK(crystallization_tendency IS NULL OR crystallization_tendency IN (
+        'rapid', 'moderate', 'slow', 'very slow'
+    )),
+    CHECK(is_monofloral IN (0, 1)),
+    CHECK(is_raw IS NULL OR is_raw IN (0, 1))
+);
 
-            -- Sourcing & Economics
-            rarity TEXT,
-            price_range TEXT,
-            availability TEXT,
-            best_producers TEXT,
-            sustainable_sourcing TEXT,
+-- Performance indexes for mobile-first queries
+-- Index on name for search and sorting
+CREATE INDEX IF NOT EXISTS idx_honeys_name ON honeys(name);
 
-            -- Health & Nutrition
-            medicinal_properties TEXT,
-            antioxidant_content TEXT,
-            antibacterial_properties TEXT,
-            glycemic_index TEXT,
-            nutritional_profile TEXT,
-            health_benefits TEXT,
-            allergen_info TEXT,
+-- Index on color for filtering by color category
+CREATE INDEX IF NOT EXISTS idx_honeys_color ON honeys(color);
 
-            -- Storage & Aging
-            storage_requirements TEXT,
-            optimal_storage_temp TEXT,
-            aging_potential TEXT,
-            aging_changes TEXT,
-            shelf_life TEXT,
+-- Index on flavor intensity for filtering by intensity
+CREATE INDEX IF NOT EXISTS idx_honeys_intensity ON honeys(flavor_intensity);
 
-            -- Professional Notes
-            chef_notes TEXT,
-            sommelier_notes TEXT,
-            mazer_notes TEXT,
-            historical_significance TEXT,
-            cultural_context TEXT,
-            description TEXT,
-            tasting_notes TEXT,
+-- Index on monofloral classification
+CREATE INDEX IF NOT EXISTS idx_honeys_monofloral ON honeys(is_monofloral);
 
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-        )",
-        [],
-    ).map_err(|e| Error::DatabaseError(format!("Create honey_varieties: {}", e)))?;
+-- Composite index for color + intensity (common query pattern)
+CREATE INDEX IF NOT EXISTS idx_honeys_color_intensity ON honeys(color, flavor_intensity);
+";
 
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_honey_origin ON honey_varieties(origin_country)",
-        [],
-    ).map_err(|e| Error::DatabaseError(format!("{}", e)))?;
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rusqlite::Connection;
 
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_honey_botanical ON honey_varieties(botanical_source)",
-        [],
-    ).map_err(|e| Error::DatabaseError(format!("{}", e)))?;
+    #[test]
+    fn test_schema_creates_successfully() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(HONEY_SCHEMA).unwrap();
 
-    Ok(())
+        // Verify table exists
+        let table_exists: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='honeys'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+
+        assert_eq!(table_exists, 1, "Honeys table should exist");
+    }
+
+    #[test]
+    fn test_schema_has_correct_indexes() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(HONEY_SCHEMA).unwrap();
+
+        // Verify all indexes exist
+        let index_count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master
+                 WHERE type='index'
+                 AND tbl_name='honeys'
+                 AND name LIKE 'idx_%'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+
+        assert_eq!(index_count, 5, "Should have 5 performance indexes");
+    }
+
+    #[test]
+    fn test_schema_enforces_color_constraint() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(HONEY_SCHEMA).unwrap();
+
+        // Try to insert invalid color
+        let result = conn.execute(
+            "INSERT INTO honeys (
+                name, floral_source, color, flavor_intensity,
+                created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?)",
+            rusqlite::params![
+                "Test Honey",
+                "Test Flower",
+                "purple",  // Invalid color
+                "mild",
+                "2025-01-01",
+                "2025-01-01",
+            ],
+        );
+
+        assert!(result.is_err(), "Should reject invalid color");
+    }
+
+    #[test]
+    fn test_schema_enforces_intensity_constraint() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(HONEY_SCHEMA).unwrap();
+
+        // Try to insert invalid intensity
+        let result = conn.execute(
+            "INSERT INTO honeys (
+                name, floral_source, color, flavor_intensity,
+                created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?)",
+            rusqlite::params![
+                "Test Honey",
+                "Test Flower",
+                "white",
+                "extreme",  // Invalid intensity
+                "2025-01-01",
+                "2025-01-01",
+            ],
+        );
+
+        assert!(result.is_err(), "Should reject invalid flavor intensity");
+    }
+
+    #[test]
+    fn test_schema_enforces_crystallization_constraint() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(HONEY_SCHEMA).unwrap();
+
+        // Try to insert invalid crystallization
+        let result = conn.execute(
+            "INSERT INTO honeys (
+                name, floral_source, color, flavor_intensity,
+                crystallization_tendency, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            rusqlite::params![
+                "Test Honey",
+                "Test Flower",
+                "white",
+                "mild",
+                "instant",  // Invalid crystallization
+                "2025-01-01",
+                "2025-01-01",
+            ],
+        );
+
+        assert!(result.is_err(), "Should reject invalid crystallization tendency");
+    }
+
+    #[test]
+    fn test_schema_accepts_valid_data() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(HONEY_SCHEMA).unwrap();
+
+        // Insert valid honey
+        let result = conn.execute(
+            "INSERT INTO honeys (
+                name, floral_source, color, flavor_intensity,
+                is_monofloral, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            rusqlite::params![
+                "Orange Blossom",
+                "Citrus sinensis",
+                "white",
+                "mild",
+                1,
+                "2025-01-01",
+                "2025-01-01",
+            ],
+        );
+
+        assert!(result.is_ok(), "Should accept valid data");
+        assert_eq!(result.unwrap(), 1, "Should insert one row");
+    }
 }

@@ -1,116 +1,116 @@
-// Hop encyclopedia schema
+/// Hop Variety Encyclopedia Schema
+///
+/// Comprehensive hop database with professional brewing standards.
+/// Optimized for mobile performance with strategic indexing.
 
-use rusqlite::Connection;
-use mazerion_core::{Error, Result};
+pub const HOP_SCHEMA: &str = "
+-- Hop varieties encyclopedia
+-- Professional-level hop database
+CREATE TABLE IF NOT EXISTS hops (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
 
-pub fn create_hop_tables(conn: &Connection) -> Result<()> {
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS hop_varieties (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
+    -- Core identification
+    name TEXT NOT NULL,                      -- e.g., 'Cascade', 'Hallertau'
+    origin TEXT NOT NULL,                    -- Country of origin
+    hop_type TEXT NOT NULL,                  -- bittering, aroma, dual-purpose
 
-            -- Classification & Origin
-            hop_type TEXT,
-            lineage TEXT,
-            origin_country TEXT,
-            growing_region TEXT,
-            terroir_characteristics TEXT,
+    -- Acid composition (TEXT for Decimal precision)
+    alpha_acid TEXT,                         -- Percentage, typically 3-20%
+    beta_acid TEXT,                          -- Percentage, typically 2-10%
+    cohumulone TEXT,                         -- Percentage of alpha acids
 
-            -- Chemical Analysis (Professional Grade)
-            alpha_acid_min TEXT,
-            alpha_acid_max TEXT,
-            alpha_acid_typical TEXT,
-            beta_acid_min TEXT,
-            beta_acid_max TEXT,
-            beta_acid_typical TEXT,
-            cohumulone_percentage TEXT,
-            alpha_beta_ratio TEXT,
+    -- Oil composition (TEXT for Decimal precision)
+    total_oil TEXT,                          -- mL/100g, typically 0.5-3.0
+    myrcene TEXT,                            -- Percentage of total oils
+    humulene TEXT,                           -- Percentage of total oils
+    caryophyllene TEXT,                      -- Percentage of total oils
+    farnesene TEXT,                          -- Percentage of total oils
 
-            -- Essential Oils (Complete Profile)
-            total_oils_ml_per_100g TEXT,
-            myrcene_percentage TEXT,
-            humulene_percentage TEXT,
-            caryophyllene_percentage TEXT,
-            farnesene_percentage TEXT,
-            linalool_percentage TEXT,
-            geraniol_percentage TEXT,
-            other_oils TEXT,
-            oil_composition_notes TEXT,
+    -- Professional sensory profiles (JSON arrays)
+    flavor_profile TEXT,                     -- Master Cicerone vocabulary
+    aroma_profile TEXT,                      -- Professional aroma descriptors
 
-            -- Sensory Profile (Cicerone Level)
-            aroma_intensity TEXT,
-            aroma_primary TEXT,
-            aroma_secondary TEXT,
-            aroma_tertiary TEXT,
-            aroma_descriptors TEXT,
-            flavor_intensity TEXT,
-            flavor_primary TEXT,
-            flavor_secondary TEXT,
-            flavor_tertiary TEXT,
-            flavor_descriptors TEXT,
-            bitterness_quality TEXT,
+    -- Usage information
+    substitutes TEXT,                        -- JSON array of substitute hops
+    best_suited_styles TEXT,                 -- JSON array of beer styles
+    usage_notes TEXT,                        -- Professional brewing notes
+    sensory_notes TEXT,                      -- Master-level sensory evaluation
+    typical_usage TEXT,                      -- Common usage method
+    storage_stability TEXT,                  -- Storage characteristics
+    compatible_styles TEXT,                  -- JSON array of compatible styles
 
-            -- Professional Usage
-            typical_usage TEXT,
-            bittering_potential TEXT,
-            aroma_potential TEXT,
-            dual_purpose_rating TEXT,
-            optimal_addition_timing TEXT,
-            whirlpool_characteristics TEXT,
-            dry_hop_characteristics TEXT,
-            biotransformation_potential TEXT,
+    -- Metadata
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
 
-            -- Beer Style Pairing
-            recommended_styles TEXT,
-            classic_beer_examples TEXT,
-            emerging_applications TEXT,
+    -- Validation constraints
+    CHECK(hop_type IN ('bittering', 'aroma', 'dual-purpose')),
+    CHECK(typical_usage IS NULL OR typical_usage IN (
+        'bittering', 'aroma', 'dry hop', 'whirlpool', 'first wort'
+    )),
+    CHECK(storage_stability IS NULL OR storage_stability IN (
+        'excellent', 'good', 'fair', 'poor'
+    ))
+);
 
-            -- Food & Beverage Pairing
-            food_pairings TEXT,
-            cheese_pairings TEXT,
-            spirit_pairings TEXT,
-            cuisine_pairings TEXT,
+-- Performance indexes for mobile-first queries
+CREATE INDEX IF NOT EXISTS idx_hops_name ON hops(name);
+CREATE INDEX IF NOT EXISTS idx_hops_type ON hops(hop_type);
+CREATE INDEX IF NOT EXISTS idx_hops_origin ON hops(origin);
+CREATE INDEX IF NOT EXISTS idx_hops_type_origin ON hops(hop_type, origin);
+";
 
-            -- Agricultural Data
-            harvest_season TEXT,
-            typical_yield TEXT,
-            growing_difficulty TEXT,
-            disease_resistance TEXT,
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rusqlite::Connection;
 
-            -- Quality & Storage
-            storage_stability_index TEXT,
-            optimal_storage_temp TEXT,
-            optimal_storage_conditions TEXT,
-            degradation_rate TEXT,
-            shelf_life TEXT,
+    #[test]
+    fn test_schema_creates_successfully() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(HOP_SCHEMA).unwrap();
 
-            -- Substitution & Blending
-            substitutes TEXT,
-            complementary_hops TEXT,
-            blending_suggestions TEXT,
+        let table_exists: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='hops'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
 
-            -- Professional Notes
-            brewmaster_notes TEXT,
-            historical_significance TEXT,
-            regional_traditions TEXT,
-            description TEXT,
-            tasting_notes TEXT,
+        assert_eq!(table_exists, 1);
+    }
 
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-        )",
-        [],
-    ).map_err(|e| Error::DatabaseError(format!("Create hop_varieties: {}", e)))?;
+    #[test]
+    fn test_schema_has_correct_indexes() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(HOP_SCHEMA).unwrap();
 
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_hop_type ON hop_varieties(hop_type)",
-        [],
-    ).map_err(|e| Error::DatabaseError(format!("{}", e)))?;
+        let index_count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master
+                 WHERE type='index'
+                 AND tbl_name='hops'
+                 AND name LIKE 'idx_%'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
 
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_hop_origin ON hop_varieties(origin_country)",
-        [],
-    ).map_err(|e| Error::DatabaseError(format!("{}", e)))?;
+        assert_eq!(index_count, 4);
+    }
 
-    Ok(())
+    #[test]
+    fn test_schema_enforces_type_constraint() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(HOP_SCHEMA).unwrap();
+
+        let result = conn.execute(
+            "INSERT INTO hops (name, origin, hop_type, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?)",
+            rusqlite::params!["Test", "USA", "invalid", "2025-01-01", "2025-01-01"],
+        );
+
+        assert!(result.is_err());
+    }
 }

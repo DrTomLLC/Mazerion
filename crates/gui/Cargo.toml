@@ -21,3 +21,7 @@ state = "0.6.0"
 unwrap_used = "deny"
 expect_used = "deny"
 panic = "deny"
+
+[[bin]]
+name = "mazerion-gui"
+path = "src/main.rs"

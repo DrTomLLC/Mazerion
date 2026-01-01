@@ -1,73 +1,120 @@
-// Bacteria culture encyclopedia schema
+/// Bacteria Encyclopedia Schema
+///
+/// Comprehensive bacteria database for sour fermentation and flavor development.
+/// Optimized for mobile performance with strategic indexing.
+/// HARDENED: Multiple CHECK constraints, composite indexes, comprehensive tests.
 
-use rusqlite::Connection;
-use mazerion_core::{Error, Result};
+pub const BACTERIA_SCHEMA: &str = "
+-- Bacteria encyclopedia
+-- Professional brewing bacteria database with security hardening
+CREATE TABLE IF NOT EXISTS bacteria (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
 
-pub fn create_bacteria_tables(conn: &Connection) -> Result<()> {
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS bacteria_cultures (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
+    -- Core identification
+    name TEXT NOT NULL,                      -- e.g., 'Lactobacillus plantarum', 'Pediococcus'
+    bacteria_type TEXT NOT NULL,             -- lactobacillus, pediococcus, acetobacter, other
+    laboratory TEXT,                         -- e.g., 'White Labs', 'Wyeast', NULL if unknown
+    product_code TEXT,                       -- e.g., 'WLP672', NULL if unknown
 
-            -- Source
-            laboratory TEXT,
-            product_code TEXT,
-            bacteria_type TEXT,
-            species TEXT,
-            strain TEXT,
+    -- Fermentation characteristics (TEXT for Decimal precision)
+    optimal_temperature_min TEXT,            -- °F 32-212, NULL if unknown
+    optimal_temperature_max TEXT,            -- °F 32-212, NULL if unknown
+    optimal_ph_min TEXT,                     -- pH 1.0-14.0, NULL if unknown
+    optimal_ph_max TEXT,                     -- pH 1.0-14.0, NULL if unknown
+    typical_dosage_grams_per_gallon TEXT,    -- Recommended usage 0-10 g/gal
 
-            -- Growth Parameters
-            temp_range_c TEXT,
-            optimal_temp_c TEXT,
-            ph_tolerance TEXT,
-            optimal_ph TEXT,
-            oxygen_tolerance TEXT,
+    -- Professional guidance (JSON arrays for structured data)
+    usage_notes TEXT,                        -- Professional brewing notes and warnings
+    flavor_profile TEXT,                     -- Flavor contributions (sour, funky, etc)
+    best_suited_styles TEXT,                 -- JSON array of beverage styles
+    compatible_styles TEXT,                  -- JSON array of compatible styles
+    timing TEXT,                             -- When to add (pre-ferment, kettle sour, etc)
 
-            -- Acid Production
-            lactic_acid_production TEXT,
-            acetic_acid_production TEXT,
-            other_acid_production TEXT,
-            acid_production_rate TEXT,
-            final_ph_range TEXT,
+    -- Metadata
+    created_at TEXT NOT NULL,                -- ISO 8601 timestamp
+    updated_at TEXT NOT NULL,                -- ISO 8601 timestamp
 
-            -- Sensory Profile
-            flavor_profile TEXT,
-            aroma_profile TEXT,
-            tartness_character TEXT,
-            funkiness_level TEXT,
+    -- Validation constraints (security hardening)
+    CHECK(bacteria_type IN ('lactobacillus', 'pediococcus', 'acetobacter', 'other')),
+    CHECK(name != ''),                       -- Prevent empty names
+    CHECK(length(name) <= 200)               -- Prevent abuse
+);
 
-            -- Co-fermentation
-            yeast_compatibility TEXT,
-            other_bacteria_compatibility TEXT,
-            sequential_inoculation TEXT,
+-- Performance indexes for mobile-first queries
+CREATE INDEX IF NOT EXISTS idx_bacteria_name ON bacteria(name);
+CREATE INDEX IF NOT EXISTS idx_bacteria_type ON bacteria(bacteria_type);
+CREATE INDEX IF NOT EXISTS idx_bacteria_type_name ON bacteria(bacteria_type, name);
+";
 
-            -- Applications
-            recommended_beer_styles TEXT,
-            recommended_kombucha TEXT,
-            recommended_other_ferments TEXT,
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rusqlite::Connection;
 
-            -- Timing & Usage
-            pitch_rate TEXT,
-            typical_fermentation_time TEXT,
-            usage_notes TEXT,
+    #[test]
+    fn test_schema_creates_successfully() {
+        let conn = Connection::open_in_memory().expect("Failed to create in-memory database");
+        conn.execute_batch(BACTERIA_SCHEMA).expect("Failed to execute schema");
+        let table_exists: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='bacteria'", [], |row| row.get(0))
+            .expect("Failed to query table existence");
+        assert_eq!(table_exists, 1);
+    }
 
-            -- Professional Notes
-            brewmaster_notes TEXT,
-            microbiologist_notes TEXT,
-            description TEXT,
+    #[test]
+    fn test_schema_has_correct_indexes() {
+        let conn = Connection::open_in_memory().expect("Failed to create in-memory database");
+        conn.execute_batch(BACTERIA_SCHEMA).expect("Failed to execute schema");
+        let index_count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND tbl_name='bacteria' AND name LIKE 'idx_%'", [], |row| row.get(0))
+            .expect("Failed to query index count");
+        assert_eq!(index_count, 3);
+    }
 
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    #[test]
+    fn test_schema_enforces_type_constraint() {
+        let conn = Connection::open_in_memory().expect("Failed to create in-memory database");
+        conn.execute_batch(BACTERIA_SCHEMA).expect("Failed to execute schema");
+        let result = conn.execute("INSERT INTO bacteria (name, bacteria_type, created_at, updated_at) VALUES (?, ?, ?, ?)",
+                                  rusqlite::params!["Test", "invalid", "2025-01-01", "2025-01-01"]);
+        assert!(result.is_err());
+    }
 
-            UNIQUE(laboratory, product_code)
-        )",
-        [],
-    ).map_err(|e| Error::DatabaseError(format!("Create bacteria_cultures: {}", e)))?;
+    #[test]
+    fn test_schema_accepts_valid_types() {
+        let conn = Connection::open_in_memory().expect("Failed to create in-memory database");
+        conn.execute_batch(BACTERIA_SCHEMA).expect("Failed to execute schema");
+        for bacteria_type in vec!["lactobacillus", "pediococcus", "acetobacter", "other"] {
+            let result = conn.execute("INSERT INTO bacteria (name, bacteria_type, created_at, updated_at) VALUES (?, ?, ?, ?)",
+                                      rusqlite::params![format!("Test {}", bacteria_type), bacteria_type, "2025-01-01", "2025-01-01"]);
+            assert!(result.is_ok());
+        }
+    }
 
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_bacteria_type ON bacteria_cultures(bacteria_type)",
-        [],
-    ).map_err(|e| Error::DatabaseError(format!("{}", e)))?;
+    #[test]
+    fn test_schema_requires_non_null_fields() {
+        let conn = Connection::open_in_memory().expect("Failed to create in-memory database");
+        conn.execute_batch(BACTERIA_SCHEMA).expect("Failed to execute schema");
+        let result = conn.execute("INSERT INTO bacteria (bacteria_type, created_at, updated_at) VALUES (?, ?, ?)",
+                                  rusqlite::params!["lactobacillus", "2025-01-01", "2025-01-01"]);
+        assert!(result.is_err());
+    }
 
-    Ok(())
+    #[test]
+    fn test_schema_rejects_empty_name() {
+        let conn = Connection::open_in_memory().expect("Failed to create in-memory database");
+        conn.execute_batch(BACTERIA_SCHEMA).expect("Failed to execute schema");
+        let result = conn.execute("INSERT INTO bacteria (name, bacteria_type, created_at, updated_at) VALUES (?, ?, ?, ?)",
+                                  rusqlite::params!["", "lactobacillus", "2025-01-01", "2025-01-01"]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_schema_rejects_oversized_name() {
+        let conn = Connection::open_in_memory().expect("Failed to create in-memory database");
+        conn.execute_batch(BACTERIA_SCHEMA).expect("Failed to execute schema");
+        let result = conn.execute("INSERT INTO bacteria (name, bacteria_type, created_at, updated_at) VALUES (?, ?, ?, ?)",
+                                  rusqlite::params!["A".repeat(201), "lactobacillus", "2025-01-01", "2025-01-01"]);
+        assert!(result.is_err());
+    }
 }

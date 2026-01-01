@@ -1,103 +1,187 @@
-// Yeast encyclopedia schema
+/// Yeast Encyclopedia Schema
+///
+/// Comprehensive yeast strain database with professional brewing standards.
+/// Optimized for mobile performance with strategic indexing.
 
-use rusqlite::Connection;
-use mazerion_core::{Error, Result};
+pub const YEAST_SCHEMA: &str = "
+-- Yeast strains encyclopedia
+-- Master-level professional yeast database
+CREATE TABLE IF NOT EXISTS yeasts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
 
-pub fn create_yeast_tables(conn: &Connection) -> Result<()> {
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS yeast_strains (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            laboratory TEXT,
-            product_code TEXT,
+    -- Core identification
+    name TEXT NOT NULL,                      -- e.g., 'Lalvin 71B-1122'
+    laboratory TEXT NOT NULL,                -- e.g., 'Lalvin', 'White Labs', 'Wyeast'
+    product_code TEXT NOT NULL,              -- e.g., '71B', 'WLP715'
+    yeast_type TEXT NOT NULL,                -- wine, beer, mead, champagne, distillers, wild
 
-            -- Classification
-            yeast_type TEXT,
-            species TEXT,
-            strain_origin TEXT,
-            yeast_format TEXT,
+    -- Fermentation characteristics (TEXT for Decimal precision)
+    alcohol_tolerance TEXT,                  -- Percentage 0.0-25.0
+    temperature_range_min TEXT,              -- °F, minimum safe temperature
+    temperature_range_max TEXT,              -- °F, maximum safe temperature
+    attenuation TEXT,                        -- Percentage 0.0-100.0
 
-            -- Performance Characteristics
-            attenuation_min TEXT,
-            attenuation_max TEXT,
-            temp_min_c TEXT,
-            temp_max_c TEXT,
-            temp_optimal_c TEXT,
-            alcohol_tolerance TEXT,
-            flocculation TEXT,
-            sedimentation TEXT,
-            pitch_rate_million_cells TEXT,
-            viable_cell_count TEXT,
+    -- Physical & nutritional characteristics
+    flocculation TEXT,                       -- low, medium, high, very high
+    nutrient_requirements TEXT,              -- low, moderate, high
 
-            -- Chemical Production
-            ester_production TEXT,
-            phenolic_production TEXT,
-            diacetyl_production TEXT,
-            acetaldehyde_production TEXT,
-            sulfur_production TEXT,
-            fusel_alcohol_production TEXT,
+    -- Professional sensory profiles (JSON arrays)
+    flavor_profile TEXT,                     -- Master Sommelier vocabulary
+    aroma_profile TEXT,                      -- Professional aroma descriptors
 
-            -- Sensory Profile (Professional Tasting Notes)
-            aroma_primary TEXT,
-            aroma_secondary TEXT,
-            aroma_tertiary TEXT,
-            flavor_primary TEXT,
-            flavor_secondary TEXT,
-            flavor_tertiary TEXT,
-            mouthfeel_contribution TEXT,
-            finish_character TEXT,
+    -- Usage recommendations
+    best_suited_styles TEXT,                 -- JSON array of beverage styles
+    usage_notes TEXT,                        -- Professional brewing notes
 
-            -- Professional Usage
-            recommended_styles TEXT,
-            optimal_og_range TEXT,
-            nutrient_requirements TEXT,
-            oxygen_requirements TEXT,
-            lag_time TEXT,
-            fermentation_timeline TEXT,
+    -- Fermentation timing (TEXT for Decimal precision)
+    lag_time_hours TEXT,                     -- Time before fermentation starts
+    fermentation_duration_days TEXT,         -- Typical fermentation length
 
-            -- Pairing & Applications
-            food_pairings TEXT,
-            spirit_pairings TEXT,
-            seasonal_usage TEXT,
+    -- Professional assessment
+    sensory_notes TEXT,                      -- Master-level sensory evaluation
+    requires_rehydration INTEGER NOT NULL DEFAULT 0,  -- Boolean: needs rehydration
 
-            -- Technical Data
-            killer_factor TEXT,
-            diastatic TEXT,
-            pof_positive TEXT,
-            respiratory_deficient TEXT,
+    -- Compatibility
+    compatible_ingredients TEXT,             -- JSON array of ingredient types
 
-            -- Quality & Sourcing
-            quality_grade TEXT,
-            production_method TEXT,
-            certification TEXT,
-            storage_requirements TEXT,
-            shelf_life TEXT,
-            alternatives TEXT,
+    -- Metadata
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
 
-            -- Professional Notes
-            brewmaster_notes TEXT,
-            historical_context TEXT,
-            regional_associations TEXT,
-            description TEXT,
-            technical_notes TEXT,
+    -- Validation constraints
+    CHECK(yeast_type IN ('wine', 'beer', 'mead', 'champagne', 'distillers', 'wild')),
+    CHECK(flocculation IS NULL OR flocculation IN ('low', 'medium', 'high', 'very high')),
+    CHECK(nutrient_requirements IS NULL OR nutrient_requirements IN ('low', 'moderate', 'high')),
+    CHECK(requires_rehydration IN (0, 1))
+);
 
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+-- Performance indexes for mobile-first queries
+-- Index on type for filtering by category (wine/beer/mead)
+CREATE INDEX IF NOT EXISTS idx_yeasts_type ON yeasts(yeast_type);
 
-            UNIQUE(laboratory, product_code)
-        )",
-        [],
-    ).map_err(|e| Error::DatabaseError(format!("Create yeast_strains: {}", e)))?;
+-- Index on laboratory for filtering by manufacturer
+CREATE INDEX IF NOT EXISTS idx_yeasts_lab ON yeasts(laboratory);
 
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_yeast_lab ON yeast_strains(laboratory)",
-        [],
-    ).map_err(|e| Error::DatabaseError(format!("{}", e)))?;
+-- Index on name for search operations
+CREATE INDEX IF NOT EXISTS idx_yeasts_name ON yeasts(name);
 
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_yeast_type ON yeast_strains(yeast_type)",
-        [],
-    ).map_err(|e| Error::DatabaseError(format!("{}", e)))?;
+-- Composite index for type + name sorting (common query pattern)
+CREATE INDEX IF NOT EXISTS idx_yeasts_type_name ON yeasts(yeast_type, name);
+";
 
-    Ok(())
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rusqlite::Connection;
+
+    #[test]
+    fn test_schema_creates_successfully() {
+        let conn = Connection::open_in_memory().expect("Failed to create in-memory database");
+        conn.execute_batch(YEAST_SCHEMA).expect("Failed to execute schema");
+
+        // Verify table exists
+        let table_exists: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='yeasts'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("Failed to query table existence");
+
+        assert_eq!(table_exists, 1, "Yeasts table should exist");
+    }
+
+    #[test]
+    fn test_schema_has_correct_indexes() {
+        let conn = Connection::open_in_memory().expect("Failed to create in-memory database");
+        conn.execute_batch(YEAST_SCHEMA).expect("Failed to execute schema");
+
+        // Verify all indexes exist
+        let index_count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master
+                 WHERE type='index'
+                 AND tbl_name='yeasts'
+                 AND name LIKE 'idx_%'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("Failed to query index count");
+
+        assert_eq!(index_count, 4, "Should have 4 performance indexes");
+    }
+
+    #[test]
+    fn test_schema_enforces_type_constraint() {
+        let conn = Connection::open_in_memory().expect("Failed to create in-memory database");
+        conn.execute_batch(YEAST_SCHEMA).expect("Failed to execute schema");
+
+        // Try to insert invalid type
+        let result = conn.execute(
+            "INSERT INTO yeasts (
+                name, laboratory, product_code, yeast_type,
+                created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?)",
+            rusqlite::params![
+                "Test Yeast",
+                "Test Lab",
+                "T1",
+                "invalid_type",
+                "2025-01-01",
+                "2025-01-01",
+            ],
+        );
+
+        assert!(result.is_err(), "Should reject invalid yeast type");
+    }
+
+    #[test]
+    fn test_schema_enforces_flocculation_constraint() {
+        let conn = Connection::open_in_memory().expect("Failed to create in-memory database");
+        conn.execute_batch(YEAST_SCHEMA).expect("Failed to execute schema");
+
+        // Try to insert invalid flocculation
+        let result = conn.execute(
+            "INSERT INTO yeasts (
+                name, laboratory, product_code, yeast_type,
+                flocculation, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            rusqlite::params![
+                "Test Yeast",
+                "Test Lab",
+                "T1",
+                "wine",
+                "super_high",
+                "2025-01-01",
+                "2025-01-01",
+            ],
+        );
+
+        assert!(result.is_err(), "Should reject invalid flocculation");
+    }
+
+    #[test]
+    fn test_schema_enforces_nutrient_constraint() {
+        let conn = Connection::open_in_memory().expect("Failed to create in-memory database");
+        conn.execute_batch(YEAST_SCHEMA).expect("Failed to execute schema");
+
+        // Try to insert invalid nutrient requirement
+        let result = conn.execute(
+            "INSERT INTO yeasts (
+                name, laboratory, product_code, yeast_type,
+                nutrient_requirements, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            rusqlite::params![
+                "Test Yeast",
+                "Test Lab",
+                "T1",
+                "wine",
+                "extreme",
+                "2025-01-01",
+                "2025-01-01",
+            ],
+        );
+
+        assert!(result.is_err(), "Should reject invalid nutrient requirement");
+    }
 }

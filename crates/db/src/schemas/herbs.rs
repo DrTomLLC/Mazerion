@@ -1,115 +1,127 @@
-// Herb encyclopedia schema
+/// Herb Encyclopedia Schema
+///
+/// Comprehensive herb database for brewing and fermentation.
+/// Optimized for mobile performance with strategic indexing.
+/// HARDENED: Multiple CHECK constraints, composite indexes, comprehensive tests.
 
-use rusqlite::Connection;
-use mazerion_core::{Error, Result};
+pub const HERB_SCHEMA: &str = "
+-- Herbs encyclopedia
+-- Professional brewing herb database with security hardening
+CREATE TABLE IF NOT EXISTS herbs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
 
-pub fn create_herb_tables(conn: &Connection) -> Result<()> {
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS herbs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
+    -- Core identification
+    name TEXT NOT NULL,                      -- e.g., 'Lavender', 'Chamomile'
+    scientific_name TEXT,                    -- e.g., 'Lavandula angustifolia', NULL if unknown
+    herb_type TEXT NOT NULL,                 -- culinary, medicinal, aromatic, other
+    origin TEXT,                             -- Geographic origin, NULL if unknown
 
-            -- Classification
-            scientific_name TEXT,
-            herb_family TEXT,
-            part_used TEXT,
-            origin_region TEXT,
-            growing_conditions TEXT,
+    -- Dosage characteristics (TEXT for Decimal precision)
+    typical_dosage_oz_per_gallon TEXT,       -- Recommended usage 0.0-10.0 oz/gal
 
-            -- Sensory Profile
-            aroma_intensity TEXT,
-            aroma_primary TEXT,
-            aroma_secondary TEXT,
-            aroma_tertiary TEXT,
-            aroma_fresh TEXT,
-            aroma_dried TEXT,
-            flavor_intensity TEXT,
-            flavor_primary TEXT,
-            flavor_secondary TEXT,
-            flavor_fresh TEXT,
-            flavor_dried TEXT,
-            bitterness_level TEXT,
-            astringency TEXT,
-            menthol_cooling TEXT,
-            resinous_character TEXT,
+    -- Professional sensory profiles (JSON arrays for structured data)
+    flavor_profile TEXT,                     -- JSON array: Master-level flavor descriptors
+    aroma_profile TEXT,                      -- JSON array: Professional aroma descriptors
 
-            -- Chemical Profile
-            essential_oil_content TEXT,
-            volatile_compounds TEXT,
-            chlorophyll_content TEXT,
+    -- Usage recommendations
+    best_suited_styles TEXT,                 -- JSON array of beverage styles
+    usage_notes TEXT,                        -- Professional brewing notes and warnings
+    sensory_notes TEXT,                      -- Master-level sensory evaluation
+    preparation_method TEXT,                 -- Processing instructions (fresh/dried/tea)
 
-            -- Usage Guidelines
-            potency_fresh TEXT,
-            potency_dried TEXT,
-            fresh_to_dried_ratio TEXT,
-            typical_usage_rate TEXT,
-            optimal_usage_timing TEXT,
-            heat_sensitivity TEXT,
+    -- Compatibility
+    compatible_styles TEXT,                  -- JSON array of compatible beverage styles
 
-            -- Processing Forms
-            fresh_usage TEXT,
-            dried_usage TEXT,
-            frozen_usage TEXT,
-            extract_usage TEXT,
-            tea_infusion TEXT,
+    -- Metadata
+    created_at TEXT NOT NULL,                -- ISO 8601 timestamp
+    updated_at TEXT NOT NULL,                -- ISO 8601 timestamp
 
-            -- Fermentation Applications
-            recommended_beer_styles TEXT,
-            recommended_mead_styles TEXT,
-            recommended_wine_styles TEXT,
-            recommended_spirit_styles TEXT,
-            botanical_gin_usage TEXT,
-            vermouth_usage TEXT,
+    -- Validation constraints (security hardening)
+    CHECK(herb_type IN ('culinary', 'medicinal', 'aromatic', 'other')),
+    CHECK(name != ''),                       -- Prevent empty names
+    CHECK(length(name) <= 200)               -- Prevent abuse
+);
 
-            -- Professional Pairing
-            complementary_herbs TEXT,
-            contrasting_herbs TEXT,
-            spice_pairings TEXT,
-            protein_pairings TEXT,
-            vegetable_pairings TEXT,
-            fruit_pairings TEXT,
-            dairy_pairings TEXT,
-            grain_pairings TEXT,
-            fat_pairings TEXT,
-            acid_pairings TEXT,
-            wine_pairings TEXT,
-            spirit_pairings TEXT,
-            cheese_pairings TEXT,
+-- Performance indexes for mobile-first queries
+-- Index on name for search operations (most common query)
+CREATE INDEX IF NOT EXISTS idx_herbs_name ON herbs(name);
 
-            -- Culinary Traditions
-            cuisine_associations TEXT,
-            traditional_combinations TEXT,
-            classic_dishes TEXT,
+-- Index on type for filtering by category
+CREATE INDEX IF NOT EXISTS idx_herbs_type ON herbs(herb_type);
 
-            -- Seasonal & Quality
-            harvest_season TEXT,
-            peak_season TEXT,
-            quality_indicators TEXT,
-            storage_requirements TEXT,
-            shelf_life_fresh TEXT,
-            shelf_life_dried TEXT,
+-- Composite index for type + name sorting (common query pattern)
+CREATE INDEX IF NOT EXISTS idx_herbs_type_name ON herbs(herb_type, name);
+";
 
-            -- Health & Medicine
-            medicinal_properties TEXT,
-            therapeutic_uses TEXT,
-            bioactive_compounds TEXT,
-            health_benefits TEXT,
-            contraindications TEXT,
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rusqlite::Connection;
 
-            -- Professional Notes
-            chef_notes TEXT,
-            herbalist_notes TEXT,
-            distiller_notes TEXT,
-            historical_uses TEXT,
-            cultural_significance TEXT,
-            description TEXT,
-            tasting_notes TEXT,
+    #[test]
+    fn test_schema_creates_successfully() {
+        let conn = Connection::open_in_memory().expect("Failed to create in-memory database");
+        conn.execute_batch(HERB_SCHEMA).expect("Failed to execute schema");
+        let table_exists: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='herbs'", [], |row| row.get(0))
+            .expect("Failed to query table existence");
+        assert_eq!(table_exists, 1, "Herbs table should exist");
+    }
 
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-        )",
-        [],
-    ).map_err(|e| Error::DatabaseError(format!("Create herbs: {}", e)))?;
+    #[test]
+    fn test_schema_has_correct_indexes() {
+        let conn = Connection::open_in_memory().expect("Failed to create in-memory database");
+        conn.execute_batch(HERB_SCHEMA).expect("Failed to execute schema");
+        let index_count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND tbl_name='herbs' AND name LIKE 'idx_%'", [], |row| row.get(0))
+            .expect("Failed to query index count");
+        assert_eq!(index_count, 3, "Should have 3 performance indexes including composite");
+    }
 
-    Ok(())
+    #[test]
+    fn test_schema_enforces_type_constraint() {
+        let conn = Connection::open_in_memory().expect("Failed to create in-memory database");
+        conn.execute_batch(HERB_SCHEMA).expect("Failed to execute schema");
+        let result = conn.execute("INSERT INTO herbs (name, herb_type, created_at, updated_at) VALUES (?, ?, ?, ?)",
+                                  rusqlite::params!["Test", "invalid", "2025-01-01", "2025-01-01"]);
+        assert!(result.is_err(), "Should reject invalid herb type");
+    }
+
+    #[test]
+    fn test_schema_accepts_valid_types() {
+        let conn = Connection::open_in_memory().expect("Failed to create in-memory database");
+        conn.execute_batch(HERB_SCHEMA).expect("Failed to execute schema");
+        for herb_type in vec!["culinary", "medicinal", "aromatic", "other"] {
+            let result = conn.execute("INSERT INTO herbs (name, herb_type, created_at, updated_at) VALUES (?, ?, ?, ?)",
+                                      rusqlite::params![format!("Test {}", herb_type), herb_type, "2025-01-01", "2025-01-01"]);
+            assert!(result.is_ok(), "Should accept valid type: {}", herb_type);
+        }
+    }
+
+    #[test]
+    fn test_schema_requires_non_null_fields() {
+        let conn = Connection::open_in_memory().expect("Failed to create in-memory database");
+        conn.execute_batch(HERB_SCHEMA).expect("Failed to execute schema");
+        let result = conn.execute("INSERT INTO herbs (herb_type, created_at, updated_at) VALUES (?, ?, ?)",
+                                  rusqlite::params!["culinary", "2025-01-01", "2025-01-01"]);
+        assert!(result.is_err(), "Should require name field");
+    }
+
+    #[test]
+    fn test_schema_rejects_empty_name() {
+        let conn = Connection::open_in_memory().expect("Failed to create in-memory database");
+        conn.execute_batch(HERB_SCHEMA).expect("Failed to execute schema");
+        let result = conn.execute("INSERT INTO herbs (name, herb_type, created_at, updated_at) VALUES (?, ?, ?, ?)",
+                                  rusqlite::params!["", "culinary", "2025-01-01", "2025-01-01"]);
+        assert!(result.is_err(), "Should reject empty name");
+    }
+
+    #[test]
+    fn test_schema_rejects_oversized_name() {
+        let conn = Connection::open_in_memory().expect("Failed to create in-memory database");
+        conn.execute_batch(HERB_SCHEMA).expect("Failed to execute schema");
+        let result = conn.execute("INSERT INTO herbs (name, herb_type, created_at, updated_at) VALUES (?, ?, ?, ?)",
+                                  rusqlite::params!["A".repeat(201), "culinary", "2025-01-01", "2025-01-01"]);
+        assert!(result.is_err(), "Should reject names longer than 200 characters");
+    }
 }

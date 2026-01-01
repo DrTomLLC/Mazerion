@@ -1,271 +1,214 @@
-// Database manager with dynamic discovery and repository access
-
-use rusqlite::{Connection, OpenFlags};
-use std::collections::HashMap;
-use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
-use mazerion_core::{Error, Result};
+use std::path::Path;
+use rusqlite::{Connection, Result};
 
+use crate::repositories::yeast::YeastRepository;
+use crate::repositories::honey::HoneyRepository;
+use crate::repositories::hop::HopRepository;
+use crate::repositories::malt::MaltRepository;
+use crate::repositories::fruit::FruitRepository;
+use crate::repositories::vegetable::VegetableRepository;
+use crate::repositories::spice::SpiceRepository;
+use crate::repositories::herb::HerbRepository;
+use crate::repositories::extract::ExtractRepository;
+use crate::repositories::syrup::SyrupRepository;
+use crate::repositories::adjunct::AdjunctRepository;
+use crate::repositories::water_profile::WaterProfileRepository;
+use crate::repositories::water_salt::WaterSaltRepository;
+use crate::repositories::acid::AcidRepository;
+use crate::repositories::nutrient::NutrientRepository;
+use crate::repositories::enzyme::EnzymeRepository;
+use crate::repositories::bacteria::BacteriaRepository;
+use crate::repositories::tannin::TanninRepository;
 use crate::schemas;
-use crate::repositories::{BatchRepository, InventoryRepository, RecipeRepository};
 
-/// Database manager with dynamic pack discovery
-pub struct DbStats {
-    pub batch_count: u32,
-    pub inventory_count: u32,
-    pub reading_count: u32,
-    pub calculation_count: u32,
-}
 pub struct DatabaseManager {
     user_db: Arc<Mutex<Connection>>,
-    master_dbs: Arc<Mutex<HashMap<String, Connection>>>,
-    packs_dir: PathBuf,
+    encyclopedia_db: Arc<Mutex<Connection>>,
 }
 
 impl DatabaseManager {
-    /// Create new manager, initializing user.db and discovering master packs
-    pub fn new<P: AsRef<Path>>(user_db_path: P, packs_dir: P) -> Result<Self> {
-        // Open/create writable user database
-        let user_db = Connection::open(user_db_path.as_ref())
-            .map_err(|e| Error::DatabaseError(format!("Failed to open user.db: {}", e)))?;
+    pub fn new<P: AsRef<Path>>(user_db_path: P, encyclopedia_db_path: P) -> Result<Self> {
+        let user_db = Connection::open(user_db_path)?;
+        let encyclopedia_db = Connection::open(encyclopedia_db_path)?;
 
-        // Initialize user schema
-        schemas::create_user_schema(&user_db)?;
+        user_db.execute_batch("PRAGMA foreign_keys = ON;")?;
+        encyclopedia_db.execute_batch("PRAGMA foreign_keys = ON;")?;
 
-        let user_db = Arc::new(Mutex::new(user_db));
-
-        let mut manager = Self {
-            user_db,
-            master_dbs: Arc::new(Mutex::new(HashMap::new())),
-            packs_dir: packs_dir.as_ref().to_path_buf(),
+        let manager = Self {
+            user_db: Arc::new(Mutex::new(user_db)),
+            encyclopedia_db: Arc::new(Mutex::new(encyclopedia_db)),
         };
 
-        // Discover and attach master databases
-        manager.discover_packs()?;
-
+        manager.initialize_schemas()?;
         Ok(manager)
     }
 
-    /// Discover and attach all master databases in packs directory
-    pub fn discover_packs(&mut self) -> Result<()> {
-        if !self.packs_dir.exists() {
-            std::fs::create_dir_all(&self.packs_dir)
-                .map_err(|e| Error::DatabaseError(format!("Failed to create packs dir: {}", e)))?;
-            return Ok(());
-        }
-
-        let entries = std::fs::read_dir(&self.packs_dir)
-            .map_err(|e| Error::DatabaseError(format!("Failed to read packs dir: {}", e)))?;
-
-        let mut master_dbs = self
-            .master_dbs
-            .lock()
-            .map_err(|_| Error::DatabaseError("Failed to acquire write lock".into()))?;
-
-        for entry in entries.filter_map(|e| e.ok()) {
-            let path = entry.path();
-            if path.extension().and_then(|s| s.to_str()) == Some("db")
-                && let Some(name) = path.file_stem().and_then(|s| s.to_str())
-                && name.ends_with("_master")
-            {
-                self.attach_master_db(&mut master_dbs, &path, name)?;
-            }
-        }
-
+    fn initialize_schemas(&self) -> Result<()> {
+        let encyclopedia_db = self.encyclopedia_db.lock().unwrap();
+        schemas::init_all_tables(&encyclopedia_db)?;
         Ok(())
     }
 
-    /// Attach a master database (read-only)
-    fn attach_master_db(
-        &self,
-        master_dbs: &mut HashMap<String, Connection>,
-        path: &Path,
-        name: &str,
-    ) -> Result<()> {
-        let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)
-            .map_err(|e| Error::DatabaseError(format!("Failed to open master DB {}: {}", name, e)))?;
-
-        master_dbs.insert(name.to_string(), conn);
-        Ok(())
-    }
-
-    /// Execute operation with user database connection
-    pub fn with_user_db<F, T>(&self, f: F) -> Result<T>
+    pub fn with_yeast_repo<T, F>(&self, f: F) -> Result<T>
     where
-        F: FnOnce(&Connection) -> Result<T>,
+        F: FnOnce(YeastRepository) -> Result<T>,
     {
-        let conn = self
-            .user_db
-            .lock()
-            .map_err(|_| Error::DatabaseError("Failed to acquire lock".into()))?;
-
-        f(&conn)
-    }
-
-    /// Execute operation with master database connection
-    pub fn with_master_db<F, T>(&self, name: &str, f: F) -> Result<T>
-    where
-        F: FnOnce(&Connection) -> Result<T>,
-    {
-        let master_dbs = self
-            .master_dbs
-            .lock()
-            .map_err(|_| Error::DatabaseError("Failed to acquire lock".into()))?;
-
-        let conn = master_dbs
-            .get(name)
-            .ok_or_else(|| Error::DatabaseError(format!("Master DB {} not found", name)))?;
-
-        f(conn)
-    }
-
-    /// Get batch repository for user database
-    pub fn batch_repo(&self) -> Result<UserBatchRepo> {
-        Ok(UserBatchRepo {
-            manager: self.user_db.clone(),
-        })
-    }
-
-    /// Get inventory repository for user database
-    pub fn inventory_repo(&self) -> Result<UserInventoryRepo> {
-        Ok(UserInventoryRepo {
-            manager: self.user_db.clone(),
-        })
-    }
-
-    /// Get recipe repository for a master database
-    pub fn recipe_repo(&self, pack_name: &str) -> Result<MasterRecipeRepo> {
-        let master_dbs = self
-            .master_dbs
-            .lock()
-            .map_err(|_| Error::DatabaseError("Failed to acquire lock".into()))?;
-
-        if !master_dbs.contains_key(pack_name) {
-            return Err(Error::DatabaseError(format!(
-                "Pack {} not found",
-                pack_name
-            )));
-        }
-
-        Ok(MasterRecipeRepo {
-            manager: self.master_dbs.clone(),
-            pack_name: pack_name.to_string(),
-        })
-    }
-
-    /// List all available master databases
-    pub fn list_packs(&self) -> Result<Vec<String>> {
-        let master_dbs = self
-            .master_dbs
-            .lock()
-            .map_err(|_| Error::DatabaseError("Failed to acquire lock".into()))?;
-
-        Ok(master_dbs.keys().cloned().collect())
-    }
-
-    /// Get statistics about user database
-    pub fn user_db_stats(&self) -> Result<UserDbStats> {
-        self.with_user_db(|conn| {
-            let batch_count: i64 = conn
-                .query_row("SELECT COUNT(*) FROM batches", [], |row| row.get(0))
-                .map_err(|e| Error::DatabaseError(format!("Failed to count batches: {}", e)))?;
-
-            let inventory_count: i64 = conn
-                .query_row("SELECT COUNT(*) FROM inventory", [], |row| row.get(0))
-                .map_err(|e| Error::DatabaseError(format!("Failed to count inventory: {}", e)))?;
-
-            let reading_count: i64 = conn
-                .query_row("SELECT COUNT(*) FROM batch_readings", [], |row| row.get(0))
-                .map_err(|e| Error::DatabaseError(format!("Failed to count readings: {}", e)))?;
-
-            let calculation_count: i64 = conn
-                .query_row("SELECT COUNT(*) FROM calculation_log", [], |row| row.get(0))
-                .map_err(|e| Error::DatabaseError(format!("Failed to count calculations: {}", e)))?;
-
-            Ok(UserDbStats {
-                batch_count: batch_count as u32,
-                inventory_count: inventory_count as u32,
-                reading_count: reading_count as u32,
-                calculation_count: calculation_count as u32,
-            })
-        })
-    }
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// REPOSITORY WRAPPERS
-// ══════════════════════════════════════════════════════════════════════════════
-
-/// Thread-safe batch repository wrapper
-pub struct UserBatchRepo {
-    manager: Arc<Mutex<Connection>>,
-}
-
-impl UserBatchRepo {
-    pub fn with_repo<F, T>(&self, f: F) -> Result<T>
-    where
-        F: FnOnce(BatchRepository) -> Result<T>,
-    {
-        let conn = self
-            .manager
-            .lock()
-            .map_err(|_| Error::DatabaseError("Failed to acquire lock".into()))?;
-
-        let repo = BatchRepository::new(&conn);
+        let conn = self.encyclopedia_db.lock().unwrap();
+        let repo = YeastRepository::new(&conn);
         f(repo)
     }
-}
 
-/// Thread-safe inventory repository wrapper
-pub struct UserInventoryRepo {
-    manager: Arc<Mutex<Connection>>,
-}
-
-impl UserInventoryRepo {
-    pub fn with_repo<F, T>(&self, f: F) -> Result<T>
+    pub fn with_honey_repo<T, F>(&self, f: F) -> Result<T>
     where
-        F: FnOnce(InventoryRepository) -> Result<T>,
+        F: FnOnce(HoneyRepository) -> Result<T>,
     {
-        let conn = self
-            .manager
-            .lock()
-            .map_err(|_| Error::DatabaseError("Failed to acquire lock".into()))?;
-
-        let repo = InventoryRepository::new(&conn);
+        let conn = self.encyclopedia_db.lock().unwrap();
+        let repo = HoneyRepository::new(&conn);
         f(repo)
     }
-}
 
-/// Thread-safe recipe repository wrapper for master databases
-pub struct MasterRecipeRepo {
-    manager: Arc<Mutex<HashMap<String, Connection>>>,
-    pack_name: String,
-}
-
-impl MasterRecipeRepo {
-    pub fn with_repo<F, T>(&self, f: F) -> Result<T>
+    pub fn with_hop_repo<T, F>(&self, f: F) -> Result<T>
     where
-        F: FnOnce(RecipeRepository) -> Result<T>,
+        F: FnOnce(HopRepository) -> Result<T>,
     {
-        let master_dbs = self
-            .manager
-            .lock()
-            .map_err(|_| Error::DatabaseError("Failed to acquire lock".into()))?;
-
-        let conn = master_dbs
-            .get(&self.pack_name)
-            .ok_or_else(|| Error::DatabaseError(format!("Pack {} not found", self.pack_name)))?;
-
-        let repo = RecipeRepository::new(conn);
+        let conn = self.encyclopedia_db.lock().unwrap();
+        let repo = HopRepository::new(&conn);
         f(repo)
     }
-}
 
-/// User database statistics
-#[derive(Debug, Clone)]
-pub struct UserDbStats {
-    pub batch_count: u32,
-    pub inventory_count: u32,
-    pub reading_count: u32,
-    pub calculation_count: u32,
+    pub fn with_malt_repo<T, F>(&self, f: F) -> Result<T>
+    where
+        F: FnOnce(MaltRepository) -> Result<T>,
+    {
+        let conn = self.encyclopedia_db.lock().unwrap();
+        let repo = MaltRepository::new(&conn);
+        f(repo)
+    }
+
+    pub fn with_fruit_repo<T, F>(&self, f: F) -> Result<T>
+    where
+        F: FnOnce(FruitRepository) -> Result<T>,
+    {
+        let conn = self.encyclopedia_db.lock().unwrap();
+        let repo = FruitRepository::new(&conn);
+        f(repo)
+    }
+
+    pub fn with_vegetable_repo<T, F>(&self, f: F) -> Result<T>
+    where
+        F: FnOnce(VegetableRepository) -> Result<T>,
+    {
+        let conn = self.encyclopedia_db.lock().unwrap();
+        let repo = VegetableRepository::new(&conn);
+        f(repo)
+    }
+
+    pub fn with_spice_repo<T, F>(&self, f: F) -> Result<T>
+    where
+        F: FnOnce(SpiceRepository) -> Result<T>,
+    {
+        let conn = self.encyclopedia_db.lock().unwrap();
+        let repo = SpiceRepository::new(&conn);
+        f(repo)
+    }
+
+    pub fn with_herb_repo<T, F>(&self, f: F) -> Result<T>
+    where
+        F: FnOnce(HerbRepository) -> Result<T>,
+    {
+        let conn = self.encyclopedia_db.lock().unwrap();
+        let repo = HerbRepository::new(&conn);
+        f(repo)
+    }
+
+    pub fn with_extract_repo<T, F>(&self, f: F) -> Result<T>
+    where
+        F: FnOnce(ExtractRepository) -> Result<T>,
+    {
+        let conn = self.encyclopedia_db.lock().unwrap();
+        let repo = ExtractRepository::new(&conn);
+        f(repo)
+    }
+
+    pub fn with_syrup_repo<T, F>(&self, f: F) -> Result<T>
+    where
+        F: FnOnce(SyrupRepository) -> Result<T>,
+    {
+        let conn = self.encyclopedia_db.lock().unwrap();
+        let repo = SyrupRepository::new(&conn);
+        f(repo)
+    }
+
+    pub fn with_adjunct_repo<T, F>(&self, f: F) -> Result<T>
+    where
+        F: FnOnce(AdjunctRepository) -> Result<T>,
+    {
+        let conn = self.encyclopedia_db.lock().unwrap();
+        let repo = AdjunctRepository::new(&conn);
+        f(repo)
+    }
+
+    pub fn with_water_profile_repo<T, F>(&self, f: F) -> Result<T>
+    where
+        F: FnOnce(WaterProfileRepository) -> Result<T>,
+    {
+        let conn = self.encyclopedia_db.lock().unwrap();
+        let repo = WaterProfileRepository::new(&conn);
+        f(repo)
+    }
+
+    pub fn with_water_salt_repo<T, F>(&self, f: F) -> Result<T>
+    where
+        F: FnOnce(WaterSaltRepository) -> Result<T>,
+    {
+        let conn = self.encyclopedia_db.lock().unwrap();
+        let repo = WaterSaltRepository::new(&conn);
+        f(repo)
+    }
+
+    pub fn with_acid_repo<T, F>(&self, f: F) -> Result<T>
+    where
+        F: FnOnce(AcidRepository) -> Result<T>,
+    {
+        let conn = self.encyclopedia_db.lock().unwrap();
+        let repo = AcidRepository::new(&conn);
+        f(repo)
+    }
+
+    pub fn with_nutrient_repo<T, F>(&self, f: F) -> Result<T>
+    where
+        F: FnOnce(NutrientRepository) -> Result<T>,
+    {
+        let conn = self.encyclopedia_db.lock().unwrap();
+        let repo = NutrientRepository::new(&conn);
+        f(repo)
+    }
+
+    pub fn with_enzyme_repo<T, F>(&self, f: F) -> Result<T>
+    where
+        F: FnOnce(EnzymeRepository) -> Result<T>,
+    {
+        let conn = self.encyclopedia_db.lock().unwrap();
+        let repo = EnzymeRepository::new(&conn);
+        f(repo)
+    }
+
+    pub fn with_bacteria_repo<T, F>(&self, f: F) -> Result<T>
+    where
+        F: FnOnce(BacteriaRepository) -> Result<T>,
+    {
+        let conn = self.encyclopedia_db.lock().unwrap();
+        let repo = BacteriaRepository::new(&conn);
+        f(repo)
+    }
+
+    pub fn with_tannin_repo<T, F>(&self, f: F) -> Result<T>
+    where
+        F: FnOnce(TanninRepository) -> Result<T>,
+    {
+        let conn = self.encyclopedia_db.lock().unwrap();
+        let repo = TanninRepository::new(&conn);
+        f(repo)
+    }
 }
